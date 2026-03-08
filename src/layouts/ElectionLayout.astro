@@ -1,0 +1,189 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Navbar from "@/components/Navbar.astro";
+import Logo from "@/components/Logo.astro";
+import SidebarIcon from "@/icons/SidebarIcon.astro";
+import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
+import CloseIcon from "@/icons/CloseIcon.astro";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import type { Election } from "@/data/elections";
+
+interface BreadcrumbItem {
+	label: string;
+	href?: string;
+	class?: string;
+}
+
+interface Props {
+	title?: string;
+	description?: string;
+	breadcrumbItems?: BreadcrumbItem[];
+	election: Election;
+}
+
+const { title, description, breadcrumbItems = [], election } = Astro.props;
+const pathname = Astro.url.pathname;
+---
+
+<BaseLayout title={title} description={description}>
+	<div class="flex min-h-screen">
+		<!-- Desktop Sidebar -->
+		<aside class="hidden w-72 shrink-0 border-r border-gray-950/10 dark:border-white/10 lg:block">
+			<div class="sticky top-0 flex h-screen flex-col overflow-y-auto px-4 py-6">
+				<div class="mb-8 px-2">
+					<a href="/">
+						<Logo class="text-xl text-gray-950 dark:text-white" />
+					</a>
+				</div>
+				<nav class="flex-1 space-y-6">
+					<div>
+						<h3 class="px-2 text-xs/6 font-semibold text-gray-500">
+							{election.title}
+						</h3>
+						<ul class="mt-1 space-y-0.5">
+							{election.articles.map((article) => {
+								const href = `/folketingsvalg/${election.year}/${article.id}`;
+								const isActive = pathname === href || pathname === `${href}/`;
+								return (
+									<li>
+										<a
+											href={href}
+											class:list={[
+												"-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
+												isActive
+													? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
+													: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
+											]}
+										>
+											<CirclePlayIcon class:list={[
+												isActive
+													? "text-gray-950 dark:text-white"
+													: "text-gray-400 dark:text-gray-500",
+											]} />
+											<span class="truncate">{article.title}</span>
+										</a>
+									</li>
+								);
+							})}
+						</ul>
+					</div>
+					<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
+						<a
+							href="/"
+							class="-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-500 hover:bg-gray-950/4 dark:hover:bg-white/5"
+						>
+							&larr; Tilbage til kurset
+						</a>
+					</div>
+				</nav>
+			</div>
+		</aside>
+
+		<!-- Mobile Sidebar Overlay -->
+		<div id="mobile-sidebar" class="fixed inset-0 z-50 hidden lg:hidden">
+			<div class="fixed inset-0 bg-gray-950/25" data-close-sidebar></div>
+			<div class="fixed inset-0 flex justify-start pr-11">
+				<div class="w-full max-w-xs overflow-y-auto bg-white px-4 py-5 ring ring-gray-950/10 dark:bg-gray-950 dark:ring-white/10">
+					<div class="mb-6 flex items-center justify-between px-2">
+						<a href="/">
+							<Logo class="text-xl text-gray-950 dark:text-white" />
+						</a>
+						<button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden" data-close-sidebar>
+							<CloseIcon class="text-gray-950 dark:text-white" />
+						</button>
+					</div>
+					<nav class="space-y-6">
+						<div>
+							<h3 class="px-2 text-xs/6 font-semibold text-gray-500">
+								{election.title}
+							</h3>
+							<ul class="mt-1 space-y-0.5">
+								{election.articles.map((article) => {
+									const href = `/folketingsvalg/${election.year}/${article.id}`;
+									const isActive = pathname === href || pathname === `${href}/`;
+									return (
+										<li>
+											<a
+												href={href}
+												class:list={[
+													"flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
+													isActive
+														? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
+														: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
+												]}
+											>
+												<CirclePlayIcon class:list={[
+													isActive
+														? "text-gray-950 dark:text-white"
+														: "text-gray-400 dark:text-gray-500",
+												]} />
+												<span class="truncate">{article.title}</span>
+											</a>
+										</li>
+									);
+								})}
+							</ul>
+						</div>
+						<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
+							<a
+								href="/"
+								class="flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-500 hover:bg-gray-950/4 dark:hover:bg-white/5"
+							>
+								&larr; Tilbage til kurset
+							</a>
+						</div>
+					</nav>
+				</div>
+			</div>
+		</div>
+
+		<!-- Main Content -->
+		<div class="flex flex-1 flex-col">
+			<Navbar>
+				<div class="flex items-center gap-3">
+					<button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden lg:hidden" data-open-sidebar>
+						<SidebarIcon class="text-gray-950 dark:text-white" />
+					</button>
+
+					{breadcrumbItems.length > 0 && (
+						<nav class="flex items-center gap-1.5 text-sm/7">
+							{breadcrumbItems.map((item, i) => (
+								<>
+									{i > 0 && (
+										<ChevronRightIcon class="text-gray-400 dark:text-gray-600" />
+									)}
+									{item.href ? (
+										<a href={item.href} class:list={[item.class, "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"]}>
+											{item.label}
+										</a>
+									) : (
+										<span class:list={[item.class, "font-medium text-gray-950 dark:text-white"]}>
+											{item.label}
+										</span>
+									)}
+								</>
+							))}
+						</nav>
+					)}
+				</div>
+			</Navbar>
+
+			<main class="flex-1 px-4 pb-16 sm:px-6">
+				<slot />
+			</main>
+		</div>
+	</div>
+</BaseLayout>
+
+<script>
+	document.querySelectorAll("[data-open-sidebar]").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			document.getElementById("mobile-sidebar")?.classList.remove("hidden");
+		});
+	});
+	document.querySelectorAll("[data-close-sidebar]").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			document.getElementById("mobile-sidebar")?.classList.add("hidden");
+		});
+	});
+</script>

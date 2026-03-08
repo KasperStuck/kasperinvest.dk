@@ -1,0 +1,40 @@
+---
+interface Props {
+	start: number;
+	videoId: string;
+	class?: string;
+}
+
+const { start, videoId, class: className } = Astro.props;
+
+const minutes = Math.floor(start / 60);
+const seconds = Math.floor(start % 60);
+const formatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+---
+
+<button
+	type="button"
+	class:list={[className, "text-sm/7 font-medium tabular-nums text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"]}
+	data-timestamp-button
+	data-start={start}
+	data-video-id={videoId}
+>
+	{formatted}
+</button>
+
+<script>
+	document.querySelectorAll("[data-timestamp-button]").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			const start = Number(btn.getAttribute("data-start"));
+			const videoId = btn.getAttribute("data-video-id");
+			if (!videoId) return;
+
+			const video = document.getElementById(videoId) as HTMLVideoElement | null;
+			if (!video) return;
+
+			video.currentTime = start;
+			video.play().catch(() => {});
+			video.scrollIntoView({ behavior: "smooth", block: "center" });
+		});
+	});
+</script>

@@ -1,0 +1,34 @@
+---
+import "@/styles/globals.css";
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const { title = "KasperInvest", description } = Astro.props;
+---
+
+<html lang="da" class="scroll-pt-16 font-sans antialiased text-gray-950 dark:bg-gray-950 dark:text-white">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width" />
+		<meta name="google-site-verification" content="CBj3TEDfutmUBZt1pTjvitR7T2R_1q8Rp6ToPE-Cy1Q" />
+		{description && <meta name="description" content={description} />}
+		<title>{title}</title>
+		<slot name="head" />
+		<script is:inline>
+			(function() {
+				var c = document.cookie.match(/(?:^|; )theme=(\w+)/);
+				var theme = c ? c[1] : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+				if (theme === "dark") document.documentElement.classList.add("dark");
+			})();
+		</script>
+	</head>
+	<body>
+		<div class="isolate">
+			<slot />
+		</div>
+	</body>
+</html>

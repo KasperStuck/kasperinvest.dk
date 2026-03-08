@@ -1,0 +1,47 @@
+---
+interface Props {
+  id?: string;
+  src: string;
+  poster?: string;
+  class?: string;
+}
+
+const { id, src, poster, class: className } = Astro.props;
+---
+
+<div class:list={[className, "group aspect-video w-full rounded-2xl bg-gray-950 dark:bg-gray-900"]} data-video-container>
+  <video
+    id={id}
+    src={src}
+    poster={poster}
+    preload="metadata"
+    controls
+    class="aspect-video w-full rounded-2xl sm:[.offscreen_&]:data-playing:fixed sm:[.offscreen_&]:data-playing:right-4 sm:[.offscreen_&]:data-playing:bottom-4 sm:[.offscreen_&]:data-playing:z-10 sm:[.offscreen_&]:data-playing:max-w-md sm:[.offscreen_&]:data-playing:rounded-xl sm:[.offscreen_&]:data-playing:shadow-lg"
+  />
+</div>
+
+<script>
+  document.querySelectorAll("[data-video-container]").forEach((container) => {
+    const video = container.querySelector("video");
+    if (!video) return;
+
+    video.addEventListener("play", () => video.setAttribute("data-playing", ""));
+    video.addEventListener("pause", () => {
+      if (!container.classList.contains("offscreen")) {
+        video.removeAttribute("data-playing");
+      }
+    });
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          container.classList.add("offscreen");
+        } else {
+          container.classList.remove("offscreen");
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(container);
+  });
+</script>

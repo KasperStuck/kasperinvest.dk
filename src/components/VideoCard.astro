@@ -1,0 +1,83 @@
+---
+import { Image } from "astro:assets";
+
+interface Props {
+	title: string;
+	subtitle?: string;
+	url: string;
+	target?: string;
+	thumbnailUrl: string;
+	videoUrl?: string;
+	duration?: number;
+	publishedAt?: string;
+}
+
+const { title, subtitle, url, target, thumbnailUrl, videoUrl, duration, publishedAt } = Astro.props;
+
+function formatDate(iso: string): string {
+	const d = new Date(iso);
+	const date = d.toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" });
+	const time = d.toLocaleTimeString("da-DK", { hour: "2-digit", minute: "2-digit" });
+	return `${date} kl. ${time}`;
+}
+
+function formatDuration(seconds: number): string {
+	const m = Math.floor(seconds / 60);
+	const s = seconds % 60;
+	return `${m}:${s.toString().padStart(2, "0")}`;
+}
+---
+
+<a href={url} target={target} rel={target === "_blank" ? "noopener noreferrer" : undefined} class="group block" data-video-card>
+	<div class="relative overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+		<Image
+			src={thumbnailUrl}
+			alt={title}
+			width={640}
+			height={360}
+			loading="lazy"
+			class="aspect-video w-full object-cover transition-opacity group-hover:opacity-75"
+		/>
+		{videoUrl && (
+			<video
+				src={videoUrl}
+				muted
+				loop
+				preload="none"
+				class="absolute inset-0 hidden aspect-video w-full object-cover"
+				data-hover-video
+			/>
+		)}
+		{subtitle && (
+			<div class="absolute left-2 bottom-2 rounded bg-gray-950/75 px-1.5 py-0.5 text-xs/5 font-medium text-white">
+				{subtitle}
+			</div>
+		)}
+		{duration && (
+			<div class="absolute right-2 bottom-2 rounded bg-gray-950/75 px-1.5 py-0.5 text-xs/5 font-medium text-white">
+				{formatDuration(duration)}
+			</div>
+		)}
+	</div>
+	{publishedAt && <p class="mt-2 text-sm/7 text-gray-500">{formatDate(publishedAt)}</p>}
+	<p class="mt-1 text-sm/7 font-semibold text-gray-950 dark:text-white">{title}</p>
+</a>
+
+<script>
+	document.querySelectorAll("[data-video-card]").forEach((card) => {
+		const video = card.querySelector<HTMLVideoElement>("[data-hover-video]");
+		const img = card.querySelector("img");
+		if (!video || !img) return;
+
+		card.addEventListener("mouseenter", () => {
+			video.classList.remove("hidden");
+			video.play().catch(() => {});
+		});
+
+		card.addEventListener("mouseleave", () => {
+			video.pause();
+			video.currentTime = 0;
+			video.classList.add("hidden");
+		});
+	});
+</script>

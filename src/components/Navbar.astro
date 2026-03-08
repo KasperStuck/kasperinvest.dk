@@ -1,0 +1,132 @@
+---
+import MenuIcon from "@/icons/MenuIcon.astro";
+import CloseIcon from "@/icons/CloseIcon.astro";
+import SunIcon from "@/icons/SunIcon.astro";
+import MoonIcon from "@/icons/MoonIcon.astro";
+import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
+---
+
+<div class="sticky top-0 z-10 bg-white/90 backdrop-blur-sm dark:bg-gray-950/90 flex items-center justify-between gap-x-8 px-4 py-4 sm:px-6">
+  <slot />
+  <nav class="flex items-center">
+    <!-- Mobile menu button -->
+    <button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md before:bg-white/75 before:backdrop-blur-sm dark:before:bg-gray-950/75 hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden lg:hidden" data-open-site-nav>
+      <MenuIcon class="text-gray-950 dark:text-white" />
+    </button>
+
+    <!-- Mobile nav dialog -->
+    <div class="fixed inset-0 z-50 hidden lg:hidden" id="site-mobile-nav">
+      <div class="fixed inset-0 bg-gray-950/25" data-close-site-nav></div>
+      <div class="fixed inset-0 flex justify-end pl-11">
+        <div class="w-full max-w-2xs bg-white px-4 py-5 ring ring-gray-950/10 sm:px-6 dark:bg-gray-950 dark:ring-white/10">
+          <div class="flex justify-end">
+            <button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md before:bg-white/75 before:backdrop-blur-sm dark:before:bg-gray-950/75 hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden" data-close-site-nav>
+              <CloseIcon class="text-gray-950 dark:text-white" />
+            </button>
+          </div>
+          <div class="mt-4">
+            <div class="flex flex-col gap-y-2">
+              <a href="/" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">Kursus</a>
+              <!-- Mobile: Folketingsvalg accordion -->
+              <div>
+                <button type="button" data-toggle-mobile-elections class="flex w-full items-center justify-between rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">
+                  Folketingsvalg
+                  <ChevronDownIcon class="size-4 transition-transform duration-200" data-mobile-elections-chevron />
+                </button>
+                <div class="hidden pl-4" data-mobile-elections-menu>
+                  <a href="/folketingsvalg/2026" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2026</a>
+                  <a href="/folketingsvalg/2022" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2022</a>
+                </div>
+              </div>
+              <a href="/youtube" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">YouTube</a>
+              <a href="/resources" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">Ressourcer</a>
+              <button type="button" data-toggle-theme class="cursor-pointer flex items-center gap-2 rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">
+                <SunIcon class="hidden text-current dark:block" />
+                <MoonIcon class="block text-current dark:hidden" />
+                Skift tema
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Desktop nav -->
+    <div class="flex items-center gap-x-6 text-sm/6 text-gray-950 max-lg:hidden dark:text-white">
+      <a href="/">Kursus</a>
+      <!-- Desktop: Folketingsvalg dropdown -->
+      <div class="relative" data-dropdown>
+        <button type="button" class="flex cursor-pointer items-center gap-1" data-dropdown-trigger>
+          Folketingsvalg
+          <ChevronDownIcon class="size-3.5 transition-transform duration-200" data-dropdown-chevron />
+        </button>
+        <div class="absolute top-full right-0 z-20 mt-2 hidden w-48 rounded-lg bg-white py-1 ring ring-gray-950/10 dark:bg-gray-950 dark:ring-white/10" data-dropdown-menu>
+          <a href="/folketingsvalg/2026" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2026</a>
+          <a href="/folketingsvalg/2022" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2022</a>
+        </div>
+      </div>
+      <a href="/youtube">YouTube</a>
+      <a href="/resources">Ressourcer</a>
+      <button type="button" class="cursor-pointer relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden" data-toggle-theme aria-label="Skift tema">
+        <SunIcon class="hidden text-gray-950 dark:block dark:text-white" />
+        <MoonIcon class="block text-gray-950 dark:hidden dark:text-white" />
+      </button>
+    </div>
+  </nav>
+</div>
+
+<script>
+  // Mobile nav
+  document.querySelectorAll("[data-open-site-nav]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.getElementById("site-mobile-nav")?.classList.remove("hidden");
+    });
+  });
+  document.querySelectorAll("[data-close-site-nav]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.getElementById("site-mobile-nav")?.classList.add("hidden");
+    });
+  });
+
+  // Mobile elections accordion
+  document.querySelectorAll("[data-toggle-mobile-elections]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const menu = btn.closest("div")?.querySelector("[data-mobile-elections-menu]");
+      const chevron = btn.querySelector("[data-mobile-elections-chevron]");
+      menu?.classList.toggle("hidden");
+      chevron?.classList.toggle("rotate-180");
+    });
+  });
+
+  // Desktop dropdown
+  document.querySelectorAll("[data-dropdown]").forEach((dropdown) => {
+    const trigger = dropdown.querySelector("[data-dropdown-trigger]");
+    const menu = dropdown.querySelector("[data-dropdown-menu]");
+    const chevron = dropdown.querySelector("[data-dropdown-chevron]");
+
+    trigger?.addEventListener("click", () => {
+      menu?.classList.toggle("hidden");
+      chevron?.classList.toggle("rotate-180");
+    });
+
+    // Close on click outside
+    document.addEventListener("click", (e) => {
+      if (!dropdown.contains(e.target as Node)) {
+        menu?.classList.add("hidden");
+        chevron?.classList.remove("rotate-180");
+      }
+    });
+  });
+
+  // Theme toggle (uses cookie so SSR can read it)
+  function applyTheme(dark: boolean) {
+    document.documentElement.classList.toggle("dark", dark);
+    document.cookie = `theme=${dark ? "dark" : "light"};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+  }
+
+  document.querySelectorAll("[data-toggle-theme]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      applyTheme(!document.documentElement.classList.contains("dark"));
+    });
+  });
+</script>

@@ -1,0 +1,278 @@
+---
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import VideoCard from "@/components/VideoCard.astro";
+import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
+import { convex, api } from "@/lib/convex";
+
+const videos = await convex.query(api.videos.listRecent, { limit: 50 });
+const channels = await convex.query(api.channels.list, {});
+const channelMap = new Map(channels.map((ch) => [ch.channelId, ch]));
+
+function videoUrl(v: { slug?: string; videoId: string; channelId: string }) {
+	const ch = channelMap.get(v.channelId);
+	const handle = ch?.customUrl?.replace(/^@/, "") ?? v.channelId;
+	return `/youtube/${handle}/${v.slug ?? v.videoId}`;
+}
+
+const allCategories = [
+	...new Set(videos.flatMap((v) => v.categories ?? [])),
+].sort();
+
+const activeChannels = [
+	...new Set(videos.map((v) => v.channelId)),
+].map((id) => ({ id, name: channelMap.get(id)?.name ?? id }));
+
+function capitalize(s: string): string {
+	return s.charAt(0).toUpperCase() + s.slice(1);
+}
+---
+
+<CenteredLayout
+	title="YouTube - KasperInvest"
+	description="Udvalgte videoer fra danske finans-youtubere om investering og privatøkonomi."
+>
+	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
+		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<span class="min-w-0 truncate text-gray-950 last:text-gray-600 dark:last:text-gray-400">YouTube</span>
+	</nav>
+
+	<div class="mt-10 flex flex-col gap-8 sm:mt-14 lg:flex-row lg:items-center lg:gap-12">
+		<div class="min-w-0 flex-1">
+			<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
+				YouTube
+			</h1>
+			<p class="mt-6 max-w-xl text-base/7 text-gray-700 dark:text-gray-400">
+				Her samler vi de bedste videoer fra danske finans-youtubere om investering og privatøkonomi. Du finder indhold fra kanaler der dækker alt fra aktieanalyse, ETF'er og dividendeaktier til budgetlægning, opsparing og skat. Uanset om du er nybegynder eller erfaren investor, kan du lære nyt fra nogle af Danmarks mest populære finanskanaler på YouTube.
+			</p>
+			<p class="mt-4 max-w-xl text-base/7 text-gray-700 dark:text-gray-400">
+				Brug filtrene herunder til at finde videoer efter type, kategori eller kanal. Udforsk emner som langsigtet investering, økonomisk frihed, porteføljeopbygning og pensionsplanlægning. Hver video er suppleret med en dansk opsummering, nøglepointer og en dybdegående artikel, så du hurtigt kan vurdere om indholdet er relevant for dig og din økonomi.
+			</p>
+		</div>
+		{videos[0] && (
+			<div class="w-full shrink-0 lg:w-1/2">
+				<VideoCard
+					url={videoUrl(videos[0])}
+					thumbnailUrl={videos[0].thumbnailUrl}
+					duration={videos[0].durationSeconds}
+					title={videos[0].title}
+					subtitle={channelMap.get(videos[0].channelId)?.name ?? ""}
+					publishedAt={videos[0].publishedAt}
+				/>
+			</div>
+		)}
+	</div>
+
+	<div class="mt-10 space-y-3">
+		<div class="flex flex-wrap items-center gap-2" id="type-filters">
+			<button type="button" data-type="all" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Alle</button>
+			<button type="button" data-type="videos" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Videoer</button>
+			<button type="button" data-type="shorts" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Shorts</button>
+
+			<span class="mx-1 h-4 w-px bg-gray-950/10 dark:bg-white/10"></span>
+
+			{allCategories.length > 0 && (
+				<div class="relative" id="category-dropdown">
+					<button
+						type="button"
+						id="category-toggle"
+						class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition inline-flex items-center gap-1.5"
+					>
+						Kategori
+						<ChevronDownIcon class="size-4" />
+					</button>
+					<div id="category-menu" class="absolute left-0 z-10 mt-2 hidden w-48 rounded-xl bg-white p-1 shadow-lg ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/15 dark:shadow-gray-950/50">
+						<button
+							type="button"
+							data-category=""
+							class="cursor-pointer w-full rounded-lg px-3 py-1.5 text-left text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+						>
+							Alle kategorier
+						</button>
+						{allCategories.map((cat) => (
+							<button
+								type="button"
+								data-category={cat}
+								class="cursor-pointer w-full rounded-lg px-3 py-1.5 text-left text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+							>
+								{capitalize(cat)}
+							</button>
+						))}
+					</div>
+				</div>
+			)}
+
+			{activeChannels.length > 1 && (
+				<div class="relative" id="channel-dropdown">
+					<button
+						type="button"
+						id="channel-toggle"
+						class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition inline-flex items-center gap-1.5"
+					>
+						Kanal
+						<ChevronDownIcon class="size-4" />
+					</button>
+					<div id="channel-menu" class="absolute left-0 z-10 mt-2 hidden w-56 rounded-xl bg-white p-1 shadow-lg ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/15 dark:shadow-gray-950/50">
+						<button
+							type="button"
+							data-channel=""
+							class="cursor-pointer w-full rounded-lg px-3 py-1.5 text-left text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+						>
+							Alle kanaler
+						</button>
+						{activeChannels.map((ch) => (
+							<button
+								type="button"
+								data-channel={ch.id}
+								class="cursor-pointer w-full rounded-lg px-3 py-1.5 text-left text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+							>
+								{ch.name}
+							</button>
+						))}
+					</div>
+				</div>
+			)}
+
+			<span id="active-category" class="hidden items-center gap-1 rounded-full bg-gray-950 px-2.5 py-0.5 text-xs/5 font-medium text-white dark:bg-white dark:text-gray-950">
+				<span id="active-category-label"></span>
+				<button type="button" id="clear-category" class="cursor-pointer ml-0.5 opacity-60 hover:opacity-100">&times;</button>
+			</span>
+			<span id="active-channel" class="hidden items-center gap-1 rounded-full bg-gray-950 px-2.5 py-0.5 text-xs/5 font-medium text-white dark:bg-white dark:text-gray-950">
+				<span id="active-channel-label"></span>
+				<button type="button" id="clear-channel" class="cursor-pointer ml-0.5 opacity-60 hover:opacity-100">&times;</button>
+			</span>
+		</div>
+	</div>
+
+	<p id="video-count" class="mt-4 text-sm/7 text-gray-500"></p>
+
+	{videos.length > 0 ? (
+		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 pb-32 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
+			{videos.slice(1).map((video) => (
+				<div
+					data-is-short={video.isShort ? "true" : "false"}
+					data-categories={JSON.stringify(video.categories ?? [])}
+					data-channel={video.channelId}
+				>
+					<VideoCard
+						url={videoUrl(video)}
+						thumbnailUrl={video.thumbnailUrl}
+						duration={video.durationSeconds}
+						title={video.title}
+						subtitle={channelMap.get(video.channelId)?.name ?? ""}
+						publishedAt={video.publishedAt}
+					/>
+				</div>
+			))}
+		</div>
+	) : (
+		<p class="mt-8 text-sm/7 text-gray-500">
+			Ingen videoer endnu. Videoer synkroniseres automatisk fra YouTube.
+		</p>
+	)}
+</CenteredLayout>
+
+<script>
+	const items = document.querySelectorAll<HTMLElement>("#video-grid > [data-is-short]");
+	const countEl = document.getElementById("video-count")!;
+
+	const activeClass = "bg-gray-950 text-white dark:bg-white dark:text-gray-950";
+	const inactiveClass = "bg-gray-950/5 text-gray-700 hover:bg-gray-950/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20";
+
+	let currentType = "videos";
+	let currentCategory = "";
+	let currentChannel = "";
+
+	const typeButtons = document.querySelectorAll<HTMLButtonElement>("#type-filters > button[data-type]");
+
+	function applyFilters() {
+		let visible = 0;
+
+		for (const item of items) {
+			const isShort = item.dataset.isShort === "true";
+			const categories: string[] = JSON.parse(item.dataset.categories || "[]");
+			const channel = item.dataset.channel || "";
+
+			const typeMatch =
+				currentType === "all" ||
+				(currentType === "videos" && !isShort) ||
+				(currentType === "shorts" && isShort);
+
+			const categoryMatch = !currentCategory || categories.includes(currentCategory);
+			const channelMatch = !currentChannel || channel === currentChannel;
+
+			const show = typeMatch && categoryMatch && channelMatch;
+			item.style.display = show ? "" : "none";
+			if (show) visible++;
+		}
+
+		countEl.textContent = `${visible} ${visible === 1 ? "video" : "videoer"}`;
+
+		for (const btn of typeButtons) {
+			const isActive = btn.dataset.type === currentType;
+			btn.className = `cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition ${isActive ? activeClass : inactiveClass}`;
+		}
+
+		updateBadge("active-category", "active-category-label", currentCategory, currentCategory);
+		updateBadge("active-channel", "active-channel-label", currentChannel,
+			currentChannel ? document.querySelector<HTMLButtonElement>(`[data-channel="${currentChannel}"]`)?.textContent?.trim() ?? currentChannel : "");
+	}
+
+	function updateBadge(badgeId: string, labelId: string, value: string, label: string) {
+		const badge = document.getElementById(badgeId)!;
+		const labelEl = document.getElementById(labelId)!;
+		if (value) {
+			labelEl.textContent = label;
+			badge.style.display = "inline-flex";
+		} else {
+			badge.style.display = "none";
+		}
+	}
+
+	for (const btn of typeButtons) {
+		btn.addEventListener("click", () => {
+			currentType = btn.dataset.type!;
+			applyFilters();
+		});
+	}
+
+	function setupDropdown(toggleId: string, menuId: string, onSelect: (value: string) => void) {
+		const toggle = document.getElementById(toggleId);
+		const menu = document.getElementById(menuId);
+		if (!toggle || !menu) return;
+
+		toggle.addEventListener("click", (e) => {
+			e.stopPropagation();
+			document.querySelectorAll("[id$='-menu']").forEach((m) => {
+				if (m !== menu) m.classList.add("hidden");
+			});
+			menu.classList.toggle("hidden");
+		});
+
+		menu.querySelectorAll<HTMLButtonElement>("button").forEach((btn) => {
+			btn.addEventListener("click", () => {
+				onSelect((btn.dataset.category ?? btn.dataset.channel) || "");
+				menu.classList.add("hidden");
+			});
+		});
+	}
+
+	setupDropdown("category-toggle", "category-menu", (val) => {
+		currentCategory = val;
+		applyFilters();
+	});
+
+	setupDropdown("channel-toggle", "channel-menu", (val) => {
+		currentChannel = val;
+		applyFilters();
+	});
+
+	document.getElementById("clear-category")?.addEventListener("click", () => { currentCategory = ""; applyFilters(); });
+	document.getElementById("clear-channel")?.addEventListener("click", () => { currentChannel = ""; applyFilters(); });
+
+	document.addEventListener("click", () => {
+		document.querySelectorAll("[id$='-menu']").forEach((m) => m.classList.add("hidden"));
+	});
+
+	applyFilters();
+</script>

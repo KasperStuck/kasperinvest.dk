@@ -1,0 +1,274 @@
+---
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import ClockIcon from "@/icons/ClockIcon.astro";
+import { convex, api } from "@/lib/convex";
+import { marked } from "marked";
+
+export async function getStaticPaths() {
+	const videos = await convex.query(api.videos.listRecent, { limit: 100 });
+	const channels = await convex.query(api.channels.list, {});
+	const channelMap = new Map(channels.map((ch) => [ch.channelId, ch.customUrl?.replace(/^@/, "") ?? ch.channelId]));
+
+	return videos
+		.filter((video) => video.slug)
+		.map((video) => ({
+			params: {
+				handle: channelMap.get(video.channelId) ?? video.channelId,
+				slug: video.slug!,
+			},
+			props: { videoId: video.videoId },
+		}));
+}
+
+const { videoId } = Astro.props;
+const video = await convex.query(api.videos.get, { videoId });
+
+if (!video) {
+	return Astro.redirect("/404");
+}
+
+const channels = await convex.query(api.channels.list, {});
+const channelMap = new Map(channels.map((ch) => [ch.channelId, ch]));
+const channel = channelMap.get(video.channelId);
+
+const allVideos = await convex.query(api.videos.listByChannel, {
+	channelId: video.channelId,
+	limit: 50,
+});
+const currentIndex = allVideos.findIndex((v) => v.videoId === video.videoId);
+const nextVideo = currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
+
+function formatDuration(seconds: number): string {
+	const h = Math.floor(seconds / 3600);
+	const m = Math.floor((seconds % 3600) / 60);
+	return h > 0 ? (m > 0 ? `${h} t ${m} min` : `${h} t`) : `${m} min`;
+}
+
+function formatDate(iso: string): string {
+	return new Date(iso).toLocaleDateString("da-DK", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+}
+
+function capitalize(s: string): string {
+	return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function videoUrl(v: { slug?: string; videoId: string; channelId: string }) {
+	const h = channelMap.get(v.channelId)?.customUrl?.replace(/^@/, "") ?? v.channelId;
+	return v.slug ? `/youtube/${h}/${v.slug}` : `/youtube/${h}/${v.videoId}`;
+}
+
+const articleHtml = video.article ? await marked.parse(video.article) : null;
+
+const { handle } = Astro.params;
+const canonicalUrl = `https://kasperinvest.dk/youtube/${handle}/${video.slug ?? video.videoId}`;
+
+function isoDuration(seconds: number): string {
+	const h = Math.floor(seconds / 3600);
+	const m = Math.floor((seconds % 3600) / 60);
+	const s = seconds % 60;
+	return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}${s ? `${s}S` : ""}`;
+}
+
+const videoSchema = {
+	"@context": "https://schema.org",
+	"@type": "VideoObject",
+	name: video.seoTitle ?? video.title,
+	description: video.seoDescription ?? video.summary ?? video.description.slice(0, 160),
+	thumbnailUrl: video.thumbnailUrl,
+	uploadDate: video.publishedAt,
+	...(video.durationSeconds && { duration: isoDuration(video.durationSeconds) }),
+	...(video.viewCount && { interactionStatistic: {
+		"@type": "InteractionCounter",
+		interactionType: { "@type": "WatchAction" },
+		userInteractionCount: video.viewCount,
+	}}),
+	contentUrl: `https://www.youtube.com/watch?v=${video.videoId}`,
+	embedUrl: `https://www.youtube.com/embed/${video.videoId}`,
+	author: {
+		"@type": "Person",
+		name: channel?.name ?? "YouTube",
+		...(channel?.customUrl && { url: `https://www.youtube.com/${channel.customUrl}` }),
+	},
+};
+
+const breadcrumbSchema = {
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: [
+		{ "@type": "ListItem", position: 1, name: "KasperInvest", item: "https://kasperinvest.dk/" },
+		{ "@type": "ListItem", position: 2, name: "YouTube", item: "https://kasperinvest.dk/youtube" },
+		{ "@type": "ListItem", position: 3, name: channel?.name ?? "YouTube", item: `https://kasperinvest.dk/youtube/${handle}` },
+		{ "@type": "ListItem", position: 4, name: video.title, item: canonicalUrl },
+	],
+};
+---
+
+<CenteredLayout
+	title={video.seoTitle ? `${video.seoTitle} - KasperInvest` : `${video.title} - KasperInvest`}
+	description={video.seoDescription ?? video.summary ?? video.description.slice(0, 160)}
+>
+	<script slot="head" type="application/ld+json" set:html={JSON.stringify(videoSchema)} />
+	<script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+	{video.faq && video.faq.length > 0 && (
+		<script slot="head" type="application/ld+json" set:html={JSON.stringify({
+			"@context": "https://schema.org",
+			"@type": "FAQPage",
+			mainEntity: video.faq.map((item) => ({
+				"@type": "Question",
+				name: item.question,
+				acceptedAnswer: {
+					"@type": "Answer",
+					text: item.answer,
+				},
+			})),
+		})} />
+	)}
+	<link slot="head" rel="canonical" href={canonicalUrl} />
+	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
+		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<a href="/youtube" class="min-w-0 shrink-0 text-gray-950 dark:text-white">YouTube</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<a href={`/youtube/${handle}`} class="min-w-0 shrink-0 text-gray-950 dark:text-white">{channel?.name ?? "YouTube"}</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">
+			{video.title}
+		</span>
+	</nav>
+
+	<div class="-mx-2 sm:-mx-4">
+		<div class="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+			<iframe
+				src={`https://www.youtube.com/embed/${video.videoId}`}
+				title={video.title}
+				allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+				allowfullscreen
+				class="absolute inset-0 h-full w-full"
+			/>
+		</div>
+	</div>
+
+	<div class="mx-auto max-w-2xl py-14">
+		<div class="space-y-16">
+			<div class="space-y-6">
+				<hgroup>
+					<a href={`/youtube/${handle}`} class="text-sm/7 font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+						{channel?.name ?? "YouTube"}
+					</a>
+					<h1 class="text-3xl tracking-tight text-gray-950 dark:text-white">
+						{video.title}
+					</h1>
+				</hgroup>
+
+				{video.categories && video.categories.length > 0 && (
+					<div class="flex flex-wrap gap-2">
+						{video.categories.map((cat) => (
+							<a
+								href={`/youtube?category=${cat}`}
+								class="inline-flex rounded-full bg-gray-950/5 px-3 py-1 text-sm/6 font-medium text-gray-950 hover:bg-gray-950/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+							>
+								{capitalize(cat)}
+							</a>
+						))}
+					</div>
+				)}
+
+				<div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm/7 text-gray-500">
+					{video.durationSeconds && (
+						<div class="flex items-center gap-x-2 font-semibold text-gray-950 dark:text-white">
+							<ClockIcon class="text-gray-950/40 dark:text-white/40" />
+							{formatDuration(video.durationSeconds)}
+						</div>
+					)}
+					<span>{formatDate(video.publishedAt)}</span>
+					{video.viewCount && (
+						<span>{video.viewCount.toLocaleString("da-DK")} visninger</span>
+					)}
+				</div>
+
+				{video.summary && (
+					<p class="text-base/7 text-gray-700 dark:text-gray-400">
+						{video.summary}
+					</p>
+				)}
+
+				{video.keyTakeaways && video.keyTakeaways.length > 0 && (
+					<div>
+						<h2 class="border-b border-gray-950/5 pb-4 text-2xl font-medium tracking-tight text-gray-950 dark:border-white/10 dark:text-white">
+							Hovedpointer
+						</h2>
+						<ul class="mt-8 list-disc pl-5 space-y-2 text-sm/7 text-gray-700 dark:text-gray-400">
+							{video.keyTakeaways.map((takeaway) => (
+								<li>{takeaway}</li>
+							))}
+						</ul>
+					</div>
+				)}
+			</div>
+
+			{articleHtml && (
+				<div class="prose prose-sm dark:prose-invert" set:html={articleHtml} />
+			)}
+
+			{video.faq && video.faq.length > 0 && (
+				<div>
+					<h2 class="border-b border-gray-950/5 pb-4 text-2xl font-medium tracking-tight text-gray-950 dark:border-white/10 dark:text-white">
+						Ofte stillede spørgsmål
+					</h2>
+					<dl class="mt-8 space-y-6">
+						{video.faq.map((item) => (
+							<div>
+								<dt class="text-sm/7 font-semibold text-gray-950 dark:text-white">
+									{item.question}
+								</dt>
+								<dd class="mt-1 text-sm/7 text-gray-700 dark:text-gray-400">
+									{item.answer}
+								</dd>
+							</div>
+						))}
+					</dl>
+				</div>
+			)}
+
+		</div>
+
+		<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
+			{nextVideo ? (
+				<div class="flow-root">
+					<a
+						href={videoUrl(nextVideo)}
+						class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
+					>
+						<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+							Næste video
+							<ChevronRightIcon />
+						</p>
+						<p class="mt-3 text-base/7 font-medium text-gray-950 dark:text-white">
+							{nextVideo.title}
+						</p>
+					</a>
+				</div>
+			) : (
+				<div class="flow-root">
+					<a
+						href="/youtube"
+						class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
+					>
+						<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+							Tilbage
+							<ChevronRightIcon />
+						</p>
+						<p class="mt-3 text-base/7 font-medium text-gray-950 dark:text-white">
+							Alle videoer
+						</p>
+					</a>
+				</div>
+			)}
+		</div>
+	</div>
+</CenteredLayout>

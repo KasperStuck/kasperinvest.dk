@@ -1,0 +1,218 @@
+---
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import ArticleIcon from "@/icons/ArticleIcon.astro";
+import CheckmarkIcon from "@/icons/CheckmarkIcon.astro";
+---
+
+<CenteredLayout title="Resources - KasperInvest" description="En samling af bøger, podcasts og gratis værktøjer, der kan hjælpe dig med at komme i gang med investering.">
+	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
+		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<span class="min-w-0 truncate text-gray-950 last:text-gray-600 dark:last:text-gray-400">Resources</span>
+	</nav>
+
+	<h1 class="mt-10 text-3xl/10 font-normal tracking-tight text-gray-950 sm:mt-14 dark:text-white">
+		Resources
+	</h1>
+	<p class="mt-6 max-w-xl text-base/7 text-gray-600 dark:text-gray-400">
+		En samling af bøger, podcasts og gratis værktøjer, der kan hjælpe dig med at komme i gang med investering.
+	</p>
+
+	<div class="mt-16 space-y-16">
+		<!-- Bøger på dansk -->
+		<section class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10">
+			<div class="col-span-full sm:col-span-1">
+				<div class="-mt-px inline-flex border-t border-gray-950 pt-px dark:border-white">
+					<div class="pt-4 text-sm/7 font-semibold text-gray-950 sm:pt-10 dark:text-white">
+						<h2>Bøger på dansk</h2>
+					</div>
+				</div>
+			</div>
+			<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
+				<p class="text-sm/8 text-gray-600 dark:text-gray-400">
+					Bøger skrevet til danske forhold med skat, pension og kontotyper i fokus.
+				</p>
+				<div class="mt-8 max-w-2xl space-y-6">
+					{[
+						{ title: "Den lille guide til investering", description: "Sarah Ophelia Møss", url: "https://www.saxo.com/dk/den-lille-guide-til-investering_sarah-ophelia-moess_epub_9788794155465" },
+						{ title: "Simpel investering", description: "Sune Bjørn Andersen", url: "https://www.saxo.com/dk/simpel-investering_haeftet_9788743012399" },
+						{ title: "Investering for nybegyndere", description: "Carsten Rasmussen", url: "https://www.saxo.com/dk/investering-for-nybegyndere_carsten-rasmussen_paperback_9788740456509" },
+						{ title: "Den lille guide til fundamental analyse", description: "Martin Gottlob & Sarah Ophelia Møss", url: "https://www.saxo.com/dk/den-lille-guide-til-fundamental-analyse_martin-gottlobsarah-ophelia-moess_haeftet_9788794086493" },
+						{ title: "Den lille guide til teknisk analyse", description: "Nanna Fick", url: "https://www.saxo.com/dk/den-lille-guide-til-teknisk-analyse_nanna-fick_haeftet_9788794086769" },
+						{ title: "Den lille guide til investering i teknologiaktier", description: "Jesper Bæk & Mads Christiansen", url: "https://www.saxo.com/dk/den-lille-guide-til-investering-i-teknologiaktier_bog_9788785237071" },
+						{ title: "Girls Just Wanna Have Funds", description: "Anna-Sophie Hartvigsen, Camilla Falkenberg & Emma Due Bitz", url: "https://www.saxo.com/dk/girls-just-wanna-have-funds_bog_9788727022673" },
+						{ title: "Den tålmodige investor", description: "Helge Larsen", url: "https://www.saxo.com/dk/den-taalmodige-investor_helge-larsen_haeftet_9788771809855" },
+						{ title: "Når hulemænd investerer", description: "Jens Balle", url: "https://www.saxo.com/dk/naar-hulemaend-investerer_bog_9788797431306" },
+						{ title: "Bobler, bullshit og børsfest", description: "Lars Tvede", url: "https://www.saxo.com/dk/bobler-bullshit-og-boersfest_lars-tvede_epub_9788740067293" },
+						{ title: "Børshandlens psykologi", description: "Lars Tvede", url: "https://www.saxo.com/dk/boershandlens-psykologi_lars-tvede_indbundet_9788740004908" },
+						{ title: "Warren Buffett — investor og kritiker", description: "Ole Risager", url: "https://www.saxo.com/dk/warren-buffett-investor-og-kritiker_ole-risager_haeftet_9788741275871" },
+						{ title: "Vejen til økonomisk frihed", description: "Frederik Strange", url: "https://www.bog-ide.dk/produkt/3799989/frederik-strange-vejen-til-oekonomisk-frihed" },
+						{ title: "Investér dig fri", description: "Pernille Wahlgren & Kasper Birk", url: "https://www.saxo.com/dk/invester-dig-fri_bog_9788702435221" },
+						{ title: "Derfor elsker jeg udbytteaktier", description: "Linnéa Schmidt", url: "https://www.plusbog.dk/derfor-elsker-jeg-udbytteaktier-linnea-schmidt-9788794251020" },
+						{ title: "Boost din opsparing med aktier", description: "Karsten Engmann Jensen", url: "https://www.saxo.com/dk/boost-din-opsparing-med-aktier_karsten-engmann-jensen_haeftet_9788750044093" },
+						{ title: "Den lille guide til børns opsparing", description: "Jacob Munk-Stander", url: "https://www.saxo.com/dk/den-lille-guide-til-boerns-opsparing_jacob-munk-c2adstander_epub_9788794258005" },
+					].map(({ title, description, url }) => (
+						<div class="flow-root">
+							<a href={url} target="_blank" rel="noopener noreferrer" class="-mx-3 -my-2 flex gap-3 rounded-xl px-3 py-2 text-sm/7 hover:bg-gray-950/4 dark:hover:bg-white/5">
+								<div class="flex h-lh shrink items-center">
+									<ArticleIcon class="text-gray-950 dark:text-white" />
+								</div>
+								<div>
+									<div>
+										<span class="font-semibold text-gray-950 dark:text-white">{title}</span>
+									</div>
+									<p class="text-gray-700 dark:text-gray-400">{description}</p>
+								</div>
+							</a>
+						</div>
+					))}
+				</div>
+			</div>
+		</section>
+
+		<!-- Bøger på engelsk -->
+		<section class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10">
+			<div class="col-span-full sm:col-span-1">
+				<div class="-mt-px inline-flex border-t border-gray-950 pt-px dark:border-white">
+					<div class="pt-4 text-sm/7 font-semibold text-gray-950 sm:pt-10 dark:text-white">
+						<h2>Bøger på engelsk</h2>
+					</div>
+				</div>
+			</div>
+			<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
+				<p class="text-sm/8 text-gray-600 dark:text-gray-400">
+					Klassikere og moderne titler om investering, adfærd og strategi.
+				</p>
+				<div class="mt-8 max-w-2xl space-y-6">
+					{[
+						{ title: "The Psychology of Money", description: "Morgan Housel", url: "https://www.amazon.com/Psychology-Money-Timeless-lessons-happiness/dp/0857197681" },
+						{ title: "The Intelligent Investor", description: "Benjamin Graham", url: "https://www.amazon.com/Intelligent-Investor-Definitive-Investing-Essentials/dp/0060555661" },
+						{ title: "One Up On Wall Street", description: "Peter Lynch", url: "https://www.amazon.com/One-Up-Wall-Street-Already/dp/0743200403" },
+						{ title: "The Little Book of Common Sense Investing", description: "John C. Bogle", url: "https://www.amazon.com/Little-Book-Common-Sense-Investing/dp/1119404509" },
+						{ title: "The Simple Path to Wealth", description: "J.L. Collins", url: "https://www.amazon.com/Simple-Path-Wealth-financial-independence/dp/1533667926" },
+						{ title: "Just Keep Buying", description: "Nick Maggiulli", url: "https://www.amazon.com/Just-Keep-Buying-Proven-wealth/dp/0857199714" },
+						{ title: "The Most Important Thing", description: "Howard Marks", url: "https://www.amazon.com/Most-Important-Thing-Uncommon-Thoughtful-ebook/dp/B07FMD9YSH" },
+						{ title: "Thinking, Fast and Slow", description: "Daniel Kahneman", url: "https://www.amazon.com/Thinking-Fast-Slow-Daniel-Kahneman/dp/0374533555" },
+						{ title: "A Random Walk Down Wall Street", description: "Burton G. Malkiel", url: "https://www.amazon.com/Random-Walk-down-Wall-Street/dp/0393352242" },
+						{ title: "Principles: Life and Work", description: "Ray Dalio", url: "https://www.amazon.com/Principles-Life-Work-Ray-Dalio/dp/1501124021" },
+						{ title: "Mastering the Market Cycle", description: "Howard Marks", url: "https://www.amazon.com/Mastering-Market-Cycle-Getting-Odds/dp/1328479250" },
+						{ title: "Die With Zero", description: "Bill Perkins", url: "https://www.amazon.com/Die-Zero-Getting-Your-Money/dp/0358099765" },
+						{ title: "Fooled by Randomness", description: "Nassim Nicholas Taleb", url: "https://www.amazon.com/Fooled-Randomness-Hidden-Markets-Incerto/dp/0812975219" },
+						{ title: "The Warren Buffett Way", description: "Robert G. Hagstrom", url: "https://www.amazon.com/Warren-Buffett-Way-Robert-Hagstrom/dp/1118503252" },
+						{ title: "Your Money or Your Life", description: "Vicki Robin & Joe Dominguez", url: "https://www.amazon.com/Your-Money-Life-Transforming-Relationship/dp/0143115766" },
+					].map(({ title, description, url }) => (
+						<div class="flow-root">
+							<a href={url} target="_blank" rel="noopener noreferrer" class="-mx-3 -my-2 flex gap-3 rounded-xl px-3 py-2 text-sm/7 hover:bg-gray-950/4 dark:hover:bg-white/5">
+								<div class="flex h-lh shrink items-center">
+									<ArticleIcon class="text-gray-950 dark:text-white" />
+								</div>
+								<div>
+									<div>
+										<span class="font-semibold text-gray-950 dark:text-white">{title}</span>
+									</div>
+									<p class="text-gray-700 dark:text-gray-400">{description}</p>
+								</div>
+							</a>
+						</div>
+					))}
+				</div>
+			</div>
+		</section>
+
+		<!-- Podcasts -->
+		<section class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10">
+			<div class="col-span-full sm:col-span-1">
+				<div class="-mt-px inline-flex border-t border-gray-950 pt-px dark:border-white">
+					<div class="pt-4 text-sm/7 font-semibold text-gray-950 sm:pt-10 dark:text-white">
+						<h2>Podcasts</h2>
+					</div>
+				</div>
+			</div>
+			<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
+				<p class="text-sm/8 text-gray-600 dark:text-gray-400">
+					Aktive danske investeringspodcasts på Spotify.
+				</p>
+				<div class="mt-8 max-w-2xl space-y-6">
+					{[
+						{ title: "Millionærklubben", description: "Euroinvestors daglige podcast om aktieanalyse, markedstendenser og makroøkonomi.", url: "https://open.spotify.com/show/64XZg5Fd4SYiwu4QKwWhmx" },
+						{ title: "Børssnak", description: "Saxo Banks ugentlige 10-minutters podcast der klæder dig på til ugen på børsen.", url: "https://open.spotify.com/show/1V821x9aD7f4P6pJG3deEE" },
+						{ title: "Saxo Market Call", description: "Saxo Banks daglige markedsanalyse med global finansoverblik.", url: "https://open.spotify.com/show/0TQCo0xVyovEigewCbc9uo" },
+						{ title: "Investeringspodcasten", description: "Nordnets ugentlige podcast med Per Hansen og Helge Larsen om markedstrends og aktier.", url: "https://open.spotify.com/show/0XRyvXVEXUv88S8mQTzGwO" },
+						{ title: "Store Penge", description: "Ekstra Bladets finanspodcast om makroøkonomi og geopolitik, 3x ugentligt.", url: "https://open.spotify.com/show/5FT40MjDDi4oeUZg6gw1vO" },
+						{ title: "Børsen Investor", description: "Børsens ugentlige podcast med professionelle investorer der analyserer aktier.", url: "https://open.spotify.com/show/5X8eY66OetwPMCAy8S5z9j" },
+						{ title: "Ophelias Invest Talk", description: "Sarah Ophelia Møss' ugentlige podcast om investering, opsparing og privatøkonomi.", url: "https://open.spotify.com/show/1WZFd47tes36IqVdgmPPYb" },
+						{ title: "Kurs mod ugen", description: "Dansk Aktionærforenings ugentlige lørdag-overblik over globale finansmarkeder.", url: "https://open.spotify.com/show/0vLJeA0Q6qlOuRLn9BOhUJ" },
+						{ title: "Kvinde, kend din kurs", description: "Female Invests ugentlige podcast med aktie-updates og investering for kvinder.", url: "https://open.spotify.com/show/6kbAPJURZ9Q0fdxGqE7ava" },
+						{ title: "Aktieuniverset", description: "Mads Christiansens podcast for både nye og erfarne investorer.", url: "https://open.spotify.com/show/5ZiIEUVARx2infXj2bONHn" },
+						{ title: "Investering på hjernen", description: "Jens Balles podcast om investorpsykologi og de mentale fælder ved investering.", url: "https://open.spotify.com/show/1xxHx1gETc6QEOjlYr70u4" },
+						{ title: "Ejendomsinvestoren", description: "Podcast udelukkende om ejendomsinvestering — handler, strategier og lån.", url: "https://open.spotify.com/show/2aFRYKuAbg919yHeFXxbIl" },
+						{ title: "PengePulsen", description: "Nordeas podcast om privatøkonomi, investeringer, boligmarked og pension.", url: "https://open.spotify.com/show/34NZ8C7sjCOYMwNGoPtzCq" },
+						{ title: "Pengestærk", description: "Arbejdernes Landsbanks podcast om investering for begyndere og erfarne.", url: "https://open.spotify.com/show/7djUW4Vck87pYIvHf7BmsR" },
+					].map(({ title, description, url }) => (
+						<div class="flow-root">
+							<a href={url} target="_blank" rel="noopener noreferrer" class="-mx-3 -my-2 flex gap-3 rounded-xl px-3 py-2 text-sm/7 hover:bg-gray-950/4 dark:hover:bg-white/5">
+								<div class="flex h-lh shrink items-center">
+									<ArticleIcon class="text-gray-950 dark:text-white" />
+								</div>
+								<div>
+									<div>
+										<span class="font-semibold text-gray-950 dark:text-white">{title}</span>
+									</div>
+									<p class="text-gray-700 dark:text-gray-400">{description}</p>
+								</div>
+							</a>
+						</div>
+					))}
+				</div>
+			</div>
+		</section>
+
+		<!-- Gratis værktøjer -->
+		<section class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10">
+			<div class="col-span-full sm:col-span-1">
+				<div class="-mt-px inline-flex border-t border-gray-950 pt-px dark:border-white">
+					<div class="pt-4 text-sm/7 font-semibold text-gray-950 sm:pt-10 dark:text-white">
+						<h2>Gratis værktøjer</h2>
+					</div>
+				</div>
+			</div>
+			<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
+				<p class="text-sm/8 text-gray-600 dark:text-gray-400">
+					Online platforme til research, screening og porteføljeoverblik.
+				</p>
+				<div class="@container">
+					<div class="mt-8 grid grid-cols-1 gap-x-8 gap-y-6 @2xl:grid-cols-2">
+						{[
+							{ title: "justETF", description: "Søg, sammenlign og analyser ETF'er for europæiske investorer.", url: "https://www.justetf.com/en/" },
+							{ title: "Yahoo Finance", description: "Watchlists, porteføljesporing og aktiescreener.", url: "https://finance.yahoo.com/" },
+							{ title: "TradingView", description: "Aktiescreener med fundamentale nøgletal og tekniske indikatorer.", url: "https://www.tradingview.com/" },
+							{ title: "Koyfin", description: "Research, dashboards og porteføljeoverblik for aktier, ETF'er og fonde.", url: "https://www.koyfin.com/" },
+							{ title: "CompaniesMarketCap", description: "Hurtig sammenligning af selskabers størrelse og markedsværdi.", url: "https://companiesmarketcap.com/" },
+							{ title: "Morningstar", description: "Screener med ratings og analyser for aktier, fonde og ETF'er.", url: "https://www.morningstar.com/" },
+							{ title: "Finviz", description: "Gratis aktiescreener med 60+ filtre, heatmaps og tekniske mønstre.", url: "https://finviz.com" },
+							{ title: "TIKR", description: "Aktieanalyse med screener og finansielle data 10+ år tilbage.", url: "https://www.tikr.com" },
+							{ title: "Curvo Backtest", description: "Test historisk performance af ETF-porteføljer for europæiske investorer.", url: "https://curvo.eu/backtest/en" },
+							{ title: "FRED", description: "840.000+ økonomiske dataserier fra hele verden til makroanalyse.", url: "https://fred.stlouisfed.org" },
+							{ title: "Sharesight", description: "Portefølje-tracker med automatisk udbyttesporing og Nordnet-integration.", url: "https://www.sharesight.com" },
+							{ title: "SEC EDGAR", description: "Gratis adgang til amerikanske selskabers årsrapporter og regnskaber.", url: "https://www.sec.gov/edgar/browse/" },
+						].map(({ title, description, url }) => (
+							<div class="flow-root">
+								<a href={url} target="_blank" rel="noopener noreferrer" class="-mx-3 -my-2 flex gap-3 rounded-xl px-3 py-2 text-sm/7 hover:bg-gray-950/4 dark:hover:bg-white/5">
+									<div class="flex h-lh shrink items-center">
+										<CheckmarkIcon class="text-gray-950 dark:text-white" />
+									</div>
+									<div>
+										<div>
+											<span class="font-semibold text-gray-950 dark:text-white">{title}</span>
+										</div>
+										<p class="text-gray-700 dark:text-gray-400">{description}</p>
+									</div>
+								</a>
+							</div>
+						))}
+					</div>
+				</div>
+			</div>
+		</section>
+	</div>
+</CenteredLayout>

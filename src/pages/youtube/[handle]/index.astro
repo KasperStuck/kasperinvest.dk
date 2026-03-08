@@ -1,0 +1,241 @@
+---
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import VideoCard from "@/components/VideoCard.astro";
+import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
+import { convex, api } from "@/lib/convex";
+
+export async function getStaticPaths() {
+	const channels = await convex.query(api.channels.list, {});
+	return channels
+		.filter((ch) => ch.customUrl)
+		.map((ch) => ({
+			params: { handle: ch.customUrl!.replace(/^@/, "") },
+			props: { channelId: ch.channelId },
+		}));
+}
+
+const { channelId } = Astro.props;
+const { handle } = Astro.params;
+
+const channel = await convex.query(api.channels.get, { channelId });
+const videos = await convex.query(api.videos.listByChannel, { channelId, limit: 50 });
+
+function videoUrl(v: { slug?: string; videoId: string }) {
+	return `/youtube/${handle}/${v.slug ?? v.videoId}`;
+}
+
+function capitalize(s: string): string {
+	return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+const allCategories = [
+	...new Set(videos.flatMap((v) => v.categories ?? [])),
+].sort();
+---
+
+<CenteredLayout
+	title={`${channel?.name ?? handle} - YouTube - KasperInvest`}
+	description={`Videoer fra ${channel?.name ?? handle} om investering og privatøkonomi.`}
+>
+	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
+		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<a href="/youtube" class="min-w-0 shrink-0 text-gray-950 dark:text-white">YouTube</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">{channel?.name ?? handle}</span>
+	</nav>
+
+	<div class="mt-10 flex flex-col gap-8 sm:mt-14 lg:flex-row lg:items-center lg:gap-12">
+		<div class="min-w-0 flex-1">
+			<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
+				{channel?.name ?? handle}
+			</h1>
+			{(channel?.aiDescription || channel?.description) && (
+				<div class="mt-6 max-w-xl space-y-3 text-base/7 text-gray-700 dark:text-gray-400">
+					{(channel.aiDescription ?? channel.description ?? "").split(/\n\n+/).map((paragraph) => (
+						<p>{paragraph.trim()}</p>
+					))}
+				</div>
+			)}
+		</div>
+		{videos[0] && (
+			<div class="w-full shrink-0 lg:w-1/2">
+				<VideoCard
+					url={videoUrl(videos[0])}
+					thumbnailUrl={videos[0].thumbnailUrl}
+					duration={videos[0].durationSeconds}
+					title={videos[0].title}
+					subtitle={channel?.name ?? ""}
+					publishedAt={videos[0].publishedAt}
+				/>
+			</div>
+		)}
+	</div>
+
+	<div class="mt-10 space-y-3">
+		<div class="flex flex-wrap items-center gap-2" id="type-filters">
+			<button type="button" data-type="all" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Alle</button>
+			<button type="button" data-type="videos" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Videoer</button>
+			<button type="button" data-type="shorts" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Shorts</button>
+
+			{allCategories.length > 0 && (
+				<>
+					<span class="mx-1 h-4 w-px bg-gray-950/10 dark:bg-white/10"></span>
+					<div class="relative" id="category-dropdown">
+						<button
+							type="button"
+							id="category-toggle"
+							class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition inline-flex items-center gap-1.5"
+						>
+							Kategori
+							<ChevronDownIcon class="size-4" />
+						</button>
+						<div id="category-menu" class="absolute left-0 z-10 mt-2 hidden w-48 rounded-xl bg-white p-1 shadow-lg ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/15 dark:shadow-gray-950/50">
+							<button
+								type="button"
+								data-category=""
+								class="cursor-pointer w-full rounded-lg px-3 py-1.5 text-left text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+							>
+								Alle kategorier
+							</button>
+							{allCategories.map((cat) => (
+								<button
+									type="button"
+									data-category={cat}
+									class="cursor-pointer w-full rounded-lg px-3 py-1.5 text-left text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+								>
+									{capitalize(cat)}
+								</button>
+							))}
+						</div>
+					</div>
+				</>
+			)}
+
+			<span id="active-category" class="hidden items-center gap-1 rounded-full bg-gray-950 px-2.5 py-0.5 text-xs/5 font-medium text-white dark:bg-white dark:text-gray-950">
+				<span id="active-category-label"></span>
+				<button type="button" id="clear-category" class="cursor-pointer ml-0.5 opacity-60 hover:opacity-100">&times;</button>
+			</span>
+		</div>
+	</div>
+
+	<p id="video-count" class="mt-4 text-sm/7 text-gray-500"></p>
+
+	{videos.length > 0 ? (
+		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 pb-32 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
+			{videos.slice(1).map((video) => (
+				<div
+					data-is-short={video.isShort ? "true" : "false"}
+					data-categories={JSON.stringify(video.categories ?? [])}
+				>
+					<VideoCard
+						url={videoUrl(video)}
+						thumbnailUrl={video.thumbnailUrl}
+						duration={video.durationSeconds}
+						title={video.title}
+						subtitle={channel?.name ?? ""}
+							publishedAt={video.publishedAt}
+					/>
+				</div>
+			))}
+		</div>
+	) : (
+		<p class="mt-8 text-sm/7 text-gray-500">
+			Ingen videoer endnu.
+		</p>
+	)}
+</CenteredLayout>
+
+<script>
+	const items = document.querySelectorAll<HTMLElement>("#video-grid > [data-is-short]");
+	const countEl = document.getElementById("video-count")!;
+
+	const activeClass = "bg-gray-950 text-white dark:bg-white dark:text-gray-950";
+	const inactiveClass = "bg-gray-950/5 text-gray-700 hover:bg-gray-950/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20";
+
+	let currentType = "videos";
+	let currentCategory = "";
+
+	const typeButtons = document.querySelectorAll<HTMLButtonElement>("#type-filters > button[data-type]");
+
+	function applyFilters() {
+		let visible = 0;
+
+		for (const item of items) {
+			const isShort = item.dataset.isShort === "true";
+			const categories: string[] = JSON.parse(item.dataset.categories || "[]");
+
+			const typeMatch =
+				currentType === "all" ||
+				(currentType === "videos" && !isShort) ||
+				(currentType === "shorts" && isShort);
+
+			const categoryMatch = !currentCategory || categories.includes(currentCategory);
+
+			const show = typeMatch && categoryMatch;
+			item.style.display = show ? "" : "none";
+			if (show) visible++;
+		}
+
+		countEl.textContent = `${visible} ${visible === 1 ? "video" : "videoer"}`;
+
+		for (const btn of typeButtons) {
+			const isActive = btn.dataset.type === currentType;
+			btn.className = `cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition ${isActive ? activeClass : inactiveClass}`;
+		}
+
+		updateBadge("active-category", "active-category-label", currentCategory, currentCategory);
+	}
+
+	function updateBadge(badgeId: string, labelId: string, value: string, label: string) {
+		const badge = document.getElementById(badgeId)!;
+		const labelEl = document.getElementById(labelId)!;
+		if (value) {
+			labelEl.textContent = label;
+			badge.style.display = "inline-flex";
+		} else {
+			badge.style.display = "none";
+		}
+	}
+
+	for (const btn of typeButtons) {
+		btn.addEventListener("click", () => {
+			currentType = btn.dataset.type!;
+			applyFilters();
+		});
+	}
+
+	function setupDropdown(toggleId: string, menuId: string, onSelect: (value: string) => void) {
+		const toggle = document.getElementById(toggleId);
+		const menu = document.getElementById(menuId);
+		if (!toggle || !menu) return;
+
+		toggle.addEventListener("click", (e) => {
+			e.stopPropagation();
+			document.querySelectorAll("[id$='-menu']").forEach((m) => {
+				if (m !== menu) m.classList.add("hidden");
+			});
+			menu.classList.toggle("hidden");
+		});
+
+		menu.querySelectorAll<HTMLButtonElement>("button").forEach((btn) => {
+			btn.addEventListener("click", () => {
+				onSelect(btn.dataset.category || "");
+				menu.classList.add("hidden");
+			});
+		});
+	}
+
+	setupDropdown("category-toggle", "category-menu", (val) => {
+		currentCategory = val;
+		applyFilters();
+	});
+
+	document.getElementById("clear-category")?.addEventListener("click", () => { currentCategory = ""; applyFilters(); });
+
+	document.addEventListener("click", () => {
+		document.querySelectorAll("[id$='-menu']").forEach((m) => m.classList.add("hidden"));
+	});
+
+	applyFilters();
+</script>

@@ -1,0 +1,105 @@
+---
+import SidebarLayout from "@/layouts/SidebarLayout.astro";
+import VideoPlayer from "@/components/VideoPlayer.astro";
+import TableOfContents from "@/components/TableOfContents.astro";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import { getModules, getLesson } from "@/data/lessons";
+
+export function getStaticPaths() {
+	const modules = getModules();
+	const paths = modules.flatMap((module) =>
+		module.lessons.map((lesson) => ({
+			params: { slug: lesson.id },
+		})),
+	);
+	return paths;
+}
+
+const { slug } = Astro.params;
+const lesson = await getLesson(slug!);
+
+if (!lesson) {
+	return Astro.redirect("/404");
+}
+
+const mdxFiles = import.meta.glob("/src/data/lessons/*.mdx");
+const mdxPath = `/src/data/lessons/${slug}.mdx`;
+const mdxModule = mdxFiles[mdxPath] ? await (mdxFiles[mdxPath]() as Promise<{ default: any }>) : null;
+const Content = mdxModule?.default;
+
+const breadcrumbItems = [
+	{ label: "KasperInvest", href: "/" },
+	{ label: lesson.module.title, href: `/#${lesson.module.id}`, class: "max-md:hidden" },
+	{ label: lesson.title },
+];
+---
+
+<SidebarLayout
+	title={`${lesson.title} - KasperInvest`}
+	description={lesson.description}
+	breadcrumbItems={breadcrumbItems}
+>
+	<div class="mx-auto max-w-7xl">
+		{lesson.video && <div class="-mx-2 sm:-mx-4">
+			<VideoPlayer
+				id="video"
+				src={lesson.video.url}
+				poster={lesson.video.thumbnail}
+			/>
+		</div>}
+		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 lg:max-w-5xl">
+			<div class="w-full flex-1">
+				<div id="content" class="prose prose-sm dark:prose-invert">
+					{Content ? <Content /> : (
+						<div class="flex flex-col items-center justify-center py-20 text-center">
+							<p class="text-lg font-medium text-gray-950 dark:text-white">Kommer snart</p>
+							<p class="mt-2 text-sm text-gray-500">Denne lektion er under udarbejdelse.</p>
+						</div>
+					)}
+				</div>
+				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
+					{lesson.next ? (
+						<div class="flow-root">
+							<a
+								href={`/${lesson.next.id}`}
+								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
+							>
+								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+									Up next
+									<ChevronRightIcon />
+								</p>
+								<p class="mt-3 text-base/7 font-medium text-gray-950 dark:text-white">
+									{lesson.next.title}
+								</p>
+								<p class="text-sm/7 text-gray-700 dark:text-gray-400">
+									{lesson.next.description}
+								</p>
+							</a>
+						</div>
+					) : (
+						<div class="flow-root">
+							<a
+								href="/youtube"
+								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
+							>
+								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+									Up next
+									<ChevronRightIcon />
+								</p>
+								<p class="mt-3 text-base/7 font-medium text-gray-950 dark:text-white">
+									YouTube
+								</p>
+								<p class="text-sm/7 text-gray-700 dark:text-gray-400">
+									Udvalgte videoer fra danske finans-youtubere om investering og privatøkonomi.
+								</p>
+							</a>
+						</div>
+					)}
+				</div>
+			</div>
+			<div class="hidden w-66 lg:block">
+				<TableOfContents contentId="content" />
+			</div>
+		</div>
+	</div>
+</SidebarLayout>

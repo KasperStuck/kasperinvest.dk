@@ -1,0 +1,25 @@
+---
+import AuthLayout from "@/layouts/AuthLayout.astro";
+import TextInput from "@/components/TextInput.astro";
+---
+
+<AuthLayout title="Login - KasperInvest">
+	<h1 class="sr-only">Login</h1>
+	<form action="/otp">
+		<div>
+			<label
+				for="email"
+				class="block w-full text-sm/7 font-medium text-gray-950 dark:text-white"
+			>
+				Email
+			</label>
+			<TextInput type="email" id="email" required class="mt-2" />
+		</div>
+		<button
+			type="submit"
+			class="mt-6 w-full rounded-full bg-gray-950 px-3.5 py-2 text-sm/6 font-semibold text-white hover:bg-gray-800 focus:outline-2 focus:outline-offset-2 focus:outline-blue-500 dark:bg-gray-700 dark:hover:bg-gray-600"
+		>
+			Send one-time password
+		</button>
+	</form>
+</AuthLayout>

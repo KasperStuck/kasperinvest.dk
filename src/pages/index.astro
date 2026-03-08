@@ -1,0 +1,164 @@
+---
+import SidebarLayout from "@/layouts/SidebarLayout.astro";
+import Logo from "@/components/Logo.astro";
+import BookIcon from "@/icons/BookIcon.astro";
+import ClockIcon from "@/icons/ClockIcon.astro";
+import LessonsIcon from "@/icons/LessonsIcon.astro";
+import PlayIcon from "@/icons/PlayIcon.astro";
+import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
+import { Image } from "astro:assets";
+import { getModules, type Module } from "@/data/lessons";
+
+const modules = getModules();
+const lessons = modules.flatMap(({ lessons }) => lessons);
+const duration = lessons.reduce(
+	(sum, { video }) => sum + (video?.duration ?? 0),
+	0,
+);
+
+function formatDuration(seconds: number): string {
+	const h = Math.floor(seconds / 3600);
+	const m = Math.floor((seconds % 3600) / 60);
+	return h > 0 ? (m > 0 ? `${h} t ${m} min` : `${h} t`) : `${m} min`;
+}
+
+function formatLessonDuration(seconds: number): string {
+	const m = Math.floor(seconds / 60);
+	const s = seconds % 60;
+	return `${m}:${s.toString().padStart(2, "0")}`;
+}
+---
+
+<SidebarLayout
+	title="KasperInvest - Investeringskursus 2.0"
+	description="Lær at investere ansvarligt i Danmark via en metodisk proces: privatøkonomi, strategi, produkter, handel, analyse, skat og nedsparing."
+	breadcrumbItems={[
+		{ label: "KasperInvest", href: "/" },
+		{ label: "Oversigt" },
+	]}
+>
+	<div class="relative mx-auto max-w-7xl">
+		<div class="absolute -inset-x-2 top-0 -z-10 h-80 overflow-hidden rounded-t-2xl mask-b-from-60% sm:h-88 md:h-112 lg:-inset-x-4 lg:h-128">
+			<Image
+				alt=""
+				src="https://kasperstuck.dk/images/kasper-stuck-gradient.webp"
+				width={1920}
+				height={1080}
+				loading="eager"
+				class="absolute inset-0 h-full w-full mask-l-from-60% object-cover object-center opacity-40"
+			/>
+			<div class="absolute inset-0 rounded-t-2xl outline-1 -outline-offset-1 outline-gray-950/10 dark:outline-white/10"></div>
+		</div>
+		<div class="mx-auto max-w-6xl">
+			<div class="relative">
+				<div class="px-4 pt-48 pb-12 lg:py-24">
+					<Logo class="text-2xl text-gray-950 dark:text-white" />
+					<h1 class="sr-only">Kursusoversigt</h1>
+					<p class="mt-7 max-w-lg text-base/7 text-pretty text-gray-600 dark:text-gray-400">
+						Lær at investere ansvarligt i Danmark via en metodisk proces:
+						privatøkonomi, strategi, produkter, handel, analyse, skat og nedsparing.
+					</p>
+					<div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3 text-sm/7 font-semibold text-gray-950 sm:gap-3 dark:text-white">
+						<div class="flex items-center gap-1.5">
+							<BookIcon class="text-gray-950/40 dark:text-white/40" />
+							{modules.length} moduler
+						</div>
+						<span class="hidden text-gray-950/25 sm:inline dark:text-white/25">
+							&middot;
+						</span>
+						<div class="flex items-center gap-1.5">
+							<LessonsIcon class="text-gray-950/40 dark:text-white/40" />
+							{lessons.length} lektioner
+						</div>
+						{duration > 0 && (
+						<>
+							<span class="hidden text-gray-950/25 sm:inline dark:text-white/25">
+								&middot;
+							</span>
+							<div class="flex items-center gap-1.5">
+								<ClockIcon class="text-gray-950/40 dark:text-white/40" />
+								{formatDuration(duration)}
+							</div>
+						</>
+					)}
+					</div>
+					<div class="mt-10">
+						<a
+							href={`/${modules[0].lessons[0].id}`}
+							class="inline-flex items-center gap-x-2 rounded-full bg-gray-950 px-3 py-0.5 text-sm/7 font-semibold text-white hover:bg-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600"
+						>
+							<PlayIcon class="text-white" />
+							Start kurset
+						</a>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 gap-y-16 pb-10 sm:px-4">
+					{modules.map((module: Module, index: number) => (
+						<section
+							id={module.id}
+							class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10"
+						>
+							<div class="col-span-full sm:col-span-1">
+								<div class="-mt-px inline-flex border-t border-gray-950 pt-px dark:border-white">
+									<div class="pt-4 text-sm/7 font-semibold text-gray-950 sm:pt-10 dark:text-white">
+										<h2>Del {index + 1}</h2>
+									</div>
+								</div>
+							</div>
+							<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
+								<div class="max-w-2xl">
+									<h2 class="text-2xl/7 font-medium tracking-tight text-pretty text-gray-950 dark:text-white">
+										{module.title}
+									</h2>
+									<p class="mt-4 text-base/7 text-gray-700 sm:text-sm/7 dark:text-gray-400">
+										{module.description}
+									</p>
+									<ol class="mt-6 space-y-4">
+										{module.lessons.map((lesson) => (
+											<li>
+												<div class="flow-root">
+													<a
+														href={`/${lesson.id}`}
+														class="-mx-3 -my-2 flex items-start gap-3 rounded-xl px-3 py-2 text-sm/7 hover:bg-gray-950/4 dark:hover:bg-white/5"
+													>
+														<div class="flex h-lh shrink items-center">
+															<CirclePlayIcon class="text-gray-950 dark:text-white" />
+														</div>
+														<div>
+															<div>
+																<span class="font-semibold text-gray-950 dark:text-white">
+																	{lesson.title}
+																</span>
+																{lesson.video?.duration && (
+																	<>
+																		<span class="mx-2 hidden text-gray-950/25 sm:inline dark:text-white/25">
+																			&middot;
+																		</span>
+																		<span class="hidden text-gray-500 sm:inline">
+																			{formatLessonDuration(lesson.video.duration)}
+																		</span>
+																	</>
+																)}
+															</div>
+															<p class="text-gray-700 dark:text-gray-400">{lesson.description}</p>
+															{lesson.video?.duration && (
+																<div class="text-gray-500 sm:hidden">
+																	{formatLessonDuration(lesson.video.duration)}
+																</div>
+															)}
+														</div>
+													</a>
+												</div>
+											</li>
+										))}
+									</ol>
+								</div>
+							</div>
+						</section>
+					))}
+				</div>
+			</div>
+		</div>
+	</div>
+</SidebarLayout>

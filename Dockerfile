@@ -7,8 +7,7 @@ RUN bun install --frozen-lockfile
 
 COPY . .
 
-ARG CONVEX_URL
-ENV CONVEX_URL=$CONVEX_URL
+ENV CONVEX_URL=https://combative-spider-931.convex.cloud
 RUN bun run build
 
 # Production stage

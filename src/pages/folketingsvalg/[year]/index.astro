@@ -1,0 +1,64 @@
+---
+import ElectionLayout from "@/layouts/ElectionLayout.astro";
+import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
+import { getElections, getElection } from "@/data/elections";
+
+export function getStaticPaths() {
+	return getElections().map((election) => ({
+		params: { year: String(election.year) },
+	}));
+}
+
+const { year } = Astro.params;
+const election = getElection(Number(year));
+
+if (!election) {
+	return Astro.redirect("/404");
+}
+
+const breadcrumbItems = [
+	{ label: "KasperInvest", href: "/" },
+	{ label: election.title },
+];
+---
+
+<ElectionLayout
+	title={`${election.title} - KasperInvest`}
+	description={election.description}
+	breadcrumbItems={breadcrumbItems}
+	election={election}
+>
+	<div class="mx-auto max-w-2xl py-10 sm:py-14 lg:max-w-5xl">
+		<h1 class="text-2xl/7 font-medium tracking-tight text-gray-950 dark:text-white">
+			{election.title}
+		</h1>
+		<p class="mt-4 text-base/7 text-gray-700 dark:text-gray-400">
+			{election.description}
+		</p>
+
+		<ol class="mt-10 space-y-4">
+			{election.articles.map((article) => (
+				<li>
+					<div class="flow-root">
+						<a
+							href={`/folketingsvalg/${election.year}/${article.id}`}
+							class="-mx-3 -my-2 flex items-start gap-3 rounded-xl px-3 py-2 text-sm/7 hover:bg-gray-950/4 dark:hover:bg-white/5"
+						>
+							<div class="flex h-lh shrink items-center">
+								<CirclePlayIcon class="text-gray-950 dark:text-white" />
+							</div>
+							<div>
+								<div>
+									<span class="font-semibold text-gray-950 dark:text-white">
+										{article.title}
+									</span>
+								</div>
+								<p class="text-gray-700 dark:text-gray-400">{article.description}</p>
+							</div>
+						</a>
+					</div>
+				</li>
+			))}
+		</ol>
+	</div>
+</ElectionLayout>

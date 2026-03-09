@@ -10,9 +10,10 @@ interface Props {
 	videoUrl?: string;
 	duration?: number;
 	publishedAt?: string;
+	viewCount?: number;
 }
 
-const { title, subtitle, url, target, thumbnailUrl, videoUrl, duration, publishedAt } = Astro.props;
+const { title, subtitle, url, target, thumbnailUrl, videoUrl, duration, publishedAt, viewCount } = Astro.props;
 
 function formatDate(iso: string): string {
 	const d = new Date(iso);
@@ -25,6 +26,12 @@ function formatDuration(seconds: number): string {
 	const m = Math.floor(seconds / 60);
 	const s = seconds % 60;
 	return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatViews(count: number): string {
+	if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M visninger`;
+	if (count >= 1_000) return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}K visninger`;
+	return `${count} visninger`;
 }
 ---
 
@@ -59,7 +66,12 @@ function formatDuration(seconds: number): string {
 			</div>
 		)}
 	</div>
-	{publishedAt && <p class="mt-2 text-sm/7 text-gray-500">{formatDate(publishedAt)}</p>}
+	{(publishedAt || viewCount) && (
+		<p class="mt-2 flex items-center justify-between text-sm/7 text-gray-500">
+			{publishedAt && <span>{formatDate(publishedAt)}</span>}
+			{viewCount != null && viewCount > 0 && <span>{formatViews(viewCount)}</span>}
+		</p>
+	)}
 	<p class="mt-1 text-sm/7 font-semibold text-gray-950 dark:text-white">{title}</p>
 </a>
 

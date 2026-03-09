@@ -35,6 +35,28 @@
   }
 }
 
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  --scrollbar-thumb: oklch(0 0 0 / 0.15);
+  padding-bottom: 0.5rem;
+
+  &::-webkit-scrollbar {
+    height: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  :where(.dark, .dark *) & {
+    --scrollbar-thumb: oklch(1 0 0 / 0.15);
+  }
+}
+
 @theme {
   --text-xs: 0.75rem;
   --text-xs--line-height: calc(1 / 0.75);

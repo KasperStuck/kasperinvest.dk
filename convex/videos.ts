@@ -98,6 +98,30 @@ export const updateArticle = internalMutation({
 	},
 });
 
+export const updateStats = internalMutation({
+	args: {
+		videoId: v.string(),
+		viewCount: v.number(),
+		likeCount: v.number(),
+	},
+	handler: async (ctx, { videoId, viewCount, likeCount }) => {
+		const video = await ctx.db
+			.query("videos")
+			.withIndex("by_videoId", (q) => q.eq("videoId", videoId))
+			.first();
+
+		if (video) await ctx.db.patch(video._id, { viewCount, likeCount });
+	},
+});
+
+export const listAllVideoIds = internalQuery({
+	args: {},
+	handler: async (ctx) => {
+		const videos = await ctx.db.query("videos").collect();
+		return videos.map((v) => v.videoId);
+	},
+});
+
 // --- Internal queries (called from actions) ---
 
 export const getByVideoId = internalQuery({

@@ -22,6 +22,33 @@ const activeChannels = [
 	...new Set(videos.map((v) => v.channelId)),
 ].map((id) => ({ id, name: channelMap.get(id)?.name ?? id }));
 
+const latestVideoByChannel = new Map<string, string>();
+for (const v of videos) {
+	const existing = latestVideoByChannel.get(v.channelId);
+	if (!existing || v.publishedAt > existing) {
+		latestVideoByChannel.set(v.channelId, v.publishedAt);
+	}
+}
+
+const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+const recentChannels = channels
+	.filter((ch) => {
+		const latest = latestVideoByChannel.get(ch.channelId);
+		return latest && latest >= thirtyDaysAgo;
+	})
+	.sort((a, b) => {
+		const dateA = latestVideoByChannel.get(a.channelId) ?? "";
+		const dateB = latestVideoByChannel.get(b.channelId) ?? "";
+		return dateB.localeCompare(dateA);
+	});
+
+function formatCount(n: number): string {
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+	if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+	return String(n);
+}
+
 function capitalize(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
 }
@@ -58,10 +85,50 @@ function capitalize(s: string): string {
 					title={videos[0].title}
 					subtitle={channelMap.get(videos[0].channelId)?.name ?? ""}
 					publishedAt={videos[0].publishedAt}
+					viewCount={videos[0].viewCount}
 				/>
 			</div>
 		)}
 	</div>
+
+	{recentChannels.length > 0 && (
+		<div class="relative mt-10" id="channel-scroll-wrapper">
+			<button type="button" id="scroll-left" class="absolute left-0 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-white/90 p-1.5 shadow-md ring-1 ring-gray-950/5 transition hover:bg-white dark:bg-gray-900/90 dark:ring-white/10 dark:hover:bg-gray-900">
+				<svg class="size-4 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+			</button>
+			<div class="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth scrollbar-thin max-w-full" id="channel-scroll">
+				{recentChannels.map((ch) => {
+					const handle = ch.customUrl?.replace(/^@/, "") ?? ch.channelId;
+					return (
+						<a
+							href={`/youtube/${handle}`}
+							class="group flex w-48 shrink-0 snap-start items-center gap-3 rounded-xl bg-gray-950/5 px-4 py-2.5 transition hover:bg-gray-950/10 dark:bg-white/5 dark:hover:bg-white/10"
+						>
+							{ch.thumbnailUrl && (
+								<img
+									src={ch.thumbnailUrl}
+									alt={ch.name}
+									class="size-10 shrink-0 rounded-full"
+									loading="lazy"
+								/>
+							)}
+							<div class="min-w-0">
+								<p class="truncate text-sm/5 font-medium text-gray-950 dark:text-white">{ch.name}</p>
+								{ch.subscriberCount != null && (
+									<p class="text-xs/5 text-gray-500">
+										{formatCount(ch.subscriberCount)} abonnenter
+									</p>
+								)}
+							</div>
+						</a>
+					);
+				})}
+			</div>
+			<button type="button" id="scroll-right" class="absolute right-0 top-1/2 z-10 hidden -translate-y-1/2 rounded-full bg-white/90 p-1.5 shadow-md ring-1 ring-gray-950/5 transition hover:bg-white dark:bg-gray-900/90 dark:ring-white/10 dark:hover:bg-gray-900">
+				<svg class="size-4 text-gray-700 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+			</button>
+		</div>
+	)}
 
 	<div class="mt-10 space-y-3">
 		<div class="flex flex-wrap items-center gap-2" id="type-filters">
@@ -161,6 +228,7 @@ function capitalize(s: string): string {
 						title={video.title}
 						subtitle={channelMap.get(video.channelId)?.name ?? ""}
 						publishedAt={video.publishedAt}
+						viewCount={video.viewCount}
 					/>
 				</div>
 			))}
@@ -173,6 +241,25 @@ function capitalize(s: string): string {
 </CenteredLayout>
 
 <script>
+	// Channel scroll arrows
+	const scrollEl = document.getElementById("channel-scroll");
+	const leftBtn = document.getElementById("scroll-left");
+	const rightBtn = document.getElementById("scroll-right");
+
+	if (scrollEl && leftBtn && rightBtn) {
+		function updateArrows() {
+			const { scrollLeft, scrollWidth, clientWidth } = scrollEl!;
+			leftBtn!.style.display = scrollLeft > 0 ? "" : "none";
+			rightBtn!.style.display = scrollLeft + clientWidth < scrollWidth - 1 ? "" : "none";
+		}
+
+		leftBtn.addEventListener("click", () => { scrollEl.scrollBy({ left: -200, behavior: "smooth" }); });
+		rightBtn.addEventListener("click", () => { scrollEl.scrollBy({ left: 200, behavior: "smooth" }); });
+		scrollEl.addEventListener("scrollend", updateArrows);
+		scrollEl.addEventListener("scroll", updateArrows, { passive: true });
+		updateArrows();
+	}
+
 	const items = document.querySelectorAll<HTMLElement>("#video-grid > [data-is-short]");
 	const countEl = document.getElementById("video-count")!;
 

@@ -435,6 +435,29 @@ export const generateChannelDescription = internalAction({
 	},
 });
 
+// --- Stats refresh ---
+
+export const refreshVideoStats = internalAction({
+	args: {},
+	handler: async (ctx) => {
+		const videoIds = await ctx.runQuery(internal.videos.listAllVideoIds);
+		// YouTube API allows up to 50 IDs per request
+		for (let i = 0; i < videoIds.length; i += 50) {
+			const batch = videoIds.slice(i, i + 50);
+			const data = await ytFetch<{ items: any[] }>(
+				`videos?part=statistics&id=${batch.join(",")}`,
+			);
+			for (const vid of data.items ?? []) {
+				await ctx.runMutation(internal.videos.updateStats, {
+					videoId: vid.id,
+					viewCount: Number(vid.statistics?.viewCount) || 0,
+					likeCount: Number(vid.statistics?.likeCount) || 0,
+				});
+			}
+		}
+	},
+});
+
 // --- Pipeline (cron + manual) ---
 
 export const syncAllChannels = internalAction({
@@ -464,6 +487,9 @@ export const syncAllChannels = internalAction({
 		await forEachSafe(withoutArticle, (v) => `article ${v.videoId}`, (v) =>
 			ctx.runAction(internal.youtube.generateArticle, { videoId: v.videoId }),
 		);
+
+		// 5. Refresh view/like counts for all videos
+		await ctx.runAction(internal.youtube.refreshVideoStats);
 	},
 });
 

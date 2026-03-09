@@ -8,9 +8,10 @@ const crons = cronJobs();
 // 2. Fetch transcripts
 // 3. AI-process (summary, SEO, categories, FAQ)
 // 4. Generate articles
+// 5. Refresh view/like counts for all videos
 crons.daily(
 	"sync-youtube",
-	{ hourUTC: 6, minuteUTC: 0 },
+	{ hourUTC: 1, minuteUTC: 0 },
 	internal.youtube.syncAllChannels,
 );
 

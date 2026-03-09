@@ -19,7 +19,7 @@ const { slug } = Astro.params;
 const lesson = await getLesson(slug!);
 
 if (!lesson) {
-	return Astro.redirect("/404");
+	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
 const mdxFiles = import.meta.glob("/src/data/lessons/*.mdx");

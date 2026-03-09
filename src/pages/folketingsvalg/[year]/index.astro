@@ -13,7 +13,7 @@ const { year } = Astro.params;
 const election = getElection(Number(year));
 
 if (!election) {
-	return Astro.redirect("/404");
+	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
 const breadcrumbItems = [

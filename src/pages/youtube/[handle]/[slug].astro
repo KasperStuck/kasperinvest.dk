@@ -25,7 +25,7 @@ const { videoId } = Astro.props;
 const video = await convex.query(api.videos.get, { videoId });
 
 if (!video) {
-	return Astro.redirect("/404");
+	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
 const channels = await convex.query(api.channels.list, {});

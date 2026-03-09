@@ -16,7 +16,7 @@ const { year, slug } = Astro.params;
 const article = getElectionArticle(Number(year), slug!);
 
 if (!article) {
-	return Astro.redirect("/404");
+	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
 let Content: any = null;

@@ -41,7 +41,15 @@ export async function getLesson(
 }
 
 export async function getLessonContent(slug: string) {
-  return (await import(`@/data/lessons/${slug}.mdx`)).default;
+  let module = lessons.find(({ lessons }) =>
+    lessons.some(({ id }) => id === slug),
+  );
+
+  if (!module) {
+    return null;
+  }
+
+  return (await import(`@/data/lessons/${module.id}/${slug}.mdx`)).default;
 }
 
 const lessons = [

@@ -23,6 +23,6 @@ ENV CONVEX_URL=https://combative-spider-931.convex.cloud
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -qO- http://localhost/health.json || exit 1
+    CMD node -e "fetch('http://localhost:80/health.json').then(r=>{if(!r.ok)throw r.status}).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/server/entry.mjs"]

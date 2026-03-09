@@ -17,7 +17,8 @@
 	},
 	"dependencies": {
 		"@astrojs/mdx": "^4.3.13",
-		"@astrojs/sitemap": "^3.7.0",
+		"@astrojs/node": "^9.5.4",
+		"@convex-dev/action-retrier": "^0.3.0",
 		"@egoist/youtube-transcript-plus": "^1.1.2",
 		"@langchain/core": "^1.1.31",
 		"@langchain/openrouter": "^0.1.5",

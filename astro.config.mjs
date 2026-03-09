@@ -1,11 +1,12 @@
 // @ts-check
 import mdx from "@astrojs/mdx";
-import sitemap from "@astrojs/sitemap";
+import node from "@astrojs/node";
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
 	site: "https://kasperinvest.dk",
-	integrations: [mdx(), sitemap()],
+	adapter: node({ mode: "standalone" }),
+	integrations: [mdx()],
 	image: {
 		remotePatterns: [
 			{

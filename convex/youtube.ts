@@ -7,7 +7,15 @@ import { ChatOpenRouter } from "@langchain/openrouter";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import slugify from "slugify";
+import { ActionRetrier } from "@convex-dev/action-retrier";
+import { components } from "./_generated/api";
 import { parseDuration, bestThumbnail, extractHashtags, getTranscriptText, forEachSafe, cleanDescription } from "./helpers";
+
+const retrier = new ActionRetrier(components.actionRetrier, {
+	initialBackoffMs: 500,
+	base: 2,
+	maxFailures: 3,
+});
 
 // --- Config ---
 
@@ -465,31 +473,31 @@ export const syncAllChannels = internalAction({
 	handler: async (ctx) => {
 		const channels = await ctx.runQuery(internal.channels.listAll);
 
-		// 1. Sync videos from YouTube
-		await forEachSafe(channels, (ch) => `sync ${ch.name}`, (ch) =>
-			ctx.runAction(internal.youtube.syncChannelVideos, { channelId: ch.channelId, maxResults: 5 }),
-		);
+		// 1. Sync videos from YouTube (with retry)
+		for (const ch of channels) {
+			await retrier.run(ctx, internal.youtube.syncChannelVideos, { channelId: ch.channelId, maxResults: 5 });
+		}
 
-		// 2. Fetch transcripts
+		// 2. Fetch transcripts (with retry)
 		const withoutTranscript = await ctx.runQuery(internal.videos.listWithoutTranscript);
-		await forEachSafe(withoutTranscript, (v) => `transcript ${v.videoId}`, (v) =>
-			ctx.runAction(internal.youtube.fetchTranscript, { videoId: v.videoId }),
-		);
+		for (const v of withoutTranscript) {
+			await retrier.run(ctx, internal.youtube.fetchTranscript, { videoId: v.videoId });
+		}
 
-		// 3. AI-process (summary, SEO, categories, FAQ)
+		// 3. AI-process (with retry)
 		const unprocessed = await ctx.runQuery(internal.videos.listUnprocessed);
-		await forEachSafe(unprocessed, (v) => `process ${v.videoId}`, (v) =>
-			ctx.runAction(internal.youtube.processVideo, { videoId: v.videoId }),
-		);
+		for (const v of unprocessed) {
+			await retrier.run(ctx, internal.youtube.processVideo, { videoId: v.videoId });
+		}
 
-		// 4. Generate articles
+		// 4. Generate articles (with retry)
 		const withoutArticle = await ctx.runQuery(internal.videos.listWithoutArticle);
-		await forEachSafe(withoutArticle, (v) => `article ${v.videoId}`, (v) =>
-			ctx.runAction(internal.youtube.generateArticle, { videoId: v.videoId }),
-		);
+		for (const v of withoutArticle) {
+			await retrier.run(ctx, internal.youtube.generateArticle, { videoId: v.videoId });
+		}
 
-		// 5. Refresh view/like counts for all videos
-		await ctx.runAction(internal.youtube.refreshVideoStats);
+		// 5. Refresh view/like counts (with retry)
+		await retrier.run(ctx, internal.youtube.refreshVideoStats, {});
 	},
 });
 
@@ -509,8 +517,8 @@ export const refreshAndGenerateAllChannelDescriptions = internalAction({
 		await ctx.runAction(internal.youtube.refreshAllChannelInfo);
 
 		const channels = await ctx.runQuery(internal.channels.listAll);
-		await forEachSafe(channels, (ch) => `description ${ch.name}`, (ch) =>
-			ctx.runAction(internal.youtube.generateChannelDescription, { channelId: ch.channelId }),
-		);
+		for (const ch of channels) {
+			await retrier.run(ctx, internal.youtube.generateChannelDescription, { channelId: ch.channelId });
+		}
 	},
 });

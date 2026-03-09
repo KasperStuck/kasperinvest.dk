@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from "convex/browser";
 
-const CONVEX_URL = import.meta.env.CONVEX_URL;
+const CONVEX_URL = process.env.CONVEX_URL || import.meta.env.CONVEX_URL;
 
 if (!CONVEX_URL) {
 	throw new Error("Missing CONVEX_URL environment variable");

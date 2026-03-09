@@ -1,28 +1,15 @@
 ---
+export const prerender = false;
+
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import ClockIcon from "@/icons/ClockIcon.astro";
 import { convex, api } from "@/lib/convex";
 import { marked } from "marked";
 
-export async function getStaticPaths() {
-	const videos = await convex.query(api.videos.listRecent, { limit: 100 });
-	const channels = await convex.query(api.channels.list, {});
-	const channelMap = new Map(channels.map((ch) => [ch.channelId, ch.customUrl?.replace(/^@/, "") ?? ch.channelId]));
+const { slug } = Astro.params;
 
-	return videos
-		.filter((video) => video.slug)
-		.map((video) => ({
-			params: {
-				handle: channelMap.get(video.channelId) ?? video.channelId,
-				slug: video.slug!,
-			},
-			props: { videoId: video.videoId },
-		}));
-}
-
-const { videoId } = Astro.props;
-const video = await convex.query(api.videos.get, { videoId });
+const video = await convex.query(api.videos.getBySlug, { slug: slug! });
 
 if (!video) {
 	return new Response(null, { status: 404, statusText: "Not Found" });

@@ -3,7 +3,7 @@ import SidebarLayout from "@/layouts/SidebarLayout.astro";
 import VideoPlayer from "@/components/VideoPlayer.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
-import { getModules, getLesson } from "@/data/lessons";
+import { getModules, getLesson, getLessonContent } from "@/data/lessons";
 
 export function getStaticPaths() {
 	const modules = getModules();
@@ -22,10 +22,7 @@ if (!lesson) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
-const mdxFiles = import.meta.glob("/src/data/lessons/*.mdx");
-const mdxPath = `/src/data/lessons/${slug}.mdx`;
-const mdxModule = mdxFiles[mdxPath] ? await (mdxFiles[mdxPath]() as Promise<{ default: any }>) : null;
-const Content = mdxModule?.default;
+const Content = await getLessonContent(slug!);
 
 const breadcrumbItems = [
 	{ label: "KasperInvest", href: "/" },

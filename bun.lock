@@ -7,6 +7,7 @@
       "dependencies": {
         "@astrojs/mdx": "^4.3.13",
         "@astrojs/node": "^9.5.4",
+        "@convex-dev/action-retrier": "^0.3.0",
         "@egoist/youtube-transcript-plus": "^1.1.2",
         "@langchain/core": "^1.1.31",
         "@langchain/openrouter": "^0.1.5",
@@ -83,6 +84,8 @@
     "@capsizecss/unpack": ["@capsizecss/unpack@4.0.0", "", { "dependencies": { "fontkitten": "^1.0.0" } }, "sha512-VERIM64vtTP1C4mxQ5thVT9fK0apjPFobqybMtA1UdUujWka24ERHbRHFGmpbbhp73MhV+KSsHQH9C6uOTdEQA=="],
 
     "@cfworker/json-schema": ["@cfworker/json-schema@4.1.1", "", {}, "sha512-gAmrUZSGtKc3AiBL71iNWxDsyUC5uMaKKGdvzYsBoTW/xi42JQHl7eKV2OYzCUqvc+D2RCcf7EXY2iCyFIk6og=="],
+
+    "@convex-dev/action-retrier": ["@convex-dev/action-retrier@0.3.0", "", { "peerDependencies": { "convex": "^1.24.8" } }, "sha512-opBNsgOPSuVY3qSARNub98XqPzSpSS7Jga0oGeWFhO+DcWBMt2gD3ssUeEA1Gi7wTNiZBX+T6OBfBnqMfv6Tuw=="],
 
     "@egoist/youtube-transcript-plus": ["@egoist/youtube-transcript-plus@1.1.2", "", {}, "sha512-mM0PBNAiXUVj711LFjg2Pvtyy83eATTTbvF40sehcptz423RVXk3RBukRDcvhdgBQHwvGoWvEwQvd2oJ6oN4Iw=="],
 

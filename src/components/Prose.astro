@@ -1,6 +1,4 @@
 ---
-import PartnerCard from "./PartnerCard.astro";
-
 interface Props {
 	empty?: boolean;
 	emptyMessage?: string;
@@ -19,24 +17,78 @@ const { empty = false, emptyMessage = "Denne artikel er under udarbejdelse." } =
 ) : (
 	<div>
 		<div id="content" class="prose prose-sm dark:prose-invert">
-			<PartnerCard />
 			<slot />
-			<PartnerCard />
 		</div>
-
-		<template id="pi-tpl">
-			<PartnerCard />
-		</template>
 
 		<script>
 			const content = document.getElementById("content")!;
-			const tpl = document.getElementById("pi-tpl") as HTMLTemplateElement;
+			const pageText = (document.title + " " + content.textContent).toLowerCase();
 
+			const banners = [
+				{
+					src: "/partners/norminvest-par.png",
+					alt: "Norm Invest - Par der investerer sammen",
+					href: "https://at.norminvest.com/t/t?a=1873806307&as=2056026217&t=2&tk=1",
+					keywords: ["investering", "aktier", "fond", "etf", "opsparing"],
+				},
+				{
+					src: "/partners/norminvest-kvinde.png",
+					alt: "Norm Invest - Start din investering",
+					href: "https://at.norminvest.com/t/t?a=1873806302&as=2056026217&t=2&tk=1",
+					keywords: ["investering", "aktier", "fond", "etf", "opsparing"],
+				},
+				{
+					src: "/partners/nordnet-livrente-mand.png",
+					alt: "Nordnet - Livsvarig pension, flyt din livrente",
+					href: "https://go.adt212.net/t/t?a=1930764499&as=2056026217&t=2&tk=1",
+					keywords: ["pension", "livrente", "ratepension", "aldersopsparing"],
+				},
+				{
+					src: "/partners/nordnet-livrente-kvinde.png",
+					alt: "Nordnet - Invester selv din pension, flyt din livrente",
+					href: "https://go.adt212.net/t/t?a=1930763698&as=2056026217&t=2&tk=1",
+					keywords: ["pension", "livrente", "ratepension", "aldersopsparing"],
+				},
+				{
+					src: "/partners/nordnet-mindreaarig.png",
+					alt: "Nordnet - Opret en konto for mindreårige",
+					href: "https://go.adt212.net/t/t?a=1886842299&as=2056026217&t=2&tk=1",
+					keywords: ["børn", "mindreårig", "børneopsparing", "barn"],
+				},
+			];
+
+			const matched = banners.filter((b) =>
+				b.keywords.some((kw) => pageText.includes(kw))
+			);
+			const pool = matched.length > 0 ? matched : banners;
+
+			function pickBanner() {
+				const b = pool[Math.floor(Math.random() * pool.length)];
+				const a = document.createElement("a");
+				a.href = b.href;
+				a.target = "_blank";
+				a.rel = "noopener";
+				a.className = "not-prose my-8 block overflow-hidden";
+				const img = document.createElement("img");
+				img.src = b.src;
+				img.alt = b.alt;
+				img.width = 930;
+				img.loading = "lazy";
+				img.className = "w-full";
+				a.appendChild(img);
+				return a;
+			}
+
+			// Insert top and bottom banners
+			content.prepend(pickBanner());
+			content.append(pickBanner());
+
+			// Insert banner after every 3rd H2
 			const headings = content.querySelectorAll(":scope > h2");
 			for (let i = 2; i < headings.length; i += 3) {
 				let next = headings[i].nextElementSibling;
 				while (next && next.tagName !== "H2") next = next.nextElementSibling;
-				content.insertBefore(tpl.content.cloneNode(true), next);
+				content.insertBefore(pickBanner(), next);
 			}
 		</script>
 	</div>

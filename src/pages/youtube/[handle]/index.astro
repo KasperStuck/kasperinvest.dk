@@ -66,6 +66,7 @@ const allCategories = [
 					subtitle={channel?.name ?? ""}
 					publishedAt={videos[0].publishedAt}
 					viewCount={videos[0].viewCount}
+					youtubeId={videos[0].videoId}
 				/>
 			</div>
 		)}
@@ -135,6 +136,7 @@ const allCategories = [
 						subtitle={channel?.name ?? ""}
 						publishedAt={video.publishedAt}
 						viewCount={video.viewCount}
+						youtubeId={video.videoId}
 					/>
 				</div>
 			))}

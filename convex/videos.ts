@@ -103,14 +103,19 @@ export const updateStats = internalMutation({
 		videoId: v.string(),
 		viewCount: v.number(),
 		likeCount: v.number(),
+		isShort: v.optional(v.boolean()),
 	},
-	handler: async (ctx, { videoId, viewCount, likeCount }) => {
+	handler: async (ctx, { videoId, viewCount, likeCount, isShort }) => {
 		const video = await ctx.db
 			.query("videos")
 			.withIndex("by_videoId", (q) => q.eq("videoId", videoId))
 			.first();
 
-		if (video) await ctx.db.patch(video._id, { viewCount, likeCount });
+		if (video) {
+			const patch: Record<string, unknown> = { viewCount, likeCount };
+			if (isShort !== undefined) patch.isShort = isShort;
+			await ctx.db.patch(video._id, patch);
+		}
 	},
 });
 
@@ -252,6 +257,24 @@ export const needsBackfill = query({
 			.query("videos")
 			.filter((q) => q.eq(q.field("isShort"), undefined))
 			.take(50),
+});
+
+export const backfillIsShort = mutation({
+	args: { maxSeconds: v.optional(v.number()) },
+	handler: async (ctx, { maxSeconds }) => {
+		const threshold = maxSeconds ?? 90;
+		const videos = await ctx.db.query("videos").collect();
+		let updated = 0;
+		for (const video of videos) {
+			const seconds = video.durationSeconds ?? 0;
+			const isShort = seconds <= threshold && seconds > 0;
+			if (video.isShort !== isShort) {
+				await ctx.db.patch(video._id, { isShort });
+				updated++;
+			}
+		}
+		return { updated, total: videos.length };
+	},
 });
 
 export const resetProcessing = mutation({

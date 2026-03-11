@@ -88,6 +88,7 @@ function capitalize(s: string): string {
 					subtitle={channelMap.get(videos[0].channelId)?.name ?? ""}
 					publishedAt={videos[0].publishedAt}
 					viewCount={videos[0].viewCount}
+					youtubeId={videos[0].videoId}
 				/>
 			</div>
 		)}
@@ -231,6 +232,7 @@ function capitalize(s: string): string {
 						subtitle={channelMap.get(video.channelId)?.name ?? ""}
 						publishedAt={video.publishedAt}
 						viewCount={video.viewCount}
+						youtubeId={video.videoId}
 					/>
 				</div>
 			))}

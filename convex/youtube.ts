@@ -271,7 +271,10 @@ export const syncChannelVideos = internalAction({
 		const playlist = await ytFetch<{ items: any[] }>(
 			`playlistItems?part=snippet&playlistId=${channel.uploadsPlaylistId}&maxResults=${maxResults ?? 10}`,
 		);
-		if (!playlist.items?.length) return { synced: 0 };
+		if (!playlist.items?.length) {
+			console.warn(`syncChannelVideos: No videos found in playlist for channel ${channelId}`);
+			return { synced: 0 };
+		}
 
 		const ids = playlist.items.map((i: any) => i.snippet.resourceId.videoId);
 		const details = await ytFetch<{ items: any[] }>(
@@ -285,6 +288,23 @@ export const syncChannelVideos = internalAction({
 
 			const durationSeconds = parseDuration(vid.contentDetails?.duration ?? "");
 			const description = vid.snippet.description ?? "";
+
+			// YouTube Shorts can be up to 180 seconds (3 min) since Oct 2024.
+			// YouTube API doesn't expose a direct "isShort" field and thumbnails are always landscape.
+			// Best heuristic: check if /shorts/ URL resolves for this video.
+			let isShort = durationSeconds <= 180;
+			if (isShort && durationSeconds > 60) {
+				// For videos between 61-180s, verify via /shorts/ URL redirect
+				try {
+					const shortUrl = `https://www.youtube.com/shorts/${vid.id}`;
+					const res = await fetch(shortUrl, { method: "HEAD", redirect: "manual" });
+					// YouTube redirects away from /shorts/ if it's not actually a Short
+					isShort = res.status === 200 || (res.status >= 300 && res.status < 400 && (res.headers.get("location")?.includes("/shorts/") ?? false));
+				} catch {
+					// Fallback: assume short if <= 180s
+					isShort = true;
+				}
+			}
 
 			await ctx.runMutation(internal.videos.insert, {
 				videoId: vid.id,
@@ -300,7 +320,7 @@ export const syncChannelVideos = internalAction({
 				likeCount: Number(vid.statistics?.likeCount) || 0,
 				tags: vid.snippet.tags ?? [],
 				hashtags: extractHashtags(description),
-				isShort: durationSeconds <= 60,
+				isShort,
 			});
 			synced++;
 		}
@@ -310,6 +330,7 @@ export const syncChannelVideos = internalAction({
 			lastSyncedAt: Date.now(),
 		});
 
+		console.log(`syncChannelVideos: ${synced} new video(s) synced for channel ${channelId} (${details.items?.length ?? 0} checked)`);
 		return { synced };
 	},
 });
@@ -449,17 +470,35 @@ export const refreshVideoStats = internalAction({
 	args: {},
 	handler: async (ctx) => {
 		const videoIds = await ctx.runQuery(internal.videos.listAllVideoIds);
+		if (videoIds.length === 0) {
+			console.warn("refreshVideoStats: No videos in database, skipping.");
+			return;
+		}
+		console.log(`refreshVideoStats: Updating stats for ${videoIds.length} video(s)`);
 		// YouTube API allows up to 50 IDs per request
 		for (let i = 0; i < videoIds.length; i += 50) {
 			const batch = videoIds.slice(i, i + 50);
 			const data = await ytFetch<{ items: any[] }>(
-				`videos?part=statistics&id=${batch.join(",")}`,
+				`videos?part=statistics,snippet,contentDetails&id=${batch.join(",")}`,
 			);
 			for (const vid of data.items ?? []) {
+				const durationSeconds = parseDuration(vid.contentDetails?.duration ?? "");
+				let isShort = durationSeconds <= 180;
+				if (isShort && durationSeconds > 60) {
+					try {
+						const shortUrl = `https://www.youtube.com/shorts/${vid.id}`;
+						const res = await fetch(shortUrl, { method: "HEAD", redirect: "manual" });
+						isShort = res.status === 200 || (res.status >= 300 && res.status < 400 && (res.headers.get("location")?.includes("/shorts/") ?? false));
+					} catch {
+						isShort = true;
+					}
+				}
+
 				await ctx.runMutation(internal.videos.updateStats, {
 					videoId: vid.id,
 					viewCount: Number(vid.statistics?.viewCount) || 0,
 					likeCount: Number(vid.statistics?.likeCount) || 0,
+					isShort,
 				});
 			}
 		}
@@ -471,33 +510,56 @@ export const refreshVideoStats = internalAction({
 export const syncAllChannels = internalAction({
 	args: {},
 	handler: async (ctx) => {
+		// Validate required env vars before doing any work
+		const missingEnvVars = [];
+		if (!process.env.YOUTUBE_API_KEY) missingEnvVars.push("YOUTUBE_API_KEY");
+		if (!process.env.OPENROUTER_API_KEY) missingEnvVars.push("OPENROUTER_API_KEY");
+		if (missingEnvVars.length > 0) {
+			console.error(`syncAllChannels aborted: missing env vars: ${missingEnvVars.join(", ")}`);
+			throw new Error(`Missing required env vars: ${missingEnvVars.join(", ")}`);
+		}
+
 		const channels = await ctx.runQuery(internal.channels.listAll);
+
+		if (channels.length === 0) {
+			console.warn("syncAllChannels: No channels found in database. Add channels first via addChannel or addChannelByHandle.");
+			return;
+		}
+
+		console.log(`syncAllChannels: Starting pipeline for ${channels.length} channel(s): ${channels.map((c) => c.name).join(", ")}`);
 
 		// 1. Sync videos from YouTube (with retry)
 		for (const ch of channels) {
+			console.log(`[1/5] Syncing videos for "${ch.name}" (${ch.channelId})`);
 			await retrier.run(ctx, internal.youtube.syncChannelVideos, { channelId: ch.channelId, maxResults: 5 });
 		}
 
 		// 2. Fetch transcripts (with retry)
 		const withoutTranscript = await ctx.runQuery(internal.videos.listWithoutTranscript);
+		console.log(`[2/5] Fetching transcripts for ${withoutTranscript.length} video(s)`);
 		for (const v of withoutTranscript) {
 			await retrier.run(ctx, internal.youtube.fetchTranscript, { videoId: v.videoId });
 		}
 
 		// 3. AI-process (with retry)
 		const unprocessed = await ctx.runQuery(internal.videos.listUnprocessed);
+		console.log(`[3/5] AI-processing ${unprocessed.length} video(s)`);
 		for (const v of unprocessed) {
 			await retrier.run(ctx, internal.youtube.processVideo, { videoId: v.videoId });
 		}
 
 		// 4. Generate articles (with retry)
 		const withoutArticle = await ctx.runQuery(internal.videos.listWithoutArticle);
+		console.log(`[4/5] Generating articles for ${withoutArticle.length} video(s)`);
 		for (const v of withoutArticle) {
 			await retrier.run(ctx, internal.youtube.generateArticle, { videoId: v.videoId });
 		}
 
 		// 5. Refresh view/like counts (with retry)
+		console.log("[5/5] Refreshing video stats");
 		await retrier.run(ctx, internal.youtube.refreshVideoStats, {});
+
+		console.log("syncAllChannels: Pipeline complete.");
 	},
 });
 
@@ -505,6 +567,11 @@ export const refreshAllChannelInfo = internalAction({
 	args: {},
 	handler: async (ctx) => {
 		const channels = await ctx.runQuery(internal.channels.listAll);
+		if (channels.length === 0) {
+			console.warn("refreshAllChannelInfo: No channels in database.");
+			return;
+		}
+		console.log(`refreshAllChannelInfo: Refreshing ${channels.length} channel(s)`);
 		await forEachSafe(channels, (ch) => `refresh ${ch.name}`, (ch) =>
 			fetchAndUpsertChannel(ctx, ch.channelId),
 		);
@@ -514,9 +581,19 @@ export const refreshAllChannelInfo = internalAction({
 export const refreshAndGenerateAllChannelDescriptions = internalAction({
 	args: {},
 	handler: async (ctx) => {
+		if (!process.env.OPENROUTER_API_KEY) {
+			console.error("refreshAndGenerateAllChannelDescriptions aborted: missing OPENROUTER_API_KEY");
+			throw new Error("Missing required env var: OPENROUTER_API_KEY");
+		}
+
 		await ctx.runAction(internal.youtube.refreshAllChannelInfo);
 
 		const channels = await ctx.runQuery(internal.channels.listAll);
+		if (channels.length === 0) {
+			console.warn("refreshAndGenerateAllChannelDescriptions: No channels in database.");
+			return;
+		}
+		console.log(`Generating AI descriptions for ${channels.length} channel(s)`);
 		for (const ch of channels) {
 			await retrier.run(ctx, internal.youtube.generateChannelDescription, { channelId: ch.channelId });
 		}

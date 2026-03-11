@@ -18,11 +18,11 @@ const { empty = false, emptyMessage = "Denne artikel er under udarbejdelse." } =
 	</div>
 ) : (
 	<div>
-		<PartnerCard />
 		<div id="content" class="prose prose-sm dark:prose-invert">
+			<PartnerCard />
 			<slot />
+			<PartnerCard />
 		</div>
-		<PartnerCard />
 
 		<template id="pi-tpl">
 			<PartnerCard />
@@ -33,7 +33,7 @@ const { empty = false, emptyMessage = "Denne artikel er under udarbejdelse." } =
 			const tpl = document.getElementById("pi-tpl") as HTMLTemplateElement;
 
 			const headings = content.querySelectorAll(":scope > h2");
-			for (let i = 1; i < headings.length; i += 2) {
+			for (let i = 2; i < headings.length; i += 3) {
 				let next = headings[i].nextElementSibling;
 				while (next && next.tagName !== "H2") next = next.nextElementSibling;
 				content.insertBefore(tpl.content.cloneNode(true), next);

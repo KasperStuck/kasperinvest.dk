@@ -2,6 +2,7 @@
 import ElectionLayout from "@/layouts/ElectionLayout.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import Prose from "@/components/Prose.astro";
 import { getElections, getElectionArticle, getElectionArticleContent } from "@/data/elections";
 
 export function getStaticPaths() {
@@ -42,14 +43,9 @@ const breadcrumbItems = [
 	<div class="mx-auto max-w-7xl">
 		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 lg:max-w-5xl">
 			<div class="w-full flex-1">
-				<div id="content" class="prose prose-sm dark:prose-invert">
-					{Content ? <Content /> : (
-						<div class="flex flex-col items-center justify-center py-20 text-center">
-							<p class="text-lg font-medium text-gray-950 dark:text-white">Kommer snart</p>
-							<p class="mt-2 text-sm text-gray-500">Denne artikel er under udarbejdelse.</p>
-						</div>
-					)}
-				</div>
+				<Prose empty={!Content}>
+					{Content && <Content />}
+				</Prose>
 				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
 					{article.next ? (
 						<div class="flow-root">

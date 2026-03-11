@@ -5,6 +5,7 @@ import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import ClockIcon from "@/icons/ClockIcon.astro";
 import { convex, api } from "@/lib/convex";
+import Prose from "@/components/Prose.astro";
 import { marked } from "marked";
 
 const { slug } = Astro.params;
@@ -199,7 +200,9 @@ const breadcrumbSchema = {
 			</div>
 
 			{articleHtml && (
-				<div class="prose prose-sm dark:prose-invert" set:html={articleHtml} />
+				<Prose>
+					<Fragment set:html={articleHtml} />
+				</Prose>
 			)}
 
 			{video.faq && video.faq.length > 0 && (
@@ -258,4 +261,5 @@ const breadcrumbSchema = {
 			)}
 		</div>
 	</div>
+
 </CenteredLayout>

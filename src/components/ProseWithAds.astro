@@ -1,0 +1,48 @@
+---
+import AdBanner from "./AdBanner.astro";
+---
+
+<div>
+	<AdBanner />
+	<div id="content" class="prose prose-sm dark:prose-invert">
+		<slot />
+	</div>
+	<AdBanner />
+</div>
+
+<template id="ad-banner-template">
+	<AdBanner />
+</template>
+
+<script>
+	function injectAds() {
+		const content = document.getElementById("content");
+		const template = document.getElementById("ad-banner-template") as HTMLTemplateElement;
+		if (!content || !template) return;
+
+		const h2s = content.querySelectorAll(":scope > h2");
+		// Insert after every 2nd h2 (index 1, 3, 5, ...)
+		for (let i = 1; i < h2s.length; i += 2) {
+			const h2 = h2s[i];
+			// Find the end of this h2's section (next h2 or end of content)
+			let insertBefore: Element | null = null;
+			let sibling = h2.nextElementSibling;
+			while (sibling) {
+				if (sibling.tagName === "H2") {
+					insertBefore = sibling;
+					break;
+				}
+				sibling = sibling.nextElementSibling;
+			}
+
+			const clone = template.content.cloneNode(true);
+			if (insertBefore) {
+				content.insertBefore(clone, insertBefore);
+			} else {
+				content.appendChild(clone);
+			}
+		}
+	}
+
+	injectAds();
+</script>

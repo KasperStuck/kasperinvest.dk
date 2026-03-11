@@ -51,9 +51,9 @@ const allCategories = [
 			<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
 				{channel?.name ?? handle}
 			</h1>
-			{(channel?.aiDescription || channel?.description) && (
+			{channel?.aiDescription && (
 				<div class="mt-6 max-w-xl space-y-3 text-base/7 text-gray-700 dark:text-gray-400">
-					{(channel.aiDescription ?? channel.description ?? "").split(/\n\n+/).map((paragraph) => (
+					{channel.aiDescription.split(/\n\n+/).map((paragraph) => (
 						<p>{paragraph.trim()}</p>
 					))}
 				</div>

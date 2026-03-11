@@ -26,6 +26,9 @@ function capitalize(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+const featuredVideo = videos.find((v) => !v.isShort);
+const gridVideos = videos.filter((v) => v !== featuredVideo);
+
 const allCategories = [
 	...new Set(videos.flatMap((v) => v.categories ?? [])),
 ].sort();
@@ -56,17 +59,17 @@ const allCategories = [
 				</div>
 			)}
 		</div>
-		{videos[0] && (
+		{featuredVideo && (
 			<div class="w-full shrink-0 lg:w-1/2">
 				<VideoCard
-					url={videoUrl(videos[0])}
-					thumbnailUrl={videos[0].thumbnailUrl}
-					duration={videos[0].durationSeconds}
-					title={videos[0].title}
+					url={videoUrl(featuredVideo)}
+					thumbnailUrl={featuredVideo.thumbnailUrl}
+					duration={featuredVideo.durationSeconds}
+					title={featuredVideo.title}
 					subtitle={channel?.name ?? ""}
-					publishedAt={videos[0].publishedAt}
-					viewCount={videos[0].viewCount}
-					youtubeId={videos[0].videoId}
+					publishedAt={featuredVideo.publishedAt}
+					viewCount={featuredVideo.viewCount}
+					youtubeId={featuredVideo.videoId}
 				/>
 			</div>
 		)}
@@ -121,9 +124,9 @@ const allCategories = [
 
 	<p id="video-count" class="mt-4 text-sm/7 text-gray-500"></p>
 
-	{videos.length > 0 ? (
+	{gridVideos.length > 0 ? (
 		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 pb-32 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
-			{videos.slice(1).map((video) => (
+			{gridVideos.map((video) => (
 				<div
 					data-is-short={video.isShort ? "true" : "false"}
 					data-categories={JSON.stringify(video.categories ?? [])}

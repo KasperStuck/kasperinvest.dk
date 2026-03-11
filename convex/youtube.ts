@@ -55,6 +55,7 @@ Bedøm den givne tekst på en skala fra 1-10 ud fra disse kriterier:
 - Troværdighed: Lyder teksten som noget en dansk finansskribent ville skrive?
 
 VIGTIGT: Hvis teksten indeholder nonsens, blandede sprog, eller ikke er naturligt dansk, skal scoren ALTID være under 5.
+VIGTIGT: Alt output SKAL være på dansk. Inkludér ALDRIG links eller URL'er.
 
 En score på 9+ betyder at teksten er klar til publicering uden rettelser.
 En score under 9 betyder at teksten har problemer der kræver regenerering.
@@ -128,7 +129,9 @@ Skriv ALTID på naturligt, flydende dansk. Analysér YouTube-videoer og returné
 
 Gyldige kategorier: privatøkonomi, aktier, ETF, obligationer, skat, pension, strategi, psykologi, analyse, krypto, bolig, FIRE, marked, andet
 
-relevanceScore: 0 = irrelevant for dansk privatinvestor, 100 = meget relevant.`,
+relevanceScore: 0 = irrelevant for dansk privatinvestor, 100 = meget relevant.
+
+VIGTIGT: Alt output SKAL være på dansk. Inkludér ALDRIG links eller URL'er i noget felt.`,
 	],
 	[
 		"human",
@@ -159,7 +162,9 @@ Regler:
 - Forklar begreber kort når de introduceres
 - Inkludér konkrete pointer og eksempler fra videoen
 - Skriv IKKE "I denne video" eller lignende — skriv som en selvstændig artikel
-- Brug IKKE h1 (#) — start med h2 (##)`,
+- Brug IKKE h1 (#) — start med h2 (##)
+- Inkludér ALDRIG links eller URL'er i artiklen
+- Alt output SKAL være på dansk`,
 	],
 	[
 		"human",
@@ -193,7 +198,9 @@ Regler:
 - Brug kanalens originale beskrivelse som udgangspunkt, men omskriv den fuldstændigt
 - Skriv IKKE i første person — skriv som en neutral redaktionel beskrivelse
 - Nævn IKKE specifikke videoer ved navn
-- Adskil afsnit med en tom linje`,
+- Adskil afsnit med en tom linje
+- Inkludér ALDRIG links eller URL'er
+- Alt output SKAL være på dansk`,
 	],
 	[
 		"human",

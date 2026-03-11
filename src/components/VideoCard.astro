@@ -60,10 +60,10 @@ function formatViews(count: number): string {
 			<button
 				type="button"
 				data-play-youtube={youtubeId}
-				class="absolute right-2 top-2 z-10 flex size-9 items-center justify-center rounded-full bg-gray-950/75 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-gray-950/90 cursor-pointer"
+				class="absolute right-2 top-2 z-10 flex size-8 items-center justify-center rounded-full bg-white/90 text-gray-950 shadow-md ring-1 ring-gray-950/5 opacity-0 transition hover:bg-white group-hover:opacity-100 cursor-pointer dark:bg-gray-900/90 dark:text-white dark:ring-white/10 dark:hover:bg-gray-900"
 				aria-label="Afspil video"
 			>
-				<svg class="size-4 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+				<svg viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" /></svg>
 			</button>
 		)}
 		{subtitle && (
@@ -109,13 +109,13 @@ function formatViews(count: number): string {
 	if (!modal) {
 		modal = document.createElement("div");
 		modal.id = "video-modal";
-		modal.className = "fixed inset-0 z-50 hidden items-center justify-center bg-gray-950/80 backdrop-blur-sm";
+		modal.className = "fixed inset-0 z-50 hidden items-center justify-center bg-gray-950/60 backdrop-blur-sm";
 		modal.innerHTML = `
 			<div class="relative w-full max-w-4xl mx-4">
-				<button type="button" id="video-modal-close" class="absolute -top-10 right-0 text-white hover:text-gray-300 cursor-pointer">
-					<svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+				<button type="button" id="video-modal-close" class="absolute -right-2 -top-10 flex size-8 items-center justify-center rounded-full bg-white/90 text-gray-950 shadow-md ring-1 ring-gray-950/5 transition hover:bg-white cursor-pointer dark:bg-gray-900/90 dark:text-white dark:ring-white/10 dark:hover:bg-gray-900">
+					<svg viewBox="0 0 16 16" fill="currentColor" class="size-4"><path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" /></svg>
 				</button>
-				<div class="aspect-video w-full rounded-xl overflow-hidden bg-black">
+				<div class="aspect-video w-full overflow-hidden rounded-xl bg-gray-100 shadow-lg ring-1 ring-gray-950/5 dark:bg-gray-800 dark:ring-white/10 dark:shadow-gray-950/50">
 					<iframe id="video-modal-iframe" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 				</div>
 			</div>

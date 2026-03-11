@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 import { getModules } from "@/data/lessons";
 import { getElections } from "@/data/elections";
+import { getPensionTypes } from "@/data/pension";
+import { getPlatforms } from "@/data/platforms";
 import { convex, api } from "@/lib/convex";
 
 export const prerender = false;
@@ -37,6 +39,16 @@ export const GET: APIRoute = async () => {
     for (const article of election.articles) {
       urls.push(urlEntry(`${SITE_URL}/folketingsvalg/${election.year}/${article.id}`));
     }
+  }
+
+  // Pension
+  for (const pension of getPensionTypes()) {
+    urls.push(urlEntry(`${SITE_URL}/pension/${pension.id}`));
+  }
+
+  // Platforme
+  for (const platform of getPlatforms()) {
+    urls.push(urlEntry(`${SITE_URL}/platforme/${platform.id}`));
   }
 
   // YouTube channels and videos (dynamic from Convex)

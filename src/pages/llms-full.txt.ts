@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 import { getModules } from "@/data/lessons";
 import { getElections } from "@/data/elections";
+import { getPensionTypes } from "@/data/pension";
+import { getPlatforms } from "@/data/platforms";
 
 export const GET: APIRoute = () => {
 	const modules = getModules();
@@ -53,6 +55,32 @@ export const GET: APIRoute = () => {
 		}
 		lines.push("");
 	}
+
+	lines.push("---", "");
+	lines.push("## Pension", "");
+	lines.push("Overblik over de vigtigste pensionstyper i Danmark.");
+	lines.push("");
+
+	for (const pension of getPensionTypes()) {
+		lines.push(
+			`- [${pension.title}](https://kasperinvest.dk/pension/${pension.id}): ${pension.description}`,
+		);
+	}
+	lines.push("");
+
+	lines.push("---", "");
+	lines.push("## Platforme", "");
+	lines.push(
+		"Anmeldelser og guides til populære investeringsplatforme i Danmark.",
+	);
+	lines.push("");
+
+	for (const platform of getPlatforms()) {
+		lines.push(
+			`- [${platform.title}](https://kasperinvest.dk/platforme/${platform.id}): ${platform.description}`,
+		);
+	}
+	lines.push("");
 
 	lines.push("---", "");
 	lines.push("## Resources", "");

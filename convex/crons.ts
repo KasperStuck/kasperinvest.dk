@@ -15,6 +15,9 @@ crons.daily(
 	internal.youtube.syncAllChannels,
 );
 
+// Refresh view/like counts and isShort status every hour
+crons.interval("refresh-stats", { hours: 1 }, internal.youtube.refreshVideoStats);
+
 // Refresh channel info from YouTube + regenerate AI descriptions weekly on Mondays at 08:00 UTC
 crons.weekly(
 	"refresh-channel-info-and-descriptions",

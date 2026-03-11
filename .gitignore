@@ -26,3 +26,11 @@ pnpm-debug.log*
 .env.local
 
 .content-workspace
+.content-research/
+
+# next.js (not used, prevent accidental tracking)
+.next/
+next-env.d.ts
+
+# npm lock (using bun)
+package-lock.json

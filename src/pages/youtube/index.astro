@@ -29,6 +29,7 @@ const activeChannels = [
 
 const latestVideoByChannel = new Map<string, string>();
 for (const v of videos) {
+	if (v.isShort) continue;
 	const existing = latestVideoByChannel.get(v.channelId);
 	if (!existing || v.publishedAt > existing) {
 		latestVideoByChannel.set(v.channelId, v.publishedAt);

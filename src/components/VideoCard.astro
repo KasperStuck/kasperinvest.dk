@@ -14,7 +14,18 @@ interface Props {
 	viewCount?: number;
 }
 
-const { title, subtitle, url, target, thumbnailUrl, videoUrl, youtubeId, duration, publishedAt, viewCount } = Astro.props;
+const {
+	title,
+	subtitle,
+	url,
+	target,
+	thumbnailUrl,
+	videoUrl,
+	youtubeId,
+	duration,
+	publishedAt,
+	viewCount,
+} = Astro.props;
 
 function formatDate(iso: string): string {
 	const d = new Date(iso);
@@ -78,7 +89,7 @@ function formatViews(count: number): string {
 		)}
 	</div>
 	{(publishedAt || viewCount) && (
-		<p class="mt-2 flex items-center justify-between text-sm/7 text-gray-500">
+		<p class="mt-2 flex items-center justify-between text-sm/7 text-gray-600 dark:text-gray-400">
 			{publishedAt && <span>{formatDate(publishedAt)}</span>}
 			{viewCount != null && viewCount > 0 && <span>{formatViews(viewCount)}</span>}
 		</p>

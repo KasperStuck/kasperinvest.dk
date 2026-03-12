@@ -1,11 +1,12 @@
 ---
-import BaseLayout from "./BaseLayout.astro";
-import Navbar from "@/components/Navbar.astro";
+import Footer from "@/components/Footer.astro";
 import Logo from "@/components/Logo.astro";
-import SidebarIcon from "@/icons/SidebarIcon.astro";
+import Navbar from "@/components/Navbar.astro";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
 import CloseIcon from "@/icons/CloseIcon.astro";
-import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import SidebarIcon from "@/icons/SidebarIcon.astro";
+import BaseLayout from "./BaseLayout.astro";
 
 interface BreadcrumbItem {
 	label: string;
@@ -25,10 +26,32 @@ interface Props {
 	breadcrumbItems?: BreadcrumbItem[];
 	sectionTitle: string;
 	sidebarItems: SidebarItem[];
+	groupByLetter?: boolean;
 }
 
-const { title, description, breadcrumbItems = [], sectionTitle, sidebarItems } = Astro.props;
+const {
+	title,
+	description,
+	breadcrumbItems = [],
+	sectionTitle,
+	sidebarItems,
+	groupByLetter = false,
+} = Astro.props;
 const pathname = Astro.url.pathname;
+
+// Group items by first letter if requested
+type GroupedItems = { letter: string; items: SidebarItem[] }[];
+const groupedItems: GroupedItems | null = groupByLetter
+	? Object.entries(
+			sidebarItems.reduce<Record<string, SidebarItem[]>>((acc, item) => {
+				const first = item.title[0].toUpperCase();
+				const letter = /\d/.test(first) ? "0-9" : first;
+				if (!acc[letter]) acc[letter] = [];
+				acc[letter].push(item);
+				return acc;
+			}, {}),
+		).map(([letter, items]) => ({ letter, items }))
+	: null;
 ---
 
 <BaseLayout title={title} description={description}>
@@ -41,16 +64,60 @@ const pathname = Astro.url.pathname;
 						<Logo class="text-xl text-gray-950 dark:text-white" />
 					</a>
 				</div>
+				<!-- Search -->
+				<div class="mb-4 px-1">
+					<div class="relative">
+						<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+						</svg>
+						<input
+							type="text"
+							placeholder="Filtrer..."
+							data-sidebar-search="desktop"
+							class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-9 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
+						/>
+						<kbd class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-gray-950/10 px-1.5 text-[10px] font-medium text-gray-400 dark:border-white/10 dark:text-gray-500" data-search-kbd>
+							<span data-search-kbd-prefix></span>K
+						</kbd>
+					</div>
+				</div>
 				<nav class="flex-1 space-y-6">
 					<div>
-						<h3 class="px-2 text-xs/6 font-semibold text-gray-500">
+						<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
 							{sectionTitle}
 						</h3>
-						<ul class="mt-1 space-y-0.5">
-							{sidebarItems.map((item) => {
+						<ul class="mt-1 space-y-0.5" data-sidebar-list="desktop">
+							{groupedItems ? groupedItems.map((group) => (
+								<>
+									<li data-sidebar-letter class="mt-4 first:mt-0 px-2 text-xs/6 font-bold text-gray-950 dark:text-white">{group.letter}</li>
+									{group.items.map((item) => {
+										const isActive = pathname === item.href || pathname === `${item.href}/`;
+										return (
+											<li data-sidebar-item data-title={item.title.toLowerCase()} data-letter={group.letter}>
+												<a
+													href={item.href}
+													class:list={[
+														"-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
+														isActive
+															? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
+															: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
+													]}
+												>
+													<CirclePlayIcon class:list={[
+														isActive
+															? "text-gray-950 dark:text-white"
+															: "text-gray-400 dark:text-gray-500",
+													]} />
+													<span class="truncate">{item.title}</span>
+												</a>
+											</li>
+										);
+									})}
+								</>
+							)) : sidebarItems.map((item) => {
 								const isActive = pathname === item.href || pathname === `${item.href}/`;
 								return (
-									<li>
+									<li data-sidebar-item data-title={item.title.toLowerCase()}>
 										<a
 											href={item.href}
 											class:list={[
@@ -71,11 +138,14 @@ const pathname = Astro.url.pathname;
 								);
 							})}
 						</ul>
+						<p class="mt-3 hidden px-2 text-sm/6 text-gray-400 dark:text-gray-500" data-sidebar-empty="desktop">
+							Ingen resultater
+						</p>
 					</div>
 					<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
 						<a
 							href="/"
-							class="-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-500 hover:bg-gray-950/4 dark:hover:bg-white/5"
+							class="-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
 						>
 							&larr; Tilbage til kurset
 						</a>
@@ -97,16 +167,57 @@ const pathname = Astro.url.pathname;
 							<CloseIcon class="text-gray-950 dark:text-white" />
 						</button>
 					</div>
+					<!-- Mobile Search -->
+					<div class="mb-4 px-1">
+						<div class="relative">
+							<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+							</svg>
+							<input
+								type="text"
+								placeholder="Filtrer..."
+								data-sidebar-search="mobile"
+								class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-3 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
+							/>
+						</div>
+					</div>
 					<nav class="space-y-6">
 						<div>
-							<h3 class="px-2 text-xs/6 font-semibold text-gray-500">
+							<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
 								{sectionTitle}
 							</h3>
-							<ul class="mt-1 space-y-0.5">
-								{sidebarItems.map((item) => {
+							<ul class="mt-1 space-y-0.5" data-sidebar-list="mobile">
+								{groupedItems ? groupedItems.map((group) => (
+									<>
+										<li data-sidebar-letter class="mt-4 first:mt-0 px-2 text-xs/6 font-bold text-gray-950 dark:text-white">{group.letter}</li>
+										{group.items.map((item) => {
+											const isActive = pathname === item.href || pathname === `${item.href}/`;
+											return (
+												<li data-sidebar-item data-title={item.title.toLowerCase()} data-letter={group.letter}>
+													<a
+														href={item.href}
+														class:list={[
+															"flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
+															isActive
+																? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
+																: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
+														]}
+													>
+														<CirclePlayIcon class:list={[
+															isActive
+																? "text-gray-950 dark:text-white"
+																: "text-gray-400 dark:text-gray-500",
+														]} />
+														<span class="truncate">{item.title}</span>
+													</a>
+												</li>
+											);
+										})}
+									</>
+								)) : sidebarItems.map((item) => {
 									const isActive = pathname === item.href || pathname === `${item.href}/`;
 									return (
-										<li>
+										<li data-sidebar-item data-title={item.title.toLowerCase()}>
 											<a
 												href={item.href}
 												class:list={[
@@ -127,11 +238,14 @@ const pathname = Astro.url.pathname;
 									);
 								})}
 							</ul>
+							<p class="mt-3 hidden px-2 text-sm/6 text-gray-400 dark:text-gray-500" data-sidebar-empty="mobile">
+								Ingen resultater
+							</p>
 						</div>
 						<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
 							<a
 								href="/"
-								class="flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-500 hover:bg-gray-950/4 dark:hover:bg-white/5"
+								class="flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
 							>
 								&larr; Tilbage til kurset
 							</a>
@@ -157,7 +271,7 @@ const pathname = Astro.url.pathname;
 										<ChevronRightIcon class="text-gray-400 dark:text-gray-600" />
 									)}
 									{item.href ? (
-										<a href={item.href} class:list={[item.class, "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"]}>
+										<a href={item.href} class:list={[item.class, "text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"]}>
 											{item.label}
 										</a>
 									) : (
@@ -175,19 +289,88 @@ const pathname = Astro.url.pathname;
 			<main class="flex-1 px-4 pb-16 sm:px-6">
 				<slot />
 			</main>
+			<Footer />
 		</div>
 	</div>
 </BaseLayout>
 
 <script>
+	// Mobile sidebar open/close
 	document.querySelectorAll("[data-open-sidebar]").forEach((btn) => {
 		btn.addEventListener("click", () => {
 			document.getElementById("mobile-sidebar")?.classList.remove("hidden");
+			const mobileSearch = document.querySelector<HTMLInputElement>('[data-sidebar-search="mobile"]');
+			mobileSearch?.focus();
 		});
 	});
 	document.querySelectorAll("[data-close-sidebar]").forEach((btn) => {
 		btn.addEventListener("click", () => {
 			document.getElementById("mobile-sidebar")?.classList.add("hidden");
 		});
+	});
+
+	// Sidebar search filter
+	document.querySelectorAll<HTMLInputElement>("[data-sidebar-search]").forEach((input) => {
+		const variant = input.dataset.sidebarSearch!;
+		const list = document.querySelector(`[data-sidebar-list="${variant}"]`);
+		const empty = document.querySelector(`[data-sidebar-empty="${variant}"]`);
+		if (!list) return;
+
+		const items = list.querySelectorAll<HTMLLIElement>("[data-sidebar-item]");
+		const letterHeaders = list.querySelectorAll<HTMLLIElement>("[data-sidebar-letter]");
+
+		input.addEventListener("input", () => {
+			const query = input.value.toLowerCase().trim();
+			let visible = 0;
+
+			items.forEach((item) => {
+				const title = item.dataset.title || "";
+				const match = !query || title.includes(query);
+				item.style.display = match ? "" : "none";
+				if (match) visible++;
+			});
+
+			// Hide letter headers when no items in that group are visible
+			letterHeaders.forEach((header) => {
+				const letter = header.textContent?.trim() || "";
+				const hasVisible = Array.from(items).some(
+					(item) => item.dataset.letter === letter && item.style.display !== "none"
+				);
+				header.style.display = hasVisible ? "" : "none";
+			});
+
+			empty?.classList.toggle("hidden", visible > 0);
+		});
+
+		// Clear on Escape
+		input.addEventListener("keydown", (e) => {
+			if (e.key === "Escape" && input.value) {
+				e.preventDefault();
+				input.value = "";
+				input.dispatchEvent(new Event("input"));
+			}
+		});
+	});
+
+	// Cmd/Ctrl+K to focus desktop search
+	const kbdPrefix = document.querySelector("[data-search-kbd-prefix]");
+	if (kbdPrefix) {
+		kbdPrefix.textContent = navigator.platform.includes("Mac") ? "\u2318" : "Ctrl+";
+	}
+
+	document.addEventListener("keydown", (e) => {
+		if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+			e.preventDefault();
+			const desktopSearch = document.querySelector<HTMLInputElement>('[data-sidebar-search="desktop"]');
+			const mobileSearch = document.querySelector<HTMLInputElement>('[data-sidebar-search="mobile"]');
+			const target = window.innerWidth >= 1024 ? desktopSearch : mobileSearch;
+
+			if (target && window.innerWidth < 1024) {
+				document.getElementById("mobile-sidebar")?.classList.remove("hidden");
+			}
+
+			target?.focus();
+			target?.select();
+		}
 	});
 </script>

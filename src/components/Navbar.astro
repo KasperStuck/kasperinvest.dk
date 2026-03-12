@@ -1,12 +1,12 @@
 ---
-import MenuIcon from "@/icons/MenuIcon.astro";
-import CloseIcon from "@/icons/CloseIcon.astro";
-import SunIcon from "@/icons/SunIcon.astro";
-import MoonIcon from "@/icons/MoonIcon.astro";
 import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
+import CloseIcon from "@/icons/CloseIcon.astro";
+import MenuIcon from "@/icons/MenuIcon.astro";
+import MoonIcon from "@/icons/MoonIcon.astro";
+import SunIcon from "@/icons/SunIcon.astro";
 ---
 
-<div class="sticky top-0 z-10 bg-white/90 backdrop-blur-sm dark:bg-gray-950/90 flex items-center justify-between gap-x-8 px-4 py-4 sm:px-6">
+<div class="sticky top-0 z-40 bg-white/90 backdrop-blur-sm dark:bg-gray-950/90 flex items-center justify-between gap-x-8 px-4 py-4 sm:px-6">
   <slot />
   <nav class="flex items-center">
     <!-- Mobile menu button -->
@@ -27,49 +27,21 @@ import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
           <div class="mt-4">
             <div class="flex flex-col gap-y-2">
               <a href="/" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">Kursus</a>
-              <!-- Mobile: Folketingsvalg accordion -->
-              <div>
-                <button type="button" data-toggle-mobile-elections class="flex w-full items-center justify-between rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">
-                  Folketingsvalg
-                  <ChevronDownIcon class="size-4 transition-transform duration-200" data-mobile-elections-chevron />
-                </button>
-                <div class="hidden pl-4" data-mobile-elections-menu>
-                  <a href="/folketingsvalg/2026" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2026</a>
-                  <a href="/folketingsvalg/2022" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2022</a>
-                </div>
-              </div>
+              <a href="/pension" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">Pension</a>
+              <a href="/platforme" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">Platforme</a>
+              <a href="/ordbog" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">Ordbog</a>
               <a href="/youtube" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">YouTube</a>
-              <!-- Mobile: Pension accordion -->
+              <!-- Mobile: Mere accordion -->
               <div>
-                <button type="button" data-toggle-mobile-pension class="flex w-full items-center justify-between rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">
-                  Pension
-                  <ChevronDownIcon class="size-4 transition-transform duration-200" data-mobile-pension-chevron />
+                <button type="button" data-toggle-mobile-mere class="flex w-full items-center justify-between rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">
+                  Mere
+                  <ChevronDownIcon class="size-4 transition-transform duration-200" data-mobile-mere-chevron />
                 </button>
-                <div class="hidden pl-4" data-mobile-pension-menu>
-                  <a href="/pension/aldersopsparing" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Aldersopsparing</a>
-                  <a href="/pension/ratepension" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Ratepension</a>
-                  <a href="/pension/folkepension" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folkepension</a>
-                  <a href="/pension/privat-pension" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Privat pension</a>
-                  <a href="/pension/arbejdsmarkedspension" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Arbejdsmarkedspension</a>
-                  <a href="/pension/livrente" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Livrente</a>
+                <div class="hidden pl-4" data-mobile-mere-menu>
+                  <a href="/folketingsvalg" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg</a>
+                  <a href="/resources" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Ressourcer</a>
                 </div>
               </div>
-              <!-- Mobile: Platforme accordion -->
-              <div>
-                <button type="button" data-toggle-mobile-platforme class="flex w-full items-center justify-between rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">
-                  Platforme
-                  <ChevronDownIcon class="size-4 transition-transform duration-200" data-mobile-platforme-chevron />
-                </button>
-                <div class="hidden pl-4" data-mobile-platforme-menu>
-                  <a href="/platforme/nordnet" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Nordnet</a>
-                  <a href="/platforme/saxo-bank" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Saxo Bank</a>
-                  <a href="/platforme/norm-invest" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Norm Invest</a>
-                  <a href="/platforme/endavu" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Endavu</a>
-                  <a href="/platforme/lysa" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Lysa</a>
-                  <a href="/platforme/etoro" class="block rounded-md px-4 py-1.5 text-base/7 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">eToro</a>
-                </div>
-              </div>
-              <a href="/resources" class="block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">Ressourcer</a>
               <button type="button" data-toggle-theme class="cursor-pointer flex items-center gap-2 rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5">
                 <SunIcon class="hidden text-current dark:block" />
                 <MoonIcon class="block text-current dark:hidden" />
@@ -84,49 +56,21 @@ import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
     <!-- Desktop nav -->
     <div class="flex items-center gap-x-6 text-sm/6 text-gray-950 max-lg:hidden dark:text-white">
       <a href="/">Kursus</a>
-      <!-- Desktop: Folketingsvalg dropdown -->
-      <div class="relative" data-dropdown>
-        <button type="button" class="flex cursor-pointer items-center gap-1" data-dropdown-trigger>
-          Folketingsvalg
-          <ChevronDownIcon class="size-3.5 transition-transform duration-200" data-dropdown-chevron />
-        </button>
-        <div class="absolute top-full right-0 z-20 mt-2 hidden w-48 rounded-lg bg-white py-1 ring ring-gray-950/10 dark:bg-gray-950 dark:ring-white/10" data-dropdown-menu>
-          <a href="/folketingsvalg/2026" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2026</a>
-          <a href="/folketingsvalg/2022" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg 2022</a>
-        </div>
-      </div>
+      <a href="/pension">Pension</a>
+      <a href="/platforme">Platforme</a>
+      <a href="/ordbog">Ordbog</a>
       <a href="/youtube">YouTube</a>
-      <!-- Desktop: Pension dropdown -->
+      <!-- Desktop: Mere dropdown -->
       <div class="relative" data-dropdown>
         <button type="button" class="flex cursor-pointer items-center gap-1" data-dropdown-trigger>
-          Pension
-          <ChevronDownIcon class="size-3.5 transition-transform duration-200" data-dropdown-chevron />
-        </button>
-        <div class="absolute top-full right-0 z-20 mt-2 hidden w-56 rounded-lg bg-white py-1 ring ring-gray-950/10 dark:bg-gray-950 dark:ring-white/10" data-dropdown-menu>
-          <a href="/pension/aldersopsparing" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Aldersopsparing</a>
-          <a href="/pension/ratepension" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Ratepension</a>
-          <a href="/pension/folkepension" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folkepension</a>
-          <a href="/pension/privat-pension" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Privat pension</a>
-          <a href="/pension/arbejdsmarkedspension" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Arbejdsmarkedspension</a>
-          <a href="/pension/livrente" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Livrente</a>
-        </div>
-      </div>
-      <!-- Desktop: Platforme dropdown -->
-      <div class="relative" data-dropdown>
-        <button type="button" class="flex cursor-pointer items-center gap-1" data-dropdown-trigger>
-          Platforme
+          Mere
           <ChevronDownIcon class="size-3.5 transition-transform duration-200" data-dropdown-chevron />
         </button>
         <div class="absolute top-full right-0 z-20 mt-2 hidden w-48 rounded-lg bg-white py-1 ring ring-gray-950/10 dark:bg-gray-950 dark:ring-white/10" data-dropdown-menu>
-          <a href="/platforme/nordnet" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Nordnet</a>
-          <a href="/platforme/saxo-bank" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Saxo Bank</a>
-          <a href="/platforme/norm-invest" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Norm Invest</a>
-          <a href="/platforme/endavu" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Endavu</a>
-          <a href="/platforme/lysa" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Lysa</a>
-          <a href="/platforme/etoro" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">eToro</a>
+          <a href="/folketingsvalg" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Folketingsvalg</a>
+          <a href="/resources" class="block px-4 py-1.5 text-sm/6 text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5">Ressourcer</a>
         </div>
       </div>
-      <a href="/resources">Ressourcer</a>
       <button type="button" class="cursor-pointer relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden" data-toggle-theme aria-label="Skift tema">
         <SunIcon class="hidden text-gray-950 dark:block dark:text-white" />
         <MoonIcon class="block text-gray-950 dark:hidden dark:text-white" />
@@ -148,35 +92,19 @@ import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
     });
   });
 
-  // Mobile elections accordion
-  document.querySelectorAll("[data-toggle-mobile-elections]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const menu = btn.closest("div")?.querySelector("[data-mobile-elections-menu]");
-      const chevron = btn.querySelector("[data-mobile-elections-chevron]");
-      menu?.classList.toggle("hidden");
-      chevron?.classList.toggle("rotate-180");
+  // Mobile accordion (generic)
+  function setupMobileAccordion(toggleAttr: string, menuAttr: string, chevronAttr: string) {
+    document.querySelectorAll(`[${toggleAttr}]`).forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const menu = btn.closest("div")?.querySelector(`[${menuAttr}]`);
+        const chevron = btn.querySelector(`[${chevronAttr}]`);
+        menu?.classList.toggle("hidden");
+        chevron?.classList.toggle("rotate-180");
+      });
     });
-  });
+  }
 
-  // Mobile pension accordion
-  document.querySelectorAll("[data-toggle-mobile-pension]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const menu = btn.closest("div")?.querySelector("[data-mobile-pension-menu]");
-      const chevron = btn.querySelector("[data-mobile-pension-chevron]");
-      menu?.classList.toggle("hidden");
-      chevron?.classList.toggle("rotate-180");
-    });
-  });
-
-  // Mobile platforme accordion
-  document.querySelectorAll("[data-toggle-mobile-platforme]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const menu = btn.closest("div")?.querySelector("[data-mobile-platforme-menu]");
-      const chevron = btn.querySelector("[data-mobile-platforme-chevron]");
-      menu?.classList.toggle("hidden");
-      chevron?.classList.toggle("rotate-180");
-    });
-  });
+  setupMobileAccordion("data-toggle-mobile-mere", "data-mobile-mere-menu", "data-mobile-mere-chevron");
 
   // Desktop dropdown
   document.querySelectorAll("[data-dropdown]").forEach((dropdown) => {

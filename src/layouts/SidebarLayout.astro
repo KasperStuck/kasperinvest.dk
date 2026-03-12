@@ -1,12 +1,13 @@
 ---
-import BaseLayout from "./BaseLayout.astro";
-import Navbar from "@/components/Navbar.astro";
+import Footer from "@/components/Footer.astro";
 import Logo from "@/components/Logo.astro";
-import SidebarIcon from "@/icons/SidebarIcon.astro";
+import Navbar from "@/components/Navbar.astro";
+import { getModules } from "@/data/lessons";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
 import CloseIcon from "@/icons/CloseIcon.astro";
-import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
-import { getModules } from "@/data/lessons";
+import SidebarIcon from "@/icons/SidebarIcon.astro";
+import BaseLayout from "./BaseLayout.astro";
 
 interface BreadcrumbItem {
 	label: string;
@@ -38,7 +39,7 @@ const pathname = Astro.url.pathname;
 				<nav class="flex-1 space-y-6">
 					{modules.map((module, moduleIndex) => (
 						<div>
-							<h3 class="px-2 text-xs/6 font-semibold text-gray-500">
+							<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
 								Del {moduleIndex + 1} &mdash; {module.title}
 							</h3>
 							<ul class="mt-1 space-y-0.5">
@@ -89,7 +90,7 @@ const pathname = Astro.url.pathname;
 					<nav class="space-y-6">
 						{modules.map((module, moduleIndex) => (
 							<div>
-								<h3 class="px-2 text-xs/6 font-semibold text-gray-500">
+								<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
 									Del {moduleIndex + 1} &mdash; {module.title}
 								</h3>
 								<ul class="mt-1 space-y-0.5">
@@ -143,7 +144,7 @@ const pathname = Astro.url.pathname;
 										<ChevronRightIcon class="text-gray-400 dark:text-gray-600" />
 									)}
 									{item.href ? (
-										<a href={item.href} class:list={[item.class, "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"]}>
+										<a href={item.href} class:list={[item.class, "text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"]}>
 											{item.label}
 										</a>
 									) : (
@@ -161,6 +162,7 @@ const pathname = Astro.url.pathname;
 			<main class="flex-1 px-4 pb-16 sm:px-6">
 				<slot />
 			</main>
+			<Footer />
 		</div>
 	</div>
 </BaseLayout>

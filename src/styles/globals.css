@@ -1,99 +1,86 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/inter/wght-italic.css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-@font-face {
-  font-family: "InterVariable";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("/fonts/InterVariable.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "InterVariable";
-  font-style: italic;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("/fonts/InterVariable-Italic.woff2") format("woff2");
-}
-
 @theme inline {
-  --font-sans: "InterVariable", sans-serif;
-  --font-sans--font-feature-settings: "cv11";
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+	--font-sans: "Inter Variable", sans-serif;
+	--font-sans--font-feature-settings: "cv11";
+	--font-mono:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+		monospace;
 }
 
 @layer base {
-  table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
-  }
+	table {
+		display: block;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		max-width: 100%;
+	}
 }
 
 @utility scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-  --scrollbar-thumb: oklch(0 0 0 / 0.15);
-  padding-bottom: 0.5rem;
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) transparent;
+	--scrollbar-thumb: oklch(0 0 0 / 0.15);
+	padding-bottom: 0.5rem;
 
-  &::-webkit-scrollbar {
-    height: 6px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 9999px;
-  }
+	&::-webkit-scrollbar {
+		height: 6px;
+	}
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	&::-webkit-scrollbar-thumb {
+		background: var(--scrollbar-thumb);
+		border-radius: 9999px;
+	}
 
-  :where(.dark, .dark *) & {
-    --scrollbar-thumb: oklch(1 0 0 / 0.15);
-  }
+	:where(.dark, .dark *) & {
+		--scrollbar-thumb: oklch(1 0 0 / 0.15);
+	}
 }
 
 @theme {
-  --text-xs: 0.75rem;
-  --text-xs--line-height: calc(1 / 0.75);
-  --text-sm: 0.875rem;
-  --text-sm--line-height: calc(1.25 / 0.875);
-  --text-base: 1rem;
-  --text-base--line-height: calc(1.5 / 1);
-  --text-lg: 1.125rem;
-  --text-lg--line-height: calc(1.75 / 1.125);
-  --text-xl: 1.25rem;
-  --text-xl--line-height: calc(1.75 / 1.25);
-  --text-2xl: 1.5rem;
-  --text-2xl--line-height: calc(2 / 1.5);
-  --text-3xl: 2rem;
-  --text-3xl--line-height: calc(2.5 / 2);
-  --text-4xl: 2.5rem;
-  --text-4xl--line-height: 1;
-  --text-5xl: 3rem;
-  --text-5xl--line-height: 1;
-  --text-6xl: 3.75rem;
-  --text-6xl--line-height: 1;
-  --text-7xl: 4.5rem;
-  --text-7xl--line-height: 1;
-  --text-8xl: 6rem;
-  --text-8xl--line-height: 1;
-  --text-9xl: 8rem;
-  --text-9xl--line-height: 1;
+	--text-xs: 0.75rem;
+	--text-xs--line-height: calc(1 / 0.75);
+	--text-sm: 0.875rem;
+	--text-sm--line-height: calc(1.25 / 0.875);
+	--text-base: 1rem;
+	--text-base--line-height: calc(1.5 / 1);
+	--text-lg: 1.125rem;
+	--text-lg--line-height: calc(1.75 / 1.125);
+	--text-xl: 1.25rem;
+	--text-xl--line-height: calc(1.75 / 1.25);
+	--text-2xl: 1.5rem;
+	--text-2xl--line-height: calc(2 / 1.5);
+	--text-3xl: 2rem;
+	--text-3xl--line-height: calc(2.5 / 2);
+	--text-4xl: 2.5rem;
+	--text-4xl--line-height: 1;
+	--text-5xl: 3rem;
+	--text-5xl--line-height: 1;
+	--text-6xl: 3.75rem;
+	--text-6xl--line-height: 1;
+	--text-7xl: 4.5rem;
+	--text-7xl--line-height: 1;
+	--text-8xl: 6rem;
+	--text-8xl--line-height: 1;
+	--text-9xl: 8rem;
+	--text-9xl--line-height: 1;
 
-  --animate-caret-blink: caret-blink 1.1s infinite;
+	--animate-caret-blink: caret-blink 1.1s infinite;
 
-  @keyframes caret-blink {
-    0% {
-      visibility: visible;
-    }
-    50%,
-    100% {
-      visibility: hidden;
-    }
-  }
+	@keyframes caret-blink {
+		0% {
+			visibility: visible;
+		}
+		50%,
+		100% {
+			visibility: hidden;
+		}
+	}
 }

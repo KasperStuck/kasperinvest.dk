@@ -2,62 +2,81 @@
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import Prose from "@/components/Prose.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
-import { getPlatform, getPlatformContent, getPlatforms } from "@/data/platforms";
+import { getGlossaryTerm, getGlossaryTermContent, getGlossaryTerms } from "@/data/glossary";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import SectionLayout from "@/layouts/SectionLayout.astro";
 
 export function getStaticPaths() {
-	return getPlatforms().map((p) => ({
-		params: { slug: p.id },
+	return getGlossaryTerms().map((t) => ({
+		params: { slug: t.id },
 	}));
 }
 
 const { slug } = Astro.params;
 if (!slug) return new Response(null, { status: 404, statusText: "Not Found" });
-const platform = getPlatform(slug);
+const term = getGlossaryTerm(slug);
 
-if (!platform) {
+if (!term) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
-const sidebarItems = getPlatforms().map((p) => ({
-	id: p.id,
-	title: p.title,
-	href: `/platforme/${p.id}`,
+const sidebarItems = getGlossaryTerms().map((t) => ({
+	id: t.id,
+	title: t.title,
+	href: `/ordbog/${t.id}`,
 }));
 
 let Content: AstroComponentFactory | null = null;
 try {
-	Content = (await getPlatformContent(slug)) as AstroComponentFactory;
+	Content = (await getGlossaryTermContent(slug)) as AstroComponentFactory;
 } catch {
 	// MDX file doesn't exist yet
 }
 
 const breadcrumbItems = [
 	{ label: "KasperInvest", href: "/" },
-	{ label: "Platforme", href: "/platforme", class: "max-md:hidden" },
-	{ label: platform.title },
+	{ label: "Ordbog", href: "/ordbog", class: "max-md:hidden" },
+	{ label: term.title },
 ];
+
+const publishedDate = new Date(term.publishedAt).toLocaleDateString("da-DK", {
+	year: "numeric",
+	month: "long",
+	day: "numeric",
+});
+const updatedDate = new Date(term.updatedAt).toLocaleDateString("da-DK", {
+	year: "numeric",
+	month: "long",
+	day: "numeric",
+});
+const showUpdated = term.updatedAt !== term.publishedAt;
 ---
 
 <SectionLayout
-	title={`${platform.title} - Platforme - KasperInvest`}
-	description={platform.description}
+	title={`${term.title} - Ordbog - KasperInvest`}
+	description={term.description}
 	breadcrumbItems={breadcrumbItems}
-	sectionTitle="Platforme"
+	sectionTitle="Ordbog"
 	sidebarItems={sidebarItems}
+	groupByLetter
 >
 	<div class="mx-auto max-w-7xl">
 		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 lg:max-w-5xl">
 			<div class="w-full flex-1">
+				<div class="mb-6 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
+					<time datetime={term.publishedAt}>Udgivet {publishedDate}</time>
+					{showUpdated && (
+						<time datetime={term.updatedAt}>Opdateret {updatedDate}</time>
+					)}
+				</div>
 				<Prose empty={!Content}>
 					{Content && <Content />}
 				</Prose>
 				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
-					{platform.next ? (
+					{term.next ? (
 						<div class="flow-root">
 							<a
-								href={`/platforme/${platform.next.id}`}
+								href={`/ordbog/${term.next.id}`}
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
 								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
@@ -65,10 +84,10 @@ const breadcrumbItems = [
 									<ChevronRightIcon />
 								</p>
 								<p class="mt-3 text-base/7 font-medium text-gray-950 dark:text-white">
-									{platform.next.title}
+									{term.next.title}
 								</p>
 								<p class="text-sm/7 text-gray-700 dark:text-gray-400">
-									{platform.next.description}
+									{term.next.description}
 								</p>
 							</a>
 						</div>

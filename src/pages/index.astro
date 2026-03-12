@@ -1,20 +1,17 @@
 ---
-import SidebarLayout from "@/layouts/SidebarLayout.astro";
+import { Image } from "astro:assets";
 import Logo from "@/components/Logo.astro";
+import { getModules, type Module } from "@/data/lessons";
 import BookIcon from "@/icons/BookIcon.astro";
+import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
 import ClockIcon from "@/icons/ClockIcon.astro";
 import LessonsIcon from "@/icons/LessonsIcon.astro";
 import PlayIcon from "@/icons/PlayIcon.astro";
-import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
-import { Image } from "astro:assets";
-import { getModules, type Module } from "@/data/lessons";
+import SidebarLayout from "@/layouts/SidebarLayout.astro";
 
 const modules = getModules();
 const lessons = modules.flatMap(({ lessons }) => lessons);
-const duration = lessons.reduce(
-	(sum, { video }) => sum + (video?.duration ?? 0),
-	0,
-);
+const duration = lessons.reduce((sum, { video }) => sum + (video?.duration ?? 0), 0);
 
 function formatDuration(seconds: number): string {
 	const h = Math.floor(seconds / 3600);
@@ -135,7 +132,7 @@ function formatLessonDuration(seconds: number): string {
 																		<span class="mx-2 hidden text-gray-950/25 sm:inline dark:text-white/25">
 																			&middot;
 																		</span>
-																		<span class="hidden text-gray-500 sm:inline">
+																		<span class="hidden text-gray-600 sm:inline">
 																			{formatLessonDuration(lesson.video.duration)}
 																		</span>
 																	</>

@@ -1,7 +1,7 @@
 ---
-import ElectionLayout from "@/layouts/ElectionLayout.astro";
+import { getElection, getElections } from "@/data/elections";
 import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
-import { getElections, getElection } from "@/data/elections";
+import ElectionLayout from "@/layouts/ElectionLayout.astro";
 
 export function getStaticPaths() {
 	return getElections().map((election) => ({
@@ -18,7 +18,8 @@ if (!election) {
 
 const breadcrumbItems = [
 	{ label: "KasperInvest", href: "/" },
-	{ label: election.title },
+	{ label: "Folketingsvalg", href: "/folketingsvalg" },
+	{ label: String(election.year) },
 ];
 ---
 

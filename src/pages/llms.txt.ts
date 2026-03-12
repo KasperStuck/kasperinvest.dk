@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
-import { getModules } from "@/data/lessons";
 import { getElections } from "@/data/elections";
+import { getModules } from "@/data/lessons";
 import { getPensionTypes } from "@/data/pension";
 import { getPlatforms } from "@/data/platforms";
 
@@ -30,9 +30,7 @@ export const GET: APIRoute = () => {
 	}
 
 	lines.push("## YouTube", "");
-	lines.push(
-		"Udvalgte videoer fra danske finans-youtubere om investering og privatøkonomi.",
-	);
+	lines.push("Udvalgte videoer fra danske finans-youtubere om investering og privatøkonomi.");
 	lines.push("");
 	lines.push("- [YouTube oversigt](https://kasperinvest.dk/youtube)");
 	lines.push("");
@@ -41,9 +39,7 @@ export const GET: APIRoute = () => {
 	lines.push("Investerings- og skatteanalyse af partiernes valgplatforme.");
 	lines.push("");
 	for (const election of elections) {
-		lines.push(
-			`- [${election.title}](https://kasperinvest.dk/folketingsvalg/${election.year})`,
-		);
+		lines.push(`- [${election.title}](https://kasperinvest.dk/folketingsvalg/${election.year})`);
 	}
 	lines.push("");
 
@@ -51,9 +47,7 @@ export const GET: APIRoute = () => {
 	lines.push("Overblik over de vigtigste pensionstyper i Danmark.");
 	lines.push("");
 	for (const pension of getPensionTypes()) {
-		lines.push(
-			`- [${pension.title}](https://kasperinvest.dk/pension/${pension.id})`,
-		);
+		lines.push(`- [${pension.title}](https://kasperinvest.dk/pension/${pension.id})`);
 	}
 	lines.push("");
 
@@ -61,9 +55,7 @@ export const GET: APIRoute = () => {
 	lines.push("Anmeldelser og guides til populære investeringsplatforme i Danmark.");
 	lines.push("");
 	for (const platform of getPlatforms()) {
-		lines.push(
-			`- [${platform.title}](https://kasperinvest.dk/platforme/${platform.id})`,
-		);
+		lines.push(`- [${platform.title}](https://kasperinvest.dk/platforme/${platform.id})`);
 	}
 	lines.push("");
 

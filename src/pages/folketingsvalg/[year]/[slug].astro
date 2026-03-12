@@ -1,9 +1,10 @@
 ---
-import ElectionLayout from "@/layouts/ElectionLayout.astro";
-import TableOfContents from "@/components/TableOfContents.astro";
-import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import Prose from "@/components/Prose.astro";
-import { getElections, getElectionArticle, getElectionArticleContent } from "@/data/elections";
+import TableOfContents from "@/components/TableOfContents.astro";
+import { getElectionArticle, getElectionArticleContent, getElections } from "@/data/elections";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import ElectionLayout from "@/layouts/ElectionLayout.astro";
 
 export function getStaticPaths() {
 	return getElections().flatMap((election) =>
@@ -14,15 +15,16 @@ export function getStaticPaths() {
 }
 
 const { year, slug } = Astro.params;
-const article = getElectionArticle(Number(year), slug!);
+if (!slug) return new Response(null, { status: 404, statusText: "Not Found" });
+const article = getElectionArticle(Number(year), slug);
 
 if (!article) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
-let Content: any = null;
+let Content: AstroComponentFactory | null = null;
 try {
-	Content = await getElectionArticleContent(Number(year), slug!);
+	Content = (await getElectionArticleContent(Number(year), slug)) as AstroComponentFactory;
 } catch {
 	// MDX file doesn't exist yet – will show "coming soon" fallback
 }
@@ -53,7 +55,7 @@ const breadcrumbItems = [
 								href={`/folketingsvalg/${year}/${article.next.id}`}
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
 									Næste parti
 									<ChevronRightIcon />
 								</p>
@@ -71,7 +73,7 @@ const breadcrumbItems = [
 								href="/"
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
 									Tilbage
 									<ChevronRightIcon />
 								</p>

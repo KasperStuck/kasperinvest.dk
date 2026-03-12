@@ -1,10 +1,11 @@
 ---
-import SidebarLayout from "@/layouts/SidebarLayout.astro";
-import VideoPlayer from "@/components/VideoPlayer.astro";
-import TableOfContents from "@/components/TableOfContents.astro";
-import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import Prose from "@/components/Prose.astro";
-import { getModules, getLesson } from "@/data/lessons";
+import TableOfContents from "@/components/TableOfContents.astro";
+import VideoPlayer from "@/components/VideoPlayer.astro";
+import { getLesson, getModules } from "@/data/lessons";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import SidebarLayout from "@/layouts/SidebarLayout.astro";
 
 export function getStaticPaths() {
 	const modules = getModules();
@@ -17,7 +18,8 @@ export function getStaticPaths() {
 }
 
 const { slug } = Astro.params;
-const lesson = await getLesson(slug!);
+if (!slug) return new Response(null, { status: 404, statusText: "Not Found" });
+const lesson = await getLesson(slug);
 
 if (!lesson) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
@@ -25,7 +27,9 @@ if (!lesson) {
 
 const mdxFiles = import.meta.glob("/src/data/lessons/**/*.mdx");
 const mdxPath = `/src/data/lessons/${lesson.module.id}/${slug}.mdx`;
-const mdxModule = mdxFiles[mdxPath] ? await (mdxFiles[mdxPath]() as Promise<{ default: any }>) : null;
+const mdxModule = mdxFiles[mdxPath]
+	? await (mdxFiles[mdxPath]() as Promise<{ default: AstroComponentFactory }>)
+	: null;
 const Content = mdxModule?.default;
 
 const breadcrumbItems = [
@@ -60,7 +64,7 @@ const breadcrumbItems = [
 								href={`/${lesson.next.id}`}
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
 									Up next
 									<ChevronRightIcon />
 								</p>
@@ -78,7 +82,7 @@ const breadcrumbItems = [
 								href="/youtube"
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
 									Up next
 									<ChevronRightIcon />
 								</p>

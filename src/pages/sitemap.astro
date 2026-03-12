@@ -1,14 +1,16 @@
 ---
-import CenteredLayout from "@/layouts/CenteredLayout.astro";
-import { getModules } from "@/data/lessons";
 import { getElections } from "@/data/elections";
+import { getGlossaryTerms } from "@/data/glossary";
+import { getModules } from "@/data/lessons";
 import { getPensionTypes } from "@/data/pension";
 import { getPlatforms } from "@/data/platforms";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
 
 const modules = getModules();
 const elections = getElections();
 const pensionTypes = getPensionTypes();
 const platforms = getPlatforms();
+const glossaryTerms = getGlossaryTerms();
 ---
 
 <CenteredLayout title="Sitemap - KasperInvest" description="Komplet oversigt over alle sider på KasperInvest.">
@@ -104,6 +106,28 @@ const platforms = getPlatforms();
 						<li>
 							<a href={`/platforme/${p.id}`} class="text-gray-700 underline decoration-gray-950/25 hover:text-gray-950 hover:decoration-gray-950 dark:text-gray-400 dark:decoration-white/25 dark:hover:text-white dark:hover:decoration-white">
 								{p.title}
+							</a>
+						</li>
+					))}
+				</ul>
+			</div>
+		</section>
+
+		<section class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10">
+			<div class="col-span-full sm:col-span-1">
+				<div class="-mt-px inline-flex border-t border-gray-950 pt-px dark:border-white">
+					<div class="pt-4 text-sm/7 font-semibold text-gray-950 sm:pt-10 dark:text-white">
+						<h2>Ordbog</h2>
+					</div>
+				</div>
+			</div>
+			<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
+				<p class="text-sm/7 text-gray-600 dark:text-gray-400">Forklaringer af de vigtigste begreber inden for investering og økonomi.</p>
+				<ul class="mt-4 space-y-3 text-sm/7">
+					{glossaryTerms.map((t) => (
+						<li>
+							<a href={`/ordbog/${t.id}`} class="text-gray-700 underline decoration-gray-950/25 hover:text-gray-950 hover:decoration-gray-950 dark:text-gray-400 dark:decoration-white/25 dark:hover:text-white dark:hover:decoration-white">
+								{t.title}
 							</a>
 						</li>
 					))}

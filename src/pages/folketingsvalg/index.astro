@@ -1,0 +1,45 @@
+---
+import { getElections } from "@/data/elections";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+const elections = getElections();
+---
+
+<CenteredLayout
+	title="Folketingsvalg - KasperInvest"
+	description="Investerings- og skatteanalyse af partiernes valgplatforme ved danske folketingsvalg. Se hvad partierne mener om investering, skat og pension."
+>
+	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
+		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">Folketingsvalg</span>
+	</nav>
+
+	<div class="mt-10 sm:mt-14">
+		<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
+			Folketingsvalg
+		</h1>
+		<p class="mt-6 max-w-2xl text-base/7 text-gray-700 dark:text-gray-400">
+			Hvad mener partierne om investering, skat og pension? Her analyserer vi partiernes valgplatforme fra et investorperspektiv, så du kan se hvilke partier der vil gøre det lettere — eller sværere — at investere i Danmark.
+		</p>
+	</div>
+
+	<div class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+		{elections.map((election) => (
+			<a
+				href={`/folketingsvalg/${election.year}`}
+				class="group rounded-xl border border-gray-950/10 p-6 transition hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"
+			>
+				<h2 class="text-base/7 font-semibold text-gray-950 group-hover:text-gray-700 dark:text-white dark:group-hover:text-gray-300">
+					{election.title}
+				</h2>
+				<p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">
+					{election.description}
+				</p>
+				<p class="mt-3 text-sm/6 text-gray-600">
+					{election.articles.length} artikler
+				</p>
+			</a>
+		))}
+	</div>
+</CenteredLayout>

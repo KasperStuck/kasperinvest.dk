@@ -1,0 +1,56 @@
+---
+import { getGlossaryTermsByLetter } from "@/data/glossary";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+const grouped = getGlossaryTermsByLetter();
+const letters = Object.keys(grouped).sort((a, b) => a.localeCompare(b, "da"));
+---
+
+<CenteredLayout title="Ordbog - KasperInvest" description="Slå op i vores finansielle ordbog med over 100 begreber inden for investering, aktier, pension og privatøkonomi.">
+	<div class="py-10 sm:py-14">
+		<h1 class="text-3xl/9 font-bold tracking-tight text-gray-950 dark:text-white sm:text-4xl/12">Ordbog</h1>
+		<p class="mt-3 max-w-2xl text-base/7 text-gray-600 dark:text-gray-400">
+			Slå op i vores finansielle ordbog og bliv klogere på begreber inden for investering, aktier, pension og privatøkonomi.
+		</p>
+
+		<!-- Letter navigation -->
+		<nav class="mt-8 flex flex-wrap gap-2">
+			{letters.map((letter) => (
+				<a
+					href={`#${letter}`}
+					class="inline-flex size-9 items-center justify-center rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5"
+				>
+					{letter}
+				</a>
+			))}
+		</nav>
+
+		<!-- Terms grouped by letter -->
+		<div class="mt-10 space-y-10">
+			{letters.map((letter) => (
+				<section id={letter}>
+					<h2 class="text-lg font-semibold text-gray-950 dark:text-white border-b border-gray-950/10 pb-2 dark:border-white/10">
+						{letter}
+					</h2>
+					<ul class="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+						{grouped[letter].map((term) => (
+							<li>
+								<a
+									href={`/ordbog/${term.id}`}
+									class="group block"
+								>
+									<span class="text-sm/6 font-medium text-gray-950 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
+										{term.title}
+									</span>
+									<p class="mt-0.5 text-sm/6 text-gray-600 dark:text-gray-400 line-clamp-1">
+										{term.description}
+									</p>
+								</a>
+							</li>
+						))}
+					</ul>
+				</section>
+			))}
+		</div>
+	</div>
+</CenteredLayout>

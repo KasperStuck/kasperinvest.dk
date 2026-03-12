@@ -1,0 +1,42 @@
+---
+import { getPensionTypes } from "@/data/pension";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+const pensionTypes = getPensionTypes();
+---
+
+<CenteredLayout
+	title="Pension - KasperInvest"
+	description="Overblik over de danske pensionstyper — aldersopsparing, ratepension, folkepension, livrente og mere. Forstå forskellen og vælg den rigtige pensionsordning."
+>
+	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
+		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
+		<span class="text-gray-950/25 dark:text-white/25">/</span>
+		<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">Pension</span>
+	</nav>
+
+	<div class="mt-10 sm:mt-14">
+		<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
+			Pension
+		</h1>
+		<p class="mt-6 max-w-2xl text-base/7 text-gray-700 dark:text-gray-400">
+			Det danske pensionssystem består af flere forskellige ordninger, der tilsammen skal sikre din økonomi, når du stopper med at arbejde. Hver pensionstype har sine egne regler for indbetaling, beskatning og udbetaling. Her får du et overblik over de vigtigste pensionstyper, så du kan forstå hvordan de virker og hvilke der er relevante for dig.
+		</p>
+	</div>
+
+	<div class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+		{pensionTypes.map((p) => (
+			<a
+				href={`/pension/${p.id}`}
+				class="group rounded-xl border border-gray-950/10 p-6 transition hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"
+			>
+				<h2 class="text-base/7 font-semibold text-gray-950 group-hover:text-gray-700 dark:text-white dark:group-hover:text-gray-300">
+					{p.title}
+				</h2>
+				<p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">
+					{p.description}
+				</p>
+			</a>
+		))}
+	</div>
+</CenteredLayout>

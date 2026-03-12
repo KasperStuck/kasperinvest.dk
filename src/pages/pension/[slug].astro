@@ -1,9 +1,10 @@
 ---
-import SectionLayout from "@/layouts/SectionLayout.astro";
-import TableOfContents from "@/components/TableOfContents.astro";
-import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import type { AstroComponentFactory } from "astro/runtime/server/index.js";
 import Prose from "@/components/Prose.astro";
-import { getPensionTypes, getPensionType, getPensionContent } from "@/data/pension";
+import TableOfContents from "@/components/TableOfContents.astro";
+import { getPensionContent, getPensionType, getPensionTypes } from "@/data/pension";
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import SectionLayout from "@/layouts/SectionLayout.astro";
 
 export function getStaticPaths() {
 	return getPensionTypes().map((p) => ({
@@ -12,7 +13,8 @@ export function getStaticPaths() {
 }
 
 const { slug } = Astro.params;
-const pension = getPensionType(slug!);
+if (!slug) return new Response(null, { status: 404, statusText: "Not Found" });
+const pension = getPensionType(slug);
 
 if (!pension) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
@@ -24,16 +26,16 @@ const sidebarItems = getPensionTypes().map((p) => ({
 	href: `/pension/${p.id}`,
 }));
 
-let Content: any = null;
+let Content: AstroComponentFactory | null = null;
 try {
-	Content = await getPensionContent(slug!);
+	Content = (await getPensionContent(slug)) as AstroComponentFactory;
 } catch {
 	// MDX file doesn't exist yet
 }
 
 const breadcrumbItems = [
 	{ label: "KasperInvest", href: "/" },
-	{ label: "Pension", href: `/pension/${getPensionTypes()[0].id}`, class: "max-md:hidden" },
+	{ label: "Pension", href: "/pension", class: "max-md:hidden" },
 	{ label: pension.title },
 ];
 ---
@@ -58,7 +60,7 @@ const breadcrumbItems = [
 								href={`/pension/${pension.next.id}`}
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
 									Næste
 									<ChevronRightIcon />
 								</p>
@@ -76,7 +78,7 @@ const breadcrumbItems = [
 								href="/"
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-500">
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
 									Tilbage
 									<ChevronRightIcon />
 								</p>

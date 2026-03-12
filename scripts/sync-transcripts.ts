@@ -4,9 +4,10 @@
  *
  * Usage: bun scripts/sync-transcripts.ts
  */
+
+import { fetchTranscript } from "@egoist/youtube-transcript-plus";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api";
-import { fetchTranscript } from "@egoist/youtube-transcript-plus";
 
 const CONVEX_URL = process.env.CONVEX_URL;
 if (!CONVEX_URL) throw new Error("Missing CONVEX_URL - source .env.local");
@@ -45,8 +46,8 @@ async function main() {
 			});
 
 			console.log(`${transcript.length} segments`);
-		} catch (e: any) {
-			console.log(`FAILED: ${e.message}`);
+		} catch (e) {
+			console.log(`FAILED: ${e instanceof Error ? e.message : String(e)}`);
 		}
 	}
 

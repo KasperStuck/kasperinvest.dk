@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { getModules, getLesson } from "./lessons";
+import { describe, expect, it } from "vitest";
+import { getLesson, getModules } from "./lessons";
 
 describe("getModules", () => {
 	it("returns all modules", () => {
@@ -41,23 +41,23 @@ describe("getLesson", () => {
 	it("finds a lesson by slug", async () => {
 		const lesson = await getLesson("velkommen-til-kurset");
 		expect(lesson).not.toBeNull();
-		expect(lesson!.title).toBe("Velkommen til kurset");
+		expect(lesson?.title).toBe("Velkommen til kurset");
 	});
 
 	it("includes the parent module", async () => {
 		const lesson = await getLesson("velkommen-til-kurset");
-		expect(lesson!.module.id).toBe("velkommen-og-fundament");
+		expect(lesson?.module.id).toBe("velkommen-og-fundament");
 	});
 
 	it("includes next lesson when not last", async () => {
 		const lesson = await getLesson("velkommen-til-kurset");
-		expect(lesson!.next).not.toBeNull();
-		expect(lesson!.next!.id).toBe("budget-og-overblik");
+		expect(lesson?.next).not.toBeNull();
+		expect(lesson?.next?.id).toBe("budget-og-overblik");
 	});
 
 	it("returns null next for last lesson in module", async () => {
 		const lesson = await getLesson("gaeld-eller-investering");
-		expect(lesson!.next).toBeNull();
+		expect(lesson?.next).toBeNull();
 	});
 
 	it("returns null for unknown slug", async () => {

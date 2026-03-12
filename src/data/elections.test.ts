@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { getElections, getElection, getElectionArticle } from "./elections";
+import { describe, expect, it } from "vitest";
+import { getElection, getElectionArticle, getElections } from "./elections";
 
 describe("getElections", () => {
 	it("returns all elections", () => {
@@ -34,7 +34,7 @@ describe("getElection", () => {
 	it("finds election by year", () => {
 		const election = getElection(2026);
 		expect(election).not.toBeNull();
-		expect(election!.title).toBe("Folketingsvalg 2026");
+		expect(election?.title).toBe("Folketingsvalg 2026");
 	});
 
 	it("returns null for unknown year", () => {
@@ -46,23 +46,23 @@ describe("getElectionArticle", () => {
 	it("finds article by year and slug", () => {
 		const article = getElectionArticle(2026, "overblik");
 		expect(article).not.toBeNull();
-		expect(article!.title).toBe("Overblik og rammebetingelser");
+		expect(article?.title).toBe("Overblik og rammebetingelser");
 	});
 
 	it("includes parent election", () => {
 		const article = getElectionArticle(2026, "overblik");
-		expect(article!.election.year).toBe(2026);
+		expect(article?.election.year).toBe(2026);
 	});
 
 	it("includes next article when not last", () => {
 		const article = getElectionArticle(2026, "overblik");
-		expect(article!.next).not.toBeNull();
-		expect(article!.next!.id).toBe("socialdemokratiet");
+		expect(article?.next).not.toBeNull();
+		expect(article?.next?.id).toBe("socialdemokratiet");
 	});
 
 	it("returns null next for last article", () => {
 		const article = getElectionArticle(2026, "alternativet");
-		expect(article!.next).toBeNull();
+		expect(article?.next).toBeNull();
 	});
 
 	it("returns null for unknown year", () => {
@@ -76,6 +76,6 @@ describe("getElectionArticle", () => {
 	it("works for 2022 election too", () => {
 		const article = getElectionArticle(2022, "overblik");
 		expect(article).not.toBeNull();
-		expect(article!.election.year).toBe(2022);
+		expect(article?.election.year).toBe(2022);
 	});
 });

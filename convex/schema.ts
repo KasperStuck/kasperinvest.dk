@@ -27,6 +27,7 @@ export default defineSchema({
 		country: v.optional(v.string()),
 		uploadsPlaylistId: v.string(),
 		thumbnailUrl: v.optional(v.string()),
+		thumbnailStorageId: v.optional(v.id("_storage")),
 		bannerUrl: v.optional(v.string()),
 		subscriberCount: v.optional(v.number()),
 		videoCount: v.optional(v.number()),
@@ -67,10 +68,14 @@ export default defineSchema({
 		seoTitle: v.optional(v.string()),
 		seoDescription: v.optional(v.string()),
 		article: v.optional(v.string()),
-		faq: v.optional(v.array(v.object({
-			question: v.string(),
-			answer: v.string(),
-		}))),
+		faq: v.optional(
+			v.array(
+				v.object({
+					question: v.string(),
+					answer: v.string(),
+				}),
+			),
+		),
 		themes: v.optional(v.array(v.string())),
 		categories: v.optional(v.array(category)),
 		keyTakeaways: v.optional(v.array(v.string())),
@@ -81,5 +86,6 @@ export default defineSchema({
 		.index("by_slug", ["slug"])
 		.index("by_channelId", ["channelId"])
 		.index("by_publishedAt", ["publishedAt"])
-		.index("by_channelId_publishedAt", ["channelId", "publishedAt"]),
+		.index("by_channelId_publishedAt", ["channelId", "publishedAt"])
+		.index("by_isShort_publishedAt", ["isShort", "publishedAt"]),
 });

@@ -1,5 +1,12 @@
 import { v } from "convex/values";
-import { query, internalMutation, internalQuery, mutation } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+
+async function resolveThumbnailUrl(ctx: QueryCtx, ch: Doc<"channels">) {
+	if (!ch.thumbnailStorageId) return ch.thumbnailUrl;
+	return (await ctx.storage.getUrl(ch.thumbnailStorageId)) ?? ch.thumbnailUrl;
+}
 
 export const upsert = internalMutation({
 	args: {
@@ -10,6 +17,7 @@ export const upsert = internalMutation({
 		country: v.optional(v.string()),
 		uploadsPlaylistId: v.string(),
 		thumbnailUrl: v.optional(v.string()),
+		thumbnailStorageId: v.optional(v.id("_storage")),
 		bannerUrl: v.optional(v.string()),
 		subscriberCount: v.optional(v.number()),
 		videoCount: v.optional(v.number()),
@@ -21,6 +29,13 @@ export const upsert = internalMutation({
 			.first();
 
 		if (existing) {
+			const hasNewThumbnail =
+				existing.thumbnailStorageId &&
+				args.thumbnailStorageId &&
+				existing.thumbnailStorageId !== args.thumbnailStorageId;
+			if (hasNewThumbnail && existing.thumbnailStorageId) {
+				await ctx.storage.delete(existing.thumbnailStorageId);
+			}
 			await ctx.db.patch(existing._id, args);
 			return existing._id;
 		}
@@ -59,16 +74,27 @@ export const listAll = internalQuery({
 
 export const list = query({
 	args: {},
-	handler: async (ctx) => ctx.db.query("channels").collect(),
+	handler: async (ctx) => {
+		const channels = await ctx.db.query("channels").collect();
+		return Promise.all(
+			channels.map(async (ch) => ({
+				...ch,
+				thumbnailUrl: await resolveThumbnailUrl(ctx, ch),
+			})),
+		);
+	},
 });
 
 export const get = query({
 	args: { channelId: v.string() },
-	handler: async (ctx, { channelId }) =>
-		ctx.db
+	handler: async (ctx, { channelId }) => {
+		const ch = await ctx.db
 			.query("channels")
 			.withIndex("by_channelId", (q) => q.eq("channelId", channelId))
-			.first(),
+			.first();
+		if (!ch) return null;
+		return { ...ch, thumbnailUrl: await resolveThumbnailUrl(ctx, ch) };
+	},
 });
 
 export const updateAiDescription = internalMutation({

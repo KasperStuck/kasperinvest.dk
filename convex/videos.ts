@@ -1,10 +1,5 @@
 import { v } from "convex/values";
-import {
-	query,
-	mutation,
-	internalMutation,
-	internalQuery,
-} from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 
 // --- Internal mutations (called from actions) ---
 
@@ -40,7 +35,20 @@ export const updateProcessedData = internalMutation({
 		faq: v.array(v.object({ question: v.string(), answer: v.string() })),
 		relevanceScore: v.number(),
 	},
-	handler: async (ctx, { videoId, summary, seoTitle, seoDescription, themes, categories, keyTakeaways, faq, relevanceScore }) => {
+	handler: async (
+		ctx,
+		{
+			videoId,
+			summary,
+			seoTitle,
+			seoDescription,
+			themes,
+			categories,
+			keyTakeaways,
+			faq,
+			relevanceScore,
+		},
+	) => {
 		const video = await ctx.db
 			.query("videos")
 			.withIndex("by_videoId", (q) => q.eq("videoId", videoId))
@@ -153,10 +161,7 @@ export const listWithoutArticle = internalQuery({
 		ctx.db
 			.query("videos")
 			.filter((q) =>
-				q.and(
-					q.eq(q.field("article"), undefined),
-					q.neq(q.field("processedAt"), undefined),
-				),
+				q.and(q.eq(q.field("article"), undefined), q.neq(q.field("processedAt"), undefined)),
 			)
 			.take(10),
 });
@@ -175,9 +180,7 @@ export const listRecentByChannel = internalQuery({
 	handler: async (ctx, { channelId, limit }) =>
 		ctx.db
 			.query("videos")
-			.withIndex("by_channelId_publishedAt", (q) =>
-				q.eq("channelId", channelId),
-			)
+			.withIndex("by_channelId_publishedAt", (q) => q.eq("channelId", channelId))
 			.order("desc")
 			.take(limit ?? 10),
 });
@@ -189,9 +192,7 @@ export const listByChannel = query({
 	handler: async (ctx, { channelId, limit }) =>
 		ctx.db
 			.query("videos")
-			.withIndex("by_channelId_publishedAt", (q) =>
-				q.eq("channelId", channelId),
-			)
+			.withIndex("by_channelId_publishedAt", (q) => q.eq("channelId", channelId))
 			.order("desc")
 			.take(limit ?? 20),
 });
@@ -206,18 +207,22 @@ export const listRecent = query({
 			.take(limit ?? 20),
 });
 
+export const listRecentVideosOnly = query({
+	args: { limit: v.optional(v.number()) },
+	handler: async (ctx, { limit }) =>
+		ctx.db
+			.query("videos")
+			.withIndex("by_isShort_publishedAt", (q) => q.eq("isShort", false))
+			.order("desc")
+			.take(limit ?? 20),
+});
+
 export const listByCategory = query({
 	args: { category: v.string(), limit: v.optional(v.number()) },
 	handler: async (ctx, { category, limit }) => {
-		const videos = await ctx.db
-			.query("videos")
-			.withIndex("by_publishedAt")
-			.order("desc")
-			.take(100);
+		const videos = await ctx.db.query("videos").withIndex("by_publishedAt").order("desc").take(100);
 
-		return videos
-			.filter((v) => v.categories?.includes(category as never))
-			.slice(0, limit ?? 20);
+		return videos.filter((v) => v.categories?.includes(category as never)).slice(0, limit ?? 20);
 	},
 });
 

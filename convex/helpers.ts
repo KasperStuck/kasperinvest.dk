@@ -19,9 +19,15 @@ export function extractHashtags(raw: string): string[] {
 	return [...tags];
 }
 
-export function getTranscriptText(transcript: { text: string }[] | undefined, maxLength: number): string {
+export function getTranscriptText(
+	transcript: { text: string }[] | undefined,
+	maxLength: number,
+): string {
 	if (!transcript?.length) return "";
-	return transcript.map((seg) => seg.text).join(" ").slice(0, maxLength);
+	return transcript
+		.map((seg) => seg.text)
+		.join(" ")
+		.slice(0, maxLength);
 }
 
 export async function forEachSafe<T>(
@@ -80,11 +86,17 @@ export function cleanDescription(raw: string): string {
 
 		const cleanedLine = trimmed
 			.replace(/https?:\/\/\S+/g, "")
-			.replace(/^[\u{1F300}-\u{1F9FF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+\s*/u, "")
+			.replace(
+				/^(?:[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{27BF}]|[\u{FE00}-\u{FE0F}]|\u{200D}|\u{20E3}|[\u{E0020}-\u{E007F}])+\s*/u,
+				"",
+			)
 			.trim();
 
 		if (cleanedLine) cleaned.push(cleanedLine);
 	}
 
-	return cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+	return cleaned
+		.join("\n")
+		.replace(/\n{3,}/g, "\n\n")
+		.trim();
 }

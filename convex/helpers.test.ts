@@ -1,11 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
-	parseDuration,
 	bestThumbnail,
-	extractHashtags,
-	getTranscriptText,
-	forEachSafe,
 	cleanDescription,
+	extractHashtags,
+	forEachSafe,
+	getTranscriptText,
+	parseDuration,
 } from "./helpers";
 
 // --- parseDuration ---
@@ -77,10 +77,7 @@ describe("bestThumbnail", () => {
 
 describe("extractHashtags", () => {
 	it("extracts hashtags from text", () => {
-		expect(extractHashtags("Check out #investing and #stocks")).toEqual([
-			"investing",
-			"stocks",
-		]);
+		expect(extractHashtags("Check out #investing and #stocks")).toEqual(["investing", "stocks"]);
 	});
 
 	it("lowercases hashtags", () => {
@@ -182,9 +179,7 @@ describe("cleanDescription", () => {
 	});
 
 	it("removes inline URLs from lines", () => {
-		expect(cleanDescription("Check out https://example.com for more")).toBe(
-			"Check out  for more",
-		);
+		expect(cleanDescription("Check out https://example.com for more")).toBe("Check out  for more");
 	});
 
 	it("skips sections starting with skip patterns", () => {
@@ -200,15 +195,13 @@ describe("cleanDescription", () => {
 	});
 
 	it("skips disclaimer lines", () => {
-		expect(
-			cleanDescription("Content\nHUSK: Jeg er ikke rådgiver\nMore content"),
-		).toBe("Content\nMore content");
+		expect(cleanDescription("Content\nHUSK: Jeg er ikke rådgiver\nMore content")).toBe(
+			"Content\nMore content",
+		);
 	});
 
 	it("skips hashtag-only lines", () => {
-		expect(cleanDescription("Content\n#tag1 #tag2 #tag3\nMore")).toBe(
-			"Content\nMore",
-		);
+		expect(cleanDescription("Content\n#tag1 #tag2 #tag3\nMore")).toBe("Content\nMore");
 	});
 
 	it("skips affiliate sections", () => {

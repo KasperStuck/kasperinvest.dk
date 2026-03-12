@@ -9,11 +9,7 @@ const crons = cronJobs();
 // 3. AI-process (summary, SEO, categories, FAQ)
 // 4. Generate articles
 // 5. Refresh view/like counts for all videos
-crons.daily(
-	"sync-youtube",
-	{ hourUTC: 1, minuteUTC: 0 },
-	internal.youtube.syncAllChannels,
-);
+crons.daily("sync-youtube", { hourUTC: 1, minuteUTC: 0 }, internal.youtube.syncAllChannels);
 
 // Refresh view/like counts and isShort status every hour
 crons.interval("refresh-stats", { hours: 1 }, internal.youtube.refreshVideoStats);

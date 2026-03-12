@@ -245,13 +245,6 @@ const glossary: GlossaryTerm[] = [
 		updatedAt: "2026-07-06T09:40:00",
 	},
 	{
-		id: "aktiv-klasse",
-		title: "Aktiv klasse",
-		description: "Hvad du kan investere i",
-		publishedAt: "2026-08-27T10:26:00",
-		updatedAt: "2026-09-07T07:22:00",
-	},
-	{
 		id: "aktivallokering",
 		title: "Aktivallokering",
 		description: "Fordelingen der bestemmer dit afkast",
@@ -370,13 +363,6 @@ const glossary: GlossaryTerm[] = [
 		description: "Den afgift, arvinger skal betale til staten af den arv, de modtager",
 		publishedAt: "2026-03-26T11:28:00",
 		updatedAt: "2026-03-30T13:56:00",
-	},
-	{
-		id: "asset-allocation",
-		title: "Asset allocation",
-		description: "Fordelingen af din opsparing på tværs af forskellige aktivklasser",
-		publishedAt: "2026-06-15T11:39:00",
-		updatedAt: "2026-06-23T11:46:00",
 	},
 	{
 		id: "automatisk-overfoersel",
@@ -1606,14 +1592,6 @@ const glossary: GlossaryTerm[] = [
 		updatedAt: "2026-04-27T13:23:00",
 	},
 	{
-		id: "high-yield-obligation",
-		title: "High Yield obligation",
-		description:
-			"Virksomhedsobligationer med højere rente og kreditrisiko end investment grade obligationer.",
-		publishedAt: "2026-03-19T08:41:00",
-		updatedAt: "2026-04-02T06:17:00",
-	},
-	{
 		id: "hoejrenteobligation",
 		title: "Højrenteobligation",
 		description:
@@ -1845,16 +1823,6 @@ const glossary: GlossaryTerm[] = [
 		description: "Et unikt identifikationsnummer for hvert værdipapir i verden",
 		publishedAt: "2026-08-13T12:14:00",
 		updatedAt: "2026-08-24T06:01:00",
-	},
-
-	// J
-	{
-		id: "junk-bond",
-		title: "Junk Bond",
-		description:
-			"Obligationer med spekulativ kreditvurdering der tilbyder høj rente som kompensation for betydelig risiko for misligholdelse.",
-		publishedAt: "2026-03-05T11:39:00",
-		updatedAt: "2026-03-16T13:42:00",
 	},
 
 	// K
@@ -2841,13 +2809,6 @@ const glossary: GlossaryTerm[] = [
 		updatedAt: "2026-07-06T12:33:00",
 	},
 	{
-		id: "risikospredning",
-		title: "Risikospredning",
-		description: "Læg ikke alle dine æg i én kurv",
-		publishedAt: "2026-03-10T09:40:00",
-		updatedAt: "2026-03-17T10:49:00",
-	},
-	{
 		id: "roi",
 		title: "ROI",
 		description: "Hvor meget fik du igen for din investering?",
@@ -3002,13 +2963,6 @@ const glossary: GlossaryTerm[] = [
 		description: "De tre størrelseskategorier for børsnoterede virksomheder",
 		publishedAt: "2026-08-24T09:10:00",
 		updatedAt: "2026-09-07T11:36:00",
-	},
-	{
-		id: "social-responsible-investment",
-		title: "Social Responsible Investment (SRI)",
-		description: "Investering med fokus på etik, miljø og samfundsansvar",
-		publishedAt: "2026-08-26T07:12:00",
-		updatedAt: "2026-08-31T08:52:00",
 	},
 	{
 		id: "soliditetsgrad",
@@ -3587,14 +3541,6 @@ const glossary: GlossaryTerm[] = [
 		updatedAt: "2026-03-25T06:37:00",
 	},
 	{
-		id: "virksomhedsobligation",
-		title: "Virksomhedsobligation",
-		description:
-			"Et lån til en virksomhed — højere rente, men også højere risiko end statsobligationer",
-		publishedAt: "2026-07-28T08:53:00",
-		updatedAt: "2026-08-10T12:38:00",
-	},
-	{
 		id: "volatilitet",
 		title: "Volatilitet",
 		description: "Et mål for hvor meget en investering svinger i værdi — risiko sat på tal",
@@ -3876,13 +3822,6 @@ const glossary: GlossaryTerm[] = [
 		description: "Din bid af investeringsforeningen",
 		publishedAt: "2026-07-07T09:37:00",
 		updatedAt: "2026-07-09T07:55:00",
-	},
-	{
-		id: "ansvarlige-investeringer",
-		title: "Ansvarlige investeringer",
-		description: "Invester med omtanke for verden",
-		publishedAt: "2026-08-20T11:52:00",
-		updatedAt: "2026-08-24T12:32:00",
 	},
 	{
 		id: "baeredygtighedsfaktorer",
@@ -4230,14 +4169,6 @@ const glossary: GlossaryTerm[] = [
 			"De samlede udgifter forbundet med at købe og sælge værdipapirer, herunder kurtage, spread og valutagebyrer.",
 		publishedAt: "2026-03-30T10:56:00",
 		updatedAt: "2026-04-13T07:58:00",
-	},
-	{
-		id: "high-yield",
-		title: "High Yield",
-		description:
-			"En aktivklasse bestående af obligationer med høj rente og forhøjet kreditrisiko, vurderet under investment grade.",
-		publishedAt: "2026-05-25T08:34:00",
-		updatedAt: "2026-06-04T06:55:00",
 	},
 	{
 		id: "hoejrentelande",

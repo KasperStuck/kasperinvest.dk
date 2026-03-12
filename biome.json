@@ -6,7 +6,16 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["**", "!!**/dist", "!!**/.astro"]
+		"includes": ["**", "!!**/dist", "!!**/.astro", "!!convex/_generated", "!!lighthouse-reports"]
+	},
+	"css": {
+		"parser": {
+			"cssModules": false,
+			"tailwindDirectives": true
+		},
+		"linter": {
+			"enabled": true
+		}
 	},
 	"formatter": {
 		"enabled": true,

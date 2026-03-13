@@ -33,7 +33,9 @@ export default defineSchema({
 		videoCount: v.optional(v.number()),
 		lastSyncedAt: v.optional(v.number()),
 		aiDescription: v.optional(v.string()),
-	}).index("by_channelId", ["channelId"]),
+	})
+		.index("by_channelId", ["channelId"])
+		.index("by_customUrl", ["customUrl"]),
 
 	videos: defineTable({
 		// YouTube metadata

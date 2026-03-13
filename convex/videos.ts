@@ -244,6 +244,18 @@ export const getBySlug = query({
 			.first(),
 });
 
+export const getNextByChannel = query({
+	args: { channelId: v.string(), publishedAt: v.string() },
+	handler: async (ctx, { channelId, publishedAt }) =>
+		ctx.db
+			.query("videos")
+			.withIndex("by_channelId_publishedAt", (q) =>
+				q.eq("channelId", channelId).lt("publishedAt", publishedAt),
+			)
+			.order("desc")
+			.first(),
+});
+
 // --- Public mutations (for local scripts) ---
 
 export const needsTranscript = query({

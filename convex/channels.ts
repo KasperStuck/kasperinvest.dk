@@ -97,6 +97,19 @@ export const get = query({
 	},
 });
 
+export const getByHandle = query({
+	args: { handle: v.string() },
+	handler: async (ctx, { handle }) => {
+		const customUrl = `@${handle}`;
+		const ch = await ctx.db
+			.query("channels")
+			.withIndex("by_customUrl", (q) => q.eq("customUrl", customUrl))
+			.first();
+		if (!ch) return null;
+		return { ...ch, thumbnailUrl: await resolveThumbnailUrl(ctx, ch) };
+	},
+});
+
 export const updateAiDescription = internalMutation({
 	args: { channelId: v.string(), aiDescription: v.string() },
 	handler: async (ctx, { channelId, aiDescription }) => {

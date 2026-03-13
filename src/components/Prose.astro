@@ -1,5 +1,6 @@
 ---
-import { banners } from "@/data/banners";
+import { getImage } from "astro:assets";
+import { banners as rawBanners } from "@/data/banners";
 
 interface Props {
 	empty?: boolean;
@@ -7,6 +8,13 @@ interface Props {
 }
 
 const { empty = false, emptyMessage = "Denne artikel er under udarbejdelse." } = Astro.props;
+
+const banners = await Promise.all(
+	rawBanners.map(async ({ image, ...rest }) => {
+		const { src, attributes } = await getImage({ src: image, format: "webp" });
+		return { src, width: attributes.width as number, height: attributes.height as number, ...rest };
+	}),
+);
 ---
 
 {empty ? (
@@ -30,37 +38,34 @@ const { empty = false, emptyMessage = "Denne artikel er under udarbejdelse." } =
 				(b) =>
 					b.keywords.length > 0 &&
 					b.keywords.some((kw) => pageText.includes(kw)) &&
-					!b.exclude.some((kw) => pageText.includes(kw))
+					!b.exclude.some((kw) => pageText.includes(kw)),
 			);
-			const fallback = banners.filter((b) => b.keywords.length === 0);
-			const pool = matched.length > 0 ? matched : fallback.length > 0 ? fallback : banners;
+			const pool = matched.length > 0 ? matched : banners;
 
-			function pickBanner() {
+			function createBanner() {
 				const b = pool[Math.floor(Math.random() * pool.length)];
-				const a = document.createElement("a");
-				a.href = b.href;
-				a.target = "_blank";
-				a.rel = "noopener";
-				a.className = "not-prose my-8 block overflow-hidden";
+				const link = document.createElement("a");
+				link.href = b.href;
+				link.target = "_blank";
+				link.rel = "noopener";
+				link.className = "not-prose my-8 block overflow-hidden";
+
 				const img = document.createElement("img");
-				img.src = b.src;
-				img.alt = b.alt;
-				img.width = b.width;
-				img.height = b.height;
-				img.loading = "lazy";
+				Object.assign(img, { src: b.src, alt: b.alt, width: b.width, height: b.height, loading: "lazy" });
 				img.className = "w-full";
-				a.appendChild(img);
-				return a;
+
+				link.appendChild(img);
+				return link;
 			}
 
-			content.prepend(pickBanner());
-			content.append(pickBanner());
+			content.prepend(createBanner());
+			content.append(createBanner());
 
 			const headings = content.querySelectorAll(":scope > h2");
 			for (let i = 2; i < headings.length; i += 3) {
 				let next = headings[i].nextElementSibling;
 				while (next && next.tagName !== "H2") next = next.nextElementSibling;
-				content.insertBefore(pickBanner(), next);
+				content.insertBefore(createBanner(), next);
 			}
 		</script>
 	</div>

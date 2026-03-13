@@ -13,8 +13,9 @@ const glossaryTerms = getGlossaryTerms().slice(0, 5);
 
 const CACHE_TTL = 60 * 60 * 1000; // 1 time
 
-type FooterVideo = Awaited<ReturnType<typeof convex.query<typeof api.videos.listRecent>>>[number];
-type FooterChannel = Awaited<ReturnType<typeof convex.query<typeof api.channels.list>>>[number];
+import type { FunctionReturnType } from "convex/server";
+type FooterVideo = FunctionReturnType<typeof api.videos.listRecent>[number];
+type FooterChannel = FunctionReturnType<typeof api.channels.list>[number];
 let _footerCache: {
 	videos: FooterVideo[];
 	channelMap: Map<string, FooterChannel>;

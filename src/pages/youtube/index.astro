@@ -6,8 +6,10 @@ import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import { api, convex } from "@/lib/convex";
 
-const videos = await convex.query(api.videos.listRecent, { limit: 50 });
-const channels = await convex.query(api.channels.list, {});
+const [videos, channels] = await Promise.all([
+	convex.query(api.videos.listRecent, { limit: 50 }),
+	convex.query(api.channels.list, {}),
+]);
 const channelMap = new Map(channels.map((ch) => [ch.channelId, ch]));
 
 function videoUrl(v: { slug?: string; videoId: string; channelId: string }) {

@@ -8,7 +8,7 @@ import ClockIcon from "@/icons/ClockIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import { api, convex } from "@/lib/convex";
 
-const { slug } = Astro.params;
+const { slug, handle } = Astro.params;
 if (!slug) return new Response(null, { status: 404, statusText: "Not Found" });
 
 const video = await convex.query(api.videos.getBySlug, { slug });
@@ -17,16 +17,13 @@ if (!video) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
-const channels = await convex.query(api.channels.list, {});
-const channelMap = new Map(channels.map((ch) => [ch.channelId, ch]));
-const channel = channelMap.get(video.channelId);
-
-const allVideos = await convex.query(api.videos.listByChannel, {
-	channelId: video.channelId,
-	limit: 50,
-});
-const currentIndex = allVideos.findIndex((v) => v.videoId === video.videoId);
-const nextVideo = currentIndex < allVideos.length - 1 ? allVideos[currentIndex + 1] : null;
+const [channel, nextVideo] = await Promise.all([
+	convex.query(api.channels.get, { channelId: video.channelId }),
+	convex.query(api.videos.getNextByChannel, {
+		channelId: video.channelId,
+		publishedAt: video.publishedAt,
+	}),
+]);
 
 function formatDuration(seconds: number): string {
 	const h = Math.floor(seconds / 3600);
@@ -46,14 +43,12 @@ function capitalize(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-function videoUrl(v: { slug?: string; videoId: string; channelId: string }) {
-	const h = channelMap.get(v.channelId)?.customUrl?.replace(/^@/, "") ?? v.channelId;
-	return v.slug ? `/youtube/${h}/${v.slug}` : `/youtube/${h}/${v.videoId}`;
+function videoUrl(v: { slug?: string; videoId: string }) {
+	return `/youtube/${handle}/${v.slug ?? v.videoId}`;
 }
 
 const articleHtml = video.article ? await marked.parse(video.article) : null;
 
-const { handle } = Astro.params;
 const canonicalUrl = `https://kasperinvest.dk/youtube/${handle}/${video.slug ?? video.videoId}`;
 
 function isoDuration(seconds: number): string {

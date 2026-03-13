@@ -8,15 +8,13 @@ import { api, convex } from "@/lib/convex";
 
 const { handle } = Astro.params;
 
-const channels = await convex.query(api.channels.list, {});
-const channel = channels.find((ch) => ch.customUrl?.replace(/^@/, "") === handle);
+const channel = handle ? await convex.query(api.channels.getByHandle, { handle }) : null;
 
 if (!channel) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
-const channelId = channel.channelId;
-const videos = await convex.query(api.videos.listByChannel, { channelId, limit: 50 });
+const videos = await convex.query(api.videos.listByChannel, { channelId: channel.channelId, limit: 50 });
 
 function videoUrl(v: { slug?: string; videoId: string }) {
 	return `/youtube/${handle}/${v.slug ?? v.videoId}`;

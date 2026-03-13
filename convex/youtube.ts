@@ -72,10 +72,13 @@ function youtubeApiKey() {
 	return key;
 }
 
-function aiModel() {
+const PRIMARY_MODEL = "stepfun/step-3.5-flash:free";
+const FALLBACK_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
+
+function aiModel(model = PRIMARY_MODEL) {
 	const key = process.env.OPENROUTER_API_KEY;
 	if (!key) throw new Error("Missing OPENROUTER_API_KEY env var");
-	return new ChatOpenRouter({ model: "openrouter/free", apiKey: key });
+	return new ChatOpenRouter({ model, apiKey: key });
 }
 
 // --- Helpers ---
@@ -119,7 +122,7 @@ Svar med JSON: {{"score": <1-10>, "reason": "Kort forklaring"}}`,
 ]);
 
 async function generateWithQuality<T>(opts: {
-	generate: () => Promise<T>;
+	generate: (model?: string) => Promise<T>;
 	extractText: (result: T) => string;
 	context: string;
 	maxAttempts?: number;
@@ -129,26 +132,48 @@ async function generateWithQuality<T>(opts: {
 		new JsonOutputParser<{ score: number; reason: string }>(),
 	);
 
+	// Try primary model first
 	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
 		try {
-			const result = await generate();
+			const result = await generate(PRIMARY_MODEL);
 			const text = extractText(result);
 
 			if (!text || text.length < 10) {
-				console.warn(`Attempt ${attempt}: generated text too short, retrying`);
+				console.warn(`Attempt ${attempt} (primary): generated text too short, retrying`);
 				continue;
 			}
 
 			const evaluation = await validator.invoke({ context, text });
-			console.log(`Attempt ${attempt}: score ${evaluation.score}/10 — ${evaluation.reason}`);
+			console.log(`Attempt ${attempt} (primary): score ${evaluation.score}/10 — ${evaluation.reason}`);
 
 			if (evaluation.score >= 9) return result;
 		} catch (e) {
-			console.warn(`Attempt ${attempt} failed:`, e);
+			console.warn(`Attempt ${attempt} (primary) failed:`, e);
 		}
 	}
 
-	console.error(`Failed to reach quality threshold after ${maxAttempts} attempts for: ${context}`);
+	// Fallback to secondary model
+	console.log(`Primary model failed quality threshold, trying fallback for: ${context}`);
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			const result = await generate(FALLBACK_MODEL);
+			const text = extractText(result);
+
+			if (!text || text.length < 10) {
+				console.warn(`Attempt ${attempt} (fallback): generated text too short, retrying`);
+				continue;
+			}
+
+			const evaluation = await validator.invoke({ context, text });
+			console.log(`Attempt ${attempt} (fallback): score ${evaluation.score}/10 — ${evaluation.reason}`);
+
+			if (evaluation.score >= 9) return result;
+		} catch (e) {
+			console.warn(`Attempt ${attempt} (fallback) failed:`, e);
+		}
+	}
+
+	console.error(`Failed to reach quality threshold after all attempts for: ${context}`);
 	return null;
 }
 
@@ -157,9 +182,9 @@ async function generateText(
 	vars: Record<string, string>,
 	context: string,
 ): Promise<string | null> {
-	const chain = prompt.pipe(aiModel());
 	return generateWithQuality({
-		generate: async () => {
+		generate: async (model) => {
+			const chain = prompt.pipe(aiModel(model));
 			const res = await chain.invoke(vars);
 			return typeof res.content === "string" ? res.content.trim() : String(res.content).trim();
 		},
@@ -440,25 +465,25 @@ export const processVideo = internalAction({
 		const video = await ctx.runQuery(internal.videos.getByVideoId, { videoId });
 		if (!video || video.processedAt) return;
 
-		const chain = VIDEO_ANALYSIS_PROMPT.pipe(aiModel()).pipe(
-			new JsonOutputParser<{
-				summary: string;
-				seoTitle: string;
-				seoDescription: string;
-				themes: string[];
-				categories: string[];
-				keyTakeaways: string[];
-				faq: { question: string; answer: string }[];
-				relevanceScore: number;
-			}>(),
-		);
+		type VideoAnalysis = {
+			summary: string;
+			seoTitle: string;
+			seoDescription: string;
+			themes: string[];
+			categories: string[];
+			keyTakeaways: string[];
+			faq: { question: string; answer: string }[];
+			relevanceScore: number;
+		};
 
 		const transcriptText = getTranscriptText(video.transcript, 3000);
 		const transcriptSection = transcriptText ? `\nTransskription (uddrag):\n${transcriptText}` : "";
 
 		const result = await generateWithQuality({
-			generate: () =>
-				chain.invoke({
+			generate: (model) =>
+				VIDEO_ANALYSIS_PROMPT.pipe(aiModel(model)).pipe(
+					new JsonOutputParser<VideoAnalysis>(),
+				).invoke({
 					title: video.title,
 					description: cleanDescription(video.description).slice(0, 1500),
 					transcriptSection,
@@ -549,6 +574,26 @@ export const generateChannelDescription = internalAction({
 	},
 });
 
+// --- Single-video pipeline (triggered immediately on insert) ---
+
+export const processNewVideo = internalAction({
+	args: { videoId: v.string() },
+	handler: async (ctx, { videoId }) => {
+		console.log(`processNewVideo: Starting full pipeline for ${videoId}`);
+
+		// Step 1: Fetch transcript
+		await retrier.run(ctx, internal.youtube.fetchTranscript, { videoId });
+
+		// Step 2: AI process (summary, SEO, categories, FAQ)
+		await retrier.run(ctx, internal.youtube.processVideo, { videoId });
+
+		// Step 3: Generate article
+		await retrier.run(ctx, internal.youtube.generateArticle, { videoId });
+
+		console.log(`processNewVideo: Pipeline complete for ${videoId}`);
+	},
+});
+
 // --- Stats refresh ---
 
 export const refreshVideoStats = internalAction({
@@ -621,38 +666,36 @@ export const syncAllChannels = internalAction({
 			`syncAllChannels: Starting pipeline for ${channels.length} channel(s): ${channels.map((c) => c.name).join(", ")}`,
 		);
 
-		// 1. Sync videos from YouTube (with retry)
+		// 1. Sync videos from YouTube (new videos trigger processNewVideo automatically via scheduler)
 		for (const ch of channels) {
-			console.log(`[1/5] Syncing videos for "${ch.name}" (${ch.channelId})`);
+			console.log(`[1/3] Syncing videos for "${ch.name}" (${ch.channelId})`);
 			await retrier.run(ctx, internal.youtube.syncChannelVideos, {
 				channelId: ch.channelId,
 				maxResults: 5,
 			});
 		}
 
-		// 2. Fetch transcripts (with retry)
+		// 2. Sweep: retry any videos that previously failed processing
 		const withoutTranscript = await ctx.runQuery(internal.videos.listWithoutTranscript);
-		console.log(`[2/5] Fetching transcripts for ${withoutTranscript.length} video(s)`);
-		for (const v of withoutTranscript) {
-			await retrier.run(ctx, internal.youtube.fetchTranscript, { videoId: v.videoId });
-		}
-
-		// 3. AI-process (with retry)
 		const unprocessed = await ctx.runQuery(internal.videos.listUnprocessed);
-		console.log(`[3/5] AI-processing ${unprocessed.length} video(s)`);
-		for (const v of unprocessed) {
-			await retrier.run(ctx, internal.youtube.processVideo, { videoId: v.videoId });
-		}
-
-		// 4. Generate articles (with retry)
 		const withoutArticle = await ctx.runQuery(internal.videos.listWithoutArticle);
-		console.log(`[4/5] Generating articles for ${withoutArticle.length} video(s)`);
-		for (const v of withoutArticle) {
-			await retrier.run(ctx, internal.youtube.generateArticle, { videoId: v.videoId });
+
+		const needsRetry = new Set<string>();
+		for (const v of [...withoutTranscript, ...unprocessed, ...withoutArticle]) {
+			needsRetry.add(v.videoId);
 		}
 
-		// 5. Refresh view/like counts (with retry)
-		console.log("[5/5] Refreshing video stats");
+		if (needsRetry.size > 0) {
+			console.log(`[2/3] Retrying ${needsRetry.size} video(s) with missing content`);
+			for (const videoId of needsRetry) {
+				await retrier.run(ctx, internal.youtube.processNewVideo, { videoId });
+			}
+		} else {
+			console.log("[2/3] No videos need retry");
+		}
+
+		// 3. Refresh view/like counts
+		console.log("[3/3] Refreshing video stats");
 		await retrier.run(ctx, internal.youtube.refreshVideoStats, {});
 
 		console.log("syncAllChannels: Pipeline complete.");

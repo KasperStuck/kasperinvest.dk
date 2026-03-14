@@ -27,6 +27,7 @@ const pathname = Astro.url.pathname;
 ---
 
 <BaseLayout title={title} description={description}>
+	<slot name="head" slot="head" />
 	<div class="flex min-h-screen">
 		<!-- Desktop Sidebar -->
 		<aside class="hidden w-72 shrink-0 border-r border-gray-950/10 dark:border-white/10 lg:block">

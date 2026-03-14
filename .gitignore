@@ -34,3 +34,8 @@ next-env.d.ts
 
 # npm lock (using bun)
 package-lock.json
+
+# test files
+test-*.mjs
+test-*.log
+test-*.json

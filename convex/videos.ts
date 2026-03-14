@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 
 // --- Internal mutations (called from actions) ---
@@ -20,7 +21,14 @@ export const insert = internalMutation({
 		hashtags: v.optional(v.array(v.string())),
 		isShort: v.optional(v.boolean()),
 	},
-	handler: async (ctx, args) => ctx.db.insert("videos", args),
+	handler: async (ctx, args) => {
+		const id = await ctx.db.insert("videos", args);
+		// Immediately trigger full processing pipeline for this video
+		await ctx.scheduler.runAfter(0, internal.youtube.processNewVideo, {
+			videoId: args.videoId,
+		});
+		return id;
+	},
 });
 
 export const updateProcessedData = internalMutation({

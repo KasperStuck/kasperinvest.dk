@@ -3,12 +3,10 @@ import { internal } from "./_generated/api";
 
 const crons = cronJobs();
 
-// Full sync pipeline daily at 06:00 UTC:
-// 1. Fetch new videos from all channels
-// 2. Fetch transcripts
-// 3. AI-process (summary, SEO, categories, FAQ)
-// 4. Generate articles
-// 5. Refresh view/like counts for all videos
+// Daily sync + sweep at 01:00 UTC:
+// 1. Fetch new videos (each triggers instant processing via scheduler)
+// 2. Sweep: retry any videos with missing content from previous failures
+// 3. Refresh view/like counts for all videos
 crons.daily("sync-youtube", { hourUTC: 1, minuteUTC: 0 }, internal.youtube.syncAllChannels);
 
 // Refresh view/like counts and isShort status every hour

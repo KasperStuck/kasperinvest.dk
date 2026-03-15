@@ -1,11 +1,11 @@
 "use node";
 
+import { createOpenAI } from "@ai-sdk/openai";
 import { ActionRetrier } from "@convex-dev/action-retrier";
-import { JsonOutputParser } from "@langchain/core/output_parsers";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { ChatOpenRouter } from "@langchain/openrouter";
+import { generateObject, generateText as aiGenerateText } from "ai";
 import { v } from "convex/values";
 import slugify from "slugify";
+import { z } from "zod";
 import { components, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
@@ -19,11 +19,33 @@ import {
 	parseDuration,
 } from "./helpers";
 
+// --- Config ---
+
+const YOUTUBE_API = "https://www.googleapis.com/youtube/v3";
+const PRIMARY_MODEL = "stepfun/step-3.5-flash:free";
+const FALLBACK_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
+const MODELS = [PRIMARY_MODEL, FALLBACK_MODEL] as const;
+const MAX_QUALITY_ATTEMPTS = 3;
+const MIN_QUALITY_SCORE = 9;
+
 const retrier = new ActionRetrier(components.actionRetrier, {
 	initialBackoffMs: 500,
 	base: 2,
 	maxFailures: 3,
 });
+
+function requireEnv(name: string): string {
+	const value = process.env[name];
+	if (!value) throw new Error(`Missing ${name} env var`);
+	return value;
+}
+
+function openRouter(model: string) {
+	return createOpenAI({
+		apiKey: requireEnv("OPENROUTER_API_KEY"),
+		baseURL: "https://openrouter.ai/api/v1",
+	})(model);
+}
 
 // --- YouTube API types ---
 
@@ -62,39 +84,58 @@ type YouTubePlaylistItem = {
 
 type YouTubeListResponse<T> = { items: T[] };
 
-// --- Config ---
-
-const YOUTUBE_API = "https://www.googleapis.com/youtube/v3";
-
-function youtubeApiKey() {
-	const key = process.env.YOUTUBE_API_KEY;
-	if (!key) throw new Error("Missing YOUTUBE_API_KEY env var");
-	return key;
-}
-
-const PRIMARY_MODEL = "stepfun/step-3.5-flash:free";
-const FALLBACK_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
-
-function aiModel(model = PRIMARY_MODEL) {
-	const key = process.env.OPENROUTER_API_KEY;
-	if (!key) throw new Error("Missing OPENROUTER_API_KEY env var");
-	return new ChatOpenRouter({ model, apiKey: key });
-}
-
-// --- Helpers ---
-
 async function ytFetch<T>(path: string): Promise<T> {
-	const res = await fetch(`${YOUTUBE_API}/${path}&key=${youtubeApiKey()}`);
+	const res = await fetch(`${YOUTUBE_API}/${path}&key=${requireEnv("YOUTUBE_API_KEY")}`);
 	if (!res.ok) throw new Error(`YouTube API error: ${res.statusText}`);
 	return res.json();
 }
 
-// --- AI quality validation ---
+// --- Shorts detection ---
 
-const QUALITY_PROMPT = ChatPromptTemplate.fromMessages([
-	[
-		"system",
-		`Du er en dansk tekstforfatter og korrekturlæser med speciale i økonomi og investering.
+async function detectIsShort(videoId: string, durationSeconds: number): Promise<boolean> {
+	if (durationSeconds > 180) return false;
+	if (durationSeconds <= 60) return true;
+
+	// For 61-180s videos, verify via YouTube /shorts/ URL redirect
+	try {
+		const res = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
+			method: "HEAD",
+			redirect: "manual",
+		});
+		return (
+			res.status === 200 ||
+			(res.status >= 300 &&
+				res.status < 400 &&
+				(res.headers.get("location")?.includes("/shorts/") ?? false))
+		);
+	} catch {
+		return true;
+	}
+}
+
+// --- AI schemas ---
+
+const qualitySchema = z.object({
+	score: z.number().min(1).max(10),
+	reason: z.string(),
+});
+
+const videoAnalysisSchema = z.object({
+	summary: z.string(),
+	seoTitle: z.string(),
+	seoDescription: z.string(),
+	themes: z.array(z.string()),
+	categories: z.array(z.string()),
+	keyTakeaways: z.array(z.string()),
+	faq: z.array(z.object({ question: z.string(), answer: z.string() })),
+	relevanceScore: z.number().min(0).max(100),
+});
+
+type VideoAnalysis = z.infer<typeof videoAnalysisSchema>;
+
+// --- AI system prompts ---
+
+const QUALITY_SYSTEM = `Du er en dansk tekstforfatter og korrekturlæser med speciale i økonomi og investering.
 
 Bedøm den givne tekst på en skala fra 1-10 ud fra disse kriterier:
 - Sprog: Er teksten skrevet på naturligt, flydende dansk? Ingen vrøvl, stavefejl, blandede sprog eller uforståelige sætninger.
@@ -106,126 +147,18 @@ VIGTIGT: Hvis teksten indeholder nonsens, blandede sprog, eller ikke er naturlig
 VIGTIGT: Alt output SKAL være på dansk. Inkludér ALDRIG links eller URL'er.
 
 En score på 9+ betyder at teksten er klar til publicering uden rettelser.
-En score under 9 betyder at teksten har problemer der kræver regenerering.
+En score under 9 betyder at teksten har problemer der kræver regenerering.`;
 
-Svar KUN med valid JSON.`,
-	],
-	[
-		"human",
-		`Kontekst: {context}
-
-Tekst der skal bedømmes:
-{text}
-
-Svar med JSON: {{"score": <1-10>, "reason": "Kort forklaring"}}`,
-	],
-]);
-
-async function generateWithQuality<T>(opts: {
-	generate: (model?: string) => Promise<T>;
-	extractText: (result: T) => string;
-	context: string;
-	maxAttempts?: number;
-}): Promise<T | null> {
-	const { generate, extractText, context, maxAttempts = 3 } = opts;
-	const validator = QUALITY_PROMPT.pipe(aiModel()).pipe(
-		new JsonOutputParser<{ score: number; reason: string }>(),
-	);
-
-	// Try primary model first
-	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		try {
-			const result = await generate(PRIMARY_MODEL);
-			const text = extractText(result);
-
-			if (!text || text.length < 10) {
-				console.warn(`Attempt ${attempt} (primary): generated text too short, retrying`);
-				continue;
-			}
-
-			const evaluation = await validator.invoke({ context, text });
-			console.log(`Attempt ${attempt} (primary): score ${evaluation.score}/10 — ${evaluation.reason}`);
-
-			if (evaluation.score >= 9) return result;
-		} catch (e) {
-			console.warn(`Attempt ${attempt} (primary) failed:`, e);
-		}
-	}
-
-	// Fallback to secondary model
-	console.log(`Primary model failed quality threshold, trying fallback for: ${context}`);
-	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		try {
-			const result = await generate(FALLBACK_MODEL);
-			const text = extractText(result);
-
-			if (!text || text.length < 10) {
-				console.warn(`Attempt ${attempt} (fallback): generated text too short, retrying`);
-				continue;
-			}
-
-			const evaluation = await validator.invoke({ context, text });
-			console.log(`Attempt ${attempt} (fallback): score ${evaluation.score}/10 — ${evaluation.reason}`);
-
-			if (evaluation.score >= 9) return result;
-		} catch (e) {
-			console.warn(`Attempt ${attempt} (fallback) failed:`, e);
-		}
-	}
-
-	console.error(`Failed to reach quality threshold after all attempts for: ${context}`);
-	return null;
-}
-
-async function generateText(
-	prompt: ChatPromptTemplate,
-	vars: Record<string, string>,
-	context: string,
-): Promise<string | null> {
-	return generateWithQuality({
-		generate: async (model) => {
-			const chain = prompt.pipe(aiModel(model));
-			const res = await chain.invoke(vars);
-			return typeof res.content === "string" ? res.content.trim() : String(res.content).trim();
-		},
-		extractText: (text) => text,
-		context,
-	});
-}
-
-// --- Prompts ---
-
-const VIDEO_ANALYSIS_PROMPT = ChatPromptTemplate.fromMessages([
-	[
-		"system",
-		`Du er en dansk tekstforfatter med ekspertise i privatøkonomi og investering.
+const VIDEO_ANALYSIS_SYSTEM = `Du er en dansk tekstforfatter med ekspertise i privatøkonomi og investering.
 Skriv ALTID på naturligt, flydende dansk. Analysér YouTube-videoer og returnér udelukkende valid JSON.
 
 Gyldige kategorier: privatøkonomi, aktier, ETF, obligationer, skat, pension, strategi, psykologi, analyse, krypto, bolig, FIRE, marked, andet
 
 relevanceScore: 0 = irrelevant for dansk privatinvestor, 100 = meget relevant.
 
-VIGTIGT: Alt output SKAL være på dansk. Inkludér ALDRIG links eller URL'er i noget felt.`,
-	],
-	[
-		"human",
-		`Analysér denne video:
+VIGTIGT: Alt output SKAL være på dansk. Inkludér ALDRIG links eller URL'er i noget felt.`;
 
-Titel: {title}
-Beskrivelse: {description}
-{transcriptSection}
-
-Svar KUN med valid JSON i dette format:
-{{"summary": "Dansk opsummering (2-3 sætninger)", "seoTitle": "SEO-titel (maks 60 tegn, fængende, inkludér nøgleord)", "seoDescription": "SEO meta-beskrivelse (maks 155 tegn, inkludér nøgleord, opfordr til klik)", "themes": ["tema1", "tema2"], "categories": ["kategori1"], "keyTakeaways": ["pointe1", "pointe2", "pointe3"], "faq": [{{"question": "Relevant spørgsmål?", "answer": "Kort, præcist svar (1-2 sætninger)"}}, {{"question": "...", "answer": "..."}}], "relevanceScore": 75}}
-
-faq: Generér 3-5 ofte stillede spørgsmål med svar baseret på videoens indhold. Spørgsmålene skal være naturlige søgeforespørgsler en dansk investor ville stille.`,
-	],
-]);
-
-const ARTICLE_PROMPT = ChatPromptTemplate.fromMessages([
-	[
-		"system",
-		`Du er en erfaren dansk tekstforfatter med speciale i privatøkonomi og investering. Skriv en grundig, velformuleret artikel baseret på en YouTube-video.
+const ARTICLE_SYSTEM = `Du er en erfaren dansk tekstforfatter med speciale i privatøkonomi og investering. Skriv en grundig, velformuleret artikel baseret på en YouTube-video.
 
 Regler:
 - Skriv på naturligt, flydende dansk i en professionel men tilgængelig tone
@@ -238,31 +171,9 @@ Regler:
 - Skriv IKKE "I denne video" eller lignende — skriv som en selvstændig artikel
 - Brug IKKE h1 (#) — start med h2 (##)
 - Inkludér ALDRIG links eller URL'er i artiklen
-- Alt output SKAL være på dansk`,
-	],
-	[
-		"human",
-		`Skriv en artikel baseret på denne video:
+- Alt output SKAL være på dansk`;
 
-Titel: {title}
-Kanal: {channelName}
-Opsummering: {summary}
-Hovedpointer: {keyTakeaways}
-Temaer: {themes}
-
-Beskrivelse:
-{description}
-
-{transcriptSection}
-
-Skriv artiklen nu:`,
-	],
-]);
-
-const CHANNEL_DESCRIPTION_PROMPT = ChatPromptTemplate.fromMessages([
-	[
-		"system",
-		`Du er en erfaren dansk tekstforfatter med speciale i privatøkonomi og investering. Skriv en unik kanalbeskrivelse til en YouTube-kanal.
+const CHANNEL_DESCRIPTION_SYSTEM = `Du er en erfaren dansk tekstforfatter med speciale i privatøkonomi og investering. Skriv en unik kanalbeskrivelse til en YouTube-kanal.
 
 Regler:
 - Skriv på naturligt, flydende dansk i en professionel men tilgængelig tone — som en rigtig dansk journalist ville skrive
@@ -274,21 +185,71 @@ Regler:
 - Nævn IKKE specifikke videoer ved navn
 - Adskil afsnit med en tom linje
 - Inkludér ALDRIG links eller URL'er
-- Alt output SKAL være på dansk`,
-	],
-	[
-		"human",
-		`Skriv en unik kanalbeskrivelse baseret på følgende:
+- Alt output SKAL være på dansk`;
 
-Kanalnavn: {channelName}
-Original beskrivelse: {originalDescription}
+// --- AI quality validation ---
 
-Seneste videoer:
-{recentVideos}
+async function validateQuality(text: string, context: string) {
+	const { object } = await generateObject({
+		model: openRouter(PRIMARY_MODEL),
+		schema: qualitySchema,
+		system: QUALITY_SYSTEM,
+		prompt: `Kontekst: ${context}\n\nTekst der skal bedømmes:\n${text}`,
+	});
+	return object;
+}
 
-Skriv kun selve beskrivelsen (ca. 70 ord, præcis 2 afsnit adskilt med tom linje), intet andet:`,
-	],
-]);
+async function generateWithQuality<T>(opts: {
+	generate: (model: string) => Promise<T>;
+	extractText: (result: T) => string;
+	context: string;
+}): Promise<T | null> {
+	const { generate, extractText, context } = opts;
+
+	for (const model of MODELS) {
+		const label = model === PRIMARY_MODEL ? "primary" : "fallback";
+		if (label === "fallback") {
+			console.log(`Primary model failed quality threshold, trying fallback for: ${context}`);
+		}
+
+		for (let attempt = 1; attempt <= MAX_QUALITY_ATTEMPTS; attempt++) {
+			try {
+				const result = await generate(model);
+				const text = extractText(result);
+
+				if (!text || text.length < 10) {
+					console.warn(`Attempt ${attempt} (${label}): generated text too short, retrying`);
+					continue;
+				}
+
+				const { score, reason } = await validateQuality(text, context);
+				console.log(`Attempt ${attempt} (${label}): score ${score}/10 — ${reason}`);
+
+				if (score >= MIN_QUALITY_SCORE) return result;
+			} catch (e) {
+				console.warn(`Attempt ${attempt} (${label}) failed:`, e);
+			}
+		}
+	}
+
+	console.error(`Failed to reach quality threshold after all attempts for: ${context}`);
+	return null;
+}
+
+async function generateTextWithQuality(
+	system: string,
+	prompt: string,
+	context: string,
+): Promise<string | null> {
+	return generateWithQuality({
+		generate: async (model) => {
+			const { text } = await aiGenerateText({ model: openRouter(model), system, prompt });
+			return text.trim();
+		},
+		extractText: (t) => t,
+		context,
+	});
+}
 
 // --- Channel actions (public) ---
 
@@ -299,16 +260,14 @@ async function fetchAndUpsertChannel(ctx: ActionCtx, channelId: string) {
 	if (!data.items?.length) throw new Error(`Channel ${channelId} not found`);
 
 	const ch = data.items[0];
-	const thumbnailUrl: string | undefined = ch.snippet.thumbnails?.medium?.url ?? undefined;
+	const thumbnailUrl = ch.snippet.thumbnails?.medium?.url;
 
-	// Download thumbnail and upload to Convex file storage
 	let thumbnailStorageId: Id<"_storage"> | undefined;
 	if (thumbnailUrl) {
 		try {
 			const res = await fetch(thumbnailUrl);
 			if (res.ok) {
-				const blob = await res.blob();
-				thumbnailStorageId = await ctx.storage.store(blob);
+				thumbnailStorageId = await ctx.storage.store(await res.blob());
 			}
 		} catch (e) {
 			console.warn(`Failed to store thumbnail for channel ${channelId}:`, e);
@@ -329,7 +288,7 @@ async function fetchAndUpsertChannel(ctx: ActionCtx, channelId: string) {
 		videoCount: Number(ch.statistics.videoCount) || 0,
 	});
 
-	return ch.snippet.title as string;
+	return ch.snippet.title;
 }
 
 export const addChannel = action({
@@ -354,7 +313,7 @@ export const addChannelByHandle = action({
 	},
 });
 
-// --- Single-item actions (internal) ---
+// --- Video sync ---
 
 export const syncChannelVideos = internalAction({
 	args: { channelId: v.string(), maxResults: v.optional(v.number()) },
@@ -366,7 +325,7 @@ export const syncChannelVideos = internalAction({
 			`playlistItems?part=snippet&playlistId=${channel.uploadsPlaylistId}&maxResults=${maxResults ?? 10}`,
 		);
 		if (!playlist.items?.length) {
-			console.warn(`syncChannelVideos: No videos found in playlist for channel ${channelId}`);
+			console.warn(`syncChannelVideos: No videos found for channel ${channelId}`);
 			return { synced: 0 };
 		}
 
@@ -383,27 +342,6 @@ export const syncChannelVideos = internalAction({
 			const durationSeconds = parseDuration(vid.contentDetails?.duration ?? "");
 			const description = vid.snippet.description ?? "";
 
-			// YouTube Shorts can be up to 180 seconds (3 min) since Oct 2024.
-			// YouTube API doesn't expose a direct "isShort" field and thumbnails are always landscape.
-			// Best heuristic: check if /shorts/ URL resolves for this video.
-			let isShort = durationSeconds <= 180;
-			if (isShort && durationSeconds > 60) {
-				// For videos between 61-180s, verify via /shorts/ URL redirect
-				try {
-					const shortUrl = `https://www.youtube.com/shorts/${vid.id}`;
-					const res = await fetch(shortUrl, { method: "HEAD", redirect: "manual" });
-					// YouTube redirects away from /shorts/ if it's not actually a Short
-					isShort =
-						res.status === 200 ||
-						(res.status >= 300 &&
-							res.status < 400 &&
-							(res.headers.get("location")?.includes("/shorts/") ?? false));
-				} catch {
-					// Fallback: assume short if <= 180s
-					isShort = true;
-				}
-			}
-
 			await ctx.runMutation(internal.videos.insert, {
 				videoId: vid.id,
 				slug: slugify(vid.snippet.title, { lower: true, strict: true }),
@@ -418,7 +356,7 @@ export const syncChannelVideos = internalAction({
 				likeCount: Number(vid.statistics?.likeCount) || 0,
 				tags: vid.snippet.tags ?? [],
 				hashtags: extractHashtags(description),
-				isShort,
+				isShort: await detectIsShort(vid.id, durationSeconds),
 			});
 			synced++;
 		}
@@ -434,6 +372,8 @@ export const syncChannelVideos = internalAction({
 		return { synced };
 	},
 });
+
+// --- Transcript ---
 
 export const fetchTranscript = internalAction({
 	args: { videoId: v.string() },
@@ -459,51 +399,48 @@ export const fetchTranscript = internalAction({
 	},
 });
 
+// --- AI processing ---
+
 export const processVideo = internalAction({
 	args: { videoId: v.string() },
 	handler: async (ctx, { videoId }) => {
 		const video = await ctx.runQuery(internal.videos.getByVideoId, { videoId });
 		if (!video || video.processedAt) return;
 
-		type VideoAnalysis = {
-			summary: string;
-			seoTitle: string;
-			seoDescription: string;
-			themes: string[];
-			categories: string[];
-			keyTakeaways: string[];
-			faq: { question: string; answer: string }[];
-			relevanceScore: number;
-		};
-
 		const transcriptText = getTranscriptText(video.transcript, 3000);
 		const transcriptSection = transcriptText ? `\nTransskription (uddrag):\n${transcriptText}` : "";
 
-		const result = await generateWithQuality({
-			generate: (model) =>
-				VIDEO_ANALYSIS_PROMPT.pipe(aiModel(model)).pipe(
-					new JsonOutputParser<VideoAnalysis>(),
-				).invoke({
-					title: video.title,
-					description: cleanDescription(video.description).slice(0, 1500),
-					transcriptSection,
-				}),
-			extractText: (r) =>
-				[r.summary, r.seoTitle, r.seoDescription, ...(r.keyTakeaways ?? [])].join(" "),
+		const result = await generateWithQuality<VideoAnalysis>({
+			generate: async (model) => {
+				const { object } = await generateObject({
+					model: openRouter(model),
+					schema: videoAnalysisSchema,
+					system: VIDEO_ANALYSIS_SYSTEM,
+					prompt: `Analysér denne video:
+
+Titel: ${video.title}
+Beskrivelse: ${cleanDescription(video.description).slice(0, 1500)}
+${transcriptSection}
+
+Generér 3-5 FAQ-spørgsmål baseret på videoens indhold. Spørgsmålene skal være naturlige søgeforespørgsler en dansk investor ville stille.`,
+				});
+				return object;
+			},
+			extractText: (r) => [r.summary, r.seoTitle, r.seoDescription, ...r.keyTakeaways].join(" "),
 			context: `Video-analyse af "${video.title}"`,
 		});
 
 		if (result) {
 			await ctx.runMutation(internal.videos.updateProcessedData, {
 				videoId,
-				summary: result.summary ?? "",
-				seoTitle: result.seoTitle ?? "",
-				seoDescription: result.seoDescription ?? "",
-				themes: result.themes ?? [],
-				categories: result.categories ?? [],
-				keyTakeaways: result.keyTakeaways ?? [],
-				faq: result.faq ?? [],
-				relevanceScore: result.relevanceScore ?? 0,
+				summary: result.summary,
+				seoTitle: result.seoTitle,
+				seoDescription: result.seoDescription,
+				themes: result.themes,
+				categories: result.categories,
+				keyTakeaways: result.keyTakeaways,
+				faq: result.faq,
+				relevanceScore: result.relevanceScore,
 			});
 		}
 	},
@@ -522,17 +459,22 @@ export const generateArticle = internalAction({
 		const transcriptText = getTranscriptText(video.transcript, 6000);
 		const transcriptSection = transcriptText ? `Transskription:\n${transcriptText}` : "";
 
-		const article = await generateText(
-			ARTICLE_PROMPT,
-			{
-				title: video.title,
-				channelName: channel?.name ?? "YouTube",
-				summary: video.summary ?? "",
-				keyTakeaways: (video.keyTakeaways ?? []).join("\n- "),
-				themes: (video.themes ?? []).join(", "),
-				description: cleanDescription(video.description).slice(0, 2000),
-				transcriptSection,
-			},
+		const article = await generateTextWithQuality(
+			ARTICLE_SYSTEM,
+			`Skriv en artikel baseret på denne video:
+
+Titel: ${video.title}
+Kanal: ${channel?.name ?? "YouTube"}
+Opsummering: ${video.summary ?? ""}
+Hovedpointer: ${(video.keyTakeaways ?? []).join("\n- ")}
+Temaer: ${(video.themes ?? []).join(", ")}
+
+Beskrivelse:
+${cleanDescription(video.description).slice(0, 2000)}
+
+${transcriptSection}
+
+Skriv artiklen nu:`,
 			`Artikel baseret på video "${video.title}"`,
 		);
 
@@ -556,15 +498,21 @@ export const generateChannelDescription = internalAction({
 			limit: 10,
 		});
 
-		const aiDescription = await generateText(
-			CHANNEL_DESCRIPTION_PROMPT,
-			{
-				channelName: channel.name,
-				originalDescription: channel.description ?? "Ingen beskrivelse",
-				recentVideos:
-					videos.map((v) => `- ${v.title}${v.summary ? ` (${v.summary})` : ""}`).join("\n") ||
-					"Ingen videoer endnu",
-			},
+		const recentVideos =
+			videos.map((v) => `- ${v.title}${v.summary ? ` (${v.summary})` : ""}`).join("\n") ||
+			"Ingen videoer endnu";
+
+		const aiDescription = await generateTextWithQuality(
+			CHANNEL_DESCRIPTION_SYSTEM,
+			`Skriv en unik kanalbeskrivelse baseret på følgende:
+
+Kanalnavn: ${channel.name}
+Original beskrivelse: ${channel.description ?? "Ingen beskrivelse"}
+
+Seneste videoer:
+${recentVideos}
+
+Skriv kun selve beskrivelsen (ca. 70 ord, præcis 2 afsnit adskilt med tom linje), intet andet:`,
 			`Kanalbeskrivelse for "${channel.name}"`,
 		);
 
@@ -574,91 +522,55 @@ export const generateChannelDescription = internalAction({
 	},
 });
 
-// --- Single-video pipeline (triggered immediately on insert) ---
+// --- Pipeline ---
 
 export const processNewVideo = internalAction({
 	args: { videoId: v.string() },
 	handler: async (ctx, { videoId }) => {
-		console.log(`processNewVideo: Starting full pipeline for ${videoId}`);
-
-		// Step 1: Fetch transcript
+		console.log(`processNewVideo: Starting pipeline for ${videoId}`);
 		await retrier.run(ctx, internal.youtube.fetchTranscript, { videoId });
-
-		// Step 2: AI process (summary, SEO, categories, FAQ)
 		await retrier.run(ctx, internal.youtube.processVideo, { videoId });
-
-		// Step 3: Generate article
 		await retrier.run(ctx, internal.youtube.generateArticle, { videoId });
-
 		console.log(`processNewVideo: Pipeline complete for ${videoId}`);
 	},
 });
-
-// --- Stats refresh ---
 
 export const refreshVideoStats = internalAction({
 	args: {},
 	handler: async (ctx) => {
 		const videoIds = await ctx.runQuery(internal.videos.listAllVideoIds);
-		if (videoIds.length === 0) {
-			console.warn("refreshVideoStats: No videos in database, skipping.");
-			return;
-		}
+		if (videoIds.length === 0) return;
+
 		console.log(`refreshVideoStats: Updating stats for ${videoIds.length} video(s)`);
-		// YouTube API allows up to 50 IDs per request
+
 		for (let i = 0; i < videoIds.length; i += 50) {
 			const batch = videoIds.slice(i, i + 50);
 			const data = await ytFetch<YouTubeListResponse<YouTubeVideoItem>>(
 				`videos?part=statistics,snippet,contentDetails&id=${batch.join(",")}`,
 			);
+
 			for (const vid of data.items ?? []) {
 				const durationSeconds = parseDuration(vid.contentDetails?.duration ?? "");
-				let isShort = durationSeconds <= 180;
-				if (isShort && durationSeconds > 60) {
-					try {
-						const shortUrl = `https://www.youtube.com/shorts/${vid.id}`;
-						const res = await fetch(shortUrl, { method: "HEAD", redirect: "manual" });
-						isShort =
-							res.status === 200 ||
-							(res.status >= 300 &&
-								res.status < 400 &&
-								(res.headers.get("location")?.includes("/shorts/") ?? false));
-					} catch {
-						isShort = true;
-					}
-				}
-
 				await ctx.runMutation(internal.videos.updateStats, {
 					videoId: vid.id,
 					viewCount: Number(vid.statistics?.viewCount) || 0,
 					likeCount: Number(vid.statistics?.likeCount) || 0,
-					isShort,
+					isShort: await detectIsShort(vid.id, durationSeconds),
 				});
 			}
 		}
 	},
 });
 
-// --- Pipeline (cron + manual) ---
-
 export const syncAllChannels = internalAction({
 	args: {},
 	handler: async (ctx) => {
-		// Validate required env vars before doing any work
-		const missingEnvVars = [];
-		if (!process.env.YOUTUBE_API_KEY) missingEnvVars.push("YOUTUBE_API_KEY");
-		if (!process.env.OPENROUTER_API_KEY) missingEnvVars.push("OPENROUTER_API_KEY");
-		if (missingEnvVars.length > 0) {
-			console.error(`syncAllChannels aborted: missing env vars: ${missingEnvVars.join(", ")}`);
-			throw new Error(`Missing required env vars: ${missingEnvVars.join(", ")}`);
-		}
+		requireEnv("YOUTUBE_API_KEY");
+		requireEnv("OPENROUTER_API_KEY");
 
 		const channels = await ctx.runQuery(internal.channels.listAll);
-
 		if (channels.length === 0) {
-			console.warn(
-				"syncAllChannels: No channels found in database. Add channels first via addChannel or addChannelByHandle.",
-			);
+			console.warn("syncAllChannels: No channels found. Add channels first.");
 			return;
 		}
 
@@ -666,7 +578,7 @@ export const syncAllChannels = internalAction({
 			`syncAllChannels: Starting pipeline for ${channels.length} channel(s): ${channels.map((c) => c.name).join(", ")}`,
 		);
 
-		// 1. Sync videos from YouTube (new videos trigger processNewVideo automatically via scheduler)
+		// 1. Sync new videos from YouTube
 		for (const ch of channels) {
 			console.log(`[1/3] Syncing videos for "${ch.name}" (${ch.channelId})`);
 			await retrier.run(ctx, internal.youtube.syncChannelVideos, {
@@ -675,15 +587,14 @@ export const syncAllChannels = internalAction({
 			});
 		}
 
-		// 2. Sweep: retry any videos that previously failed processing
+		// 2. Retry any videos that previously failed processing
 		const withoutTranscript = await ctx.runQuery(internal.videos.listWithoutTranscript);
 		const unprocessed = await ctx.runQuery(internal.videos.listUnprocessed);
 		const withoutArticle = await ctx.runQuery(internal.videos.listWithoutArticle);
 
-		const needsRetry = new Set<string>();
-		for (const v of [...withoutTranscript, ...unprocessed, ...withoutArticle]) {
-			needsRetry.add(v.videoId);
-		}
+		const needsRetry = new Set(
+			[...withoutTranscript, ...unprocessed, ...withoutArticle].map((v) => v.videoId),
+		);
 
 		if (needsRetry.size > 0) {
 			console.log(`[2/3] Retrying ${needsRetry.size} video(s) with missing content`);
@@ -706,10 +617,8 @@ export const refreshAllChannelInfo = internalAction({
 	args: {},
 	handler: async (ctx) => {
 		const channels = await ctx.runQuery(internal.channels.listAll);
-		if (channels.length === 0) {
-			console.warn("refreshAllChannelInfo: No channels in database.");
-			return;
-		}
+		if (channels.length === 0) return;
+
 		console.log(`refreshAllChannelInfo: Refreshing ${channels.length} channel(s)`);
 		await forEachSafe(
 			channels,
@@ -722,18 +631,12 @@ export const refreshAllChannelInfo = internalAction({
 export const refreshAndGenerateAllChannelDescriptions = internalAction({
 	args: {},
 	handler: async (ctx) => {
-		if (!process.env.OPENROUTER_API_KEY) {
-			console.error("refreshAndGenerateAllChannelDescriptions aborted: missing OPENROUTER_API_KEY");
-			throw new Error("Missing required env var: OPENROUTER_API_KEY");
-		}
-
+		requireEnv("OPENROUTER_API_KEY");
 		await ctx.runAction(internal.youtube.refreshAllChannelInfo);
 
 		const channels = await ctx.runQuery(internal.channels.listAll);
-		if (channels.length === 0) {
-			console.warn("refreshAndGenerateAllChannelDescriptions: No channels in database.");
-			return;
-		}
+		if (channels.length === 0) return;
+
 		console.log(`Generating AI descriptions for ${channels.length} channel(s)`);
 		for (const ch of channels) {
 			await retrier.run(ctx, internal.youtube.generateChannelDescription, {

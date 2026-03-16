@@ -1,11 +1,6 @@
+import { CONVEX_URL } from "astro:env/server";
 import { ConvexHttpClient } from "convex/browser";
-import type { FunctionReference, FunctionArgs, FunctionReturnType } from "convex/server";
-
-const CONVEX_URL = process.env.CONVEX_URL || import.meta.env.CONVEX_URL;
-
-if (!CONVEX_URL) {
-	throw new Error("Missing CONVEX_URL environment variable");
-}
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from "convex/server";
 
 const client = new ConvexHttpClient(CONVEX_URL);
 

@@ -31,7 +31,6 @@ export default defineConfig({
 		csp: {
 			directives: [
 				"default-src 'self'",
-				"script-src 'self' 'unsafe-inline'",
 				"img-src 'self' https://i.ytimg.com https://img.youtube.com https://*.convex.cloud data:",
 				"frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
 				"connect-src 'self' https://*.convex.cloud",

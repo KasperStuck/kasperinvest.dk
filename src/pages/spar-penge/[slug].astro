@@ -1,0 +1,51 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import LinkCard from "@/components/LinkCard.astro";
+import ProviderCard from "@/components/ProviderCard.astro";
+import { getSavingsCategories, getSavingsCategory } from "@/data/savings";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+export function getStaticPaths() {
+	return getSavingsCategories().map((c) => ({ params: { slug: c.id } }));
+}
+
+const category = Astro.params.slug ? getSavingsCategory(Astro.params.slug) : null;
+if (!category) return new Response(null, { status: 404, statusText: "Not Found" });
+
+const isComparison = !!category.priceLabel;
+---
+
+<CenteredLayout
+	title={`${category.title} - Spar penge - KasperInvest`}
+	description={category.description}
+>
+	<Breadcrumbs
+		slot="breadcrumbs"
+		items={[
+			{ label: "KasperInvest", href: "/" },
+			{ label: "Spar penge", href: "/spar-penge" },
+			{ label: category.title },
+		]}
+	/>
+
+	<div class="mt-10 sm:mt-14">
+		<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">{category.title}</h1>
+		<p class="mt-6 max-w-2xl text-base/7 text-gray-700 dark:text-gray-400">
+			{category.intro ?? category.description}
+		</p>
+	</div>
+
+	{isComparison ? (
+		<div class="mt-10 space-y-4">
+			{category.providers.map((p) => (
+				<ProviderCard provider={p} priceLabel={category.priceLabel} />
+			))}
+		</div>
+	) : (
+		<div class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2">
+			{category.providers.map((p) => (
+				<LinkCard href={p.url} title={p.name} description={p.description} external />
+			))}
+		</div>
+	)}
+</CenteredLayout>

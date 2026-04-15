@@ -1,0 +1,28 @@
+---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import LinkCard from "@/components/LinkCard.astro";
+import { getSavingsCategories } from "@/data/savings";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+const categories = getSavingsCategories();
+---
+
+<CenteredLayout
+	title="Spar penge - KasperInvest"
+	description="Spar penge på el, mobil, internet, TV, bank og lån. Sammenlign udbydere og find de bedste tilbud i Danmark."
+>
+	<Breadcrumbs slot="breadcrumbs" items={[{ label: "KasperInvest", href: "/" }, { label: "Spar penge" }]} />
+
+	<div class="mt-10 sm:mt-14">
+		<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">Spar penge</h1>
+		<p class="mt-6 max-w-2xl text-base/7 text-gray-700 dark:text-gray-400">
+			Små ændringer i dine faste udgifter kan gøre en stor forskel over et år. Sammenlign udbydere af el, mobil, internet, TV, bank og investering — og find de bedste tilbud, så du kan spare penge på dine månedlige regninger.
+		</p>
+	</div>
+
+	<div class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+		{categories.map((c) => (
+			<LinkCard href={`/spar-penge/${c.id}`} title={c.title} description={c.description} />
+		))}
+	</div>
+</CenteredLayout>

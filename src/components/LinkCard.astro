@@ -1,0 +1,24 @@
+---
+interface Props {
+	href: string;
+	title: string;
+	description?: string;
+	external?: boolean;
+}
+
+const { href, title, description, external } = Astro.props;
+const externalAttrs = external ? { target: "_blank", rel: "nofollow noopener sponsored" } : {};
+---
+
+<a
+	href={href}
+	{...externalAttrs}
+	class="group rounded-xl border border-gray-950/10 p-6 transition hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"
+>
+	<h2 class="text-base/7 font-semibold text-gray-950 group-hover:text-gray-700 dark:text-white dark:group-hover:text-gray-300">
+		{title}
+	</h2>
+	{description && (
+		<p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">{description}</p>
+	)}
+</a>

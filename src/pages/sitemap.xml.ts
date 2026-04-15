@@ -58,28 +58,32 @@ export const GET: APIRoute = async () => {
 	}
 
 	// YouTube channels and videos (dynamic from Convex)
-	const [channels, videos] = await Promise.all([
-		convex.query(api.channels.list, {}),
-		convex.query(api.videos.listRecent, { limit: 100 }),
-	]);
+	try {
+		const [channels, videos] = await Promise.all([
+			convex.query(api.channels.list, {}),
+			convex.query(api.videos.listRecent, { limit: 100 }),
+		]);
 
-	const channelMap = new Map(
-		channels.map((ch) => [ch.channelId, ch.customUrl?.replace(/^@/, "") ?? ch.channelId]),
-	);
+		const channelMap = new Map(
+			channels.map((ch) => [ch.channelId, ch.customUrl?.replace(/^@/, "") ?? ch.channelId]),
+		);
 
-	for (const ch of channels) {
-		if (ch.customUrl) {
-			urls.push(urlEntry(`${SITE_URL}/youtube/${ch.customUrl.replace(/^@/, "")}`));
-		}
-	}
-
-	for (const video of videos) {
-		if (video.slug) {
-			const handle = channelMap.get(video.channelId);
-			if (handle) {
-				urls.push(urlEntry(`${SITE_URL}/youtube/${handle}/${video.slug}`));
+		for (const ch of channels) {
+			if (ch.customUrl) {
+				urls.push(urlEntry(`${SITE_URL}/youtube/${ch.customUrl.replace(/^@/, "")}`));
 			}
 		}
+
+		for (const video of videos) {
+			if (video.slug) {
+				const handle = channelMap.get(video.channelId);
+				if (handle) {
+					urls.push(urlEntry(`${SITE_URL}/youtube/${handle}/${video.slug}`));
+				}
+			}
+		}
+	} catch (error) {
+		console.error("[sitemap] Convex query failed, skipping YouTube URLs", error);
 	}
 
 	const xml = `<?xml version="1.0" encoding="UTF-8"?>

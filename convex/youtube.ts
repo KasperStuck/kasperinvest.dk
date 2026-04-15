@@ -2,7 +2,7 @@
 
 import { createOpenAI } from "@ai-sdk/openai";
 import { ActionRetrier } from "@convex-dev/action-retrier";
-import { generateObject, generateText as aiGenerateText } from "ai";
+import { generateText as aiGenerateText, generateObject } from "ai";
 import { v } from "convex/values";
 import slugify from "slugify";
 import { z } from "zod";

@@ -1,11 +1,28 @@
-import livrenteMand from "@/assets/partners/nordnet-livrente-mand.png";
 import livrenteKvinde from "@/assets/partners/nordnet-livrente-kvinde.png";
+import livrenteMand from "@/assets/partners/nordnet-livrente-mand.png";
 import mindreaarig from "@/assets/partners/nordnet-mindreaarig.png";
-import norminvestPar from "@/assets/partners/norminvest-gratis-investeringsplan-par.png";
 import norminvestKvinder from "@/assets/partners/norminvest-gratis-investeringsplan-kvinder.png";
+import norminvestPar from "@/assets/partners/norminvest-gratis-investeringsplan-par.png";
 
-const NORDNET_EXCLUDE = ["saxo", "lunar", "norm invest", "norminvest", "maj invest", "majinvest", "june", "frinans"];
-const NORMINVEST_EXCLUDE = ["nordnet", "saxo", "lunar", "maj invest", "majinvest", "june", "frinans"];
+const NORDNET_EXCLUDE = [
+	"saxo",
+	"lunar",
+	"norm invest",
+	"norminvest",
+	"maj invest",
+	"majinvest",
+	"june",
+	"frinans",
+];
+const NORMINVEST_EXCLUDE = [
+	"nordnet",
+	"saxo",
+	"lunar",
+	"maj invest",
+	"majinvest",
+	"june",
+	"frinans",
+];
 
 export const banners = [
 	{

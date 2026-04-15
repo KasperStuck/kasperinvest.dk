@@ -62,11 +62,31 @@ const lessons = [
 				description: "Sæt rammer, forventninger og risikodisclaimer.",
 				video: null,
 				faq: [
-					{ question: "Kan man starte med at investere med kun 500 kr.?", answer: "Ja, absolut. Mange danske platforme tilbyder løsninger som Månedsopsparing. Her kan du automatisk købe for mindre beløb hver måned uden at betale høje gebyrer hver gang." },
-					{ question: "Hvad er en aktiesparekonto?", answer: "En aktiesparekonto (ASK) er en særlig konto med en lav skattesats på kun 17%. I 2026 er indskudsloftet 174.200 kr. Kontoen er lagerbeskattet. Det betyder, at skatten afregnes årligt af din værditilvækst." },
-					{ question: "Er dette kursus gratis?", answer: "Indholdet her er stillet til rådighed som en del af Kasper Invests mission om at demokratisere viden. Målet er at give dig et fundament uden skjulte dagsordener." },
-					{ question: "Hvilken platform anbefaler kurset?", answer: "Jeg peger ikke på en vinder. Jeg bruger ofte Nordnet og Saxo Bank som eksempler. De er de mest populære for private investorer i Danmark." },
-					{ question: "Behøver jeg en revisor til min aktieskat?", answer: "For de fleste er svaret nej. Danske platforme indberetter automatisk dine handler til Skattestyrelsen. Du skal dog altid selv tjekke din årsopgørelse en ekstra gang." },
+					{
+						question: "Kan man starte med at investere med kun 500 kr.?",
+						answer:
+							"Ja, absolut. Mange danske platforme tilbyder løsninger som Månedsopsparing. Her kan du automatisk købe for mindre beløb hver måned uden at betale høje gebyrer hver gang.",
+					},
+					{
+						question: "Hvad er en aktiesparekonto?",
+						answer:
+							"En aktiesparekonto (ASK) er en særlig konto med en lav skattesats på kun 17%. I 2026 er indskudsloftet 174.200 kr. Kontoen er lagerbeskattet. Det betyder, at skatten afregnes årligt af din værditilvækst.",
+					},
+					{
+						question: "Er dette kursus gratis?",
+						answer:
+							"Indholdet her er stillet til rådighed som en del af Kasper Invests mission om at demokratisere viden. Målet er at give dig et fundament uden skjulte dagsordener.",
+					},
+					{
+						question: "Hvilken platform anbefaler kurset?",
+						answer:
+							"Jeg peger ikke på en vinder. Jeg bruger ofte Nordnet og Saxo Bank som eksempler. De er de mest populære for private investorer i Danmark.",
+					},
+					{
+						question: "Behøver jeg en revisor til min aktieskat?",
+						answer:
+							"For de fleste er svaret nej. Danske platforme indberetter automatisk dine handler til Skattestyrelsen. Du skal dog altid selv tjekke din årsopgørelse en ekstra gang.",
+					},
 				],
 			},
 			{
@@ -75,9 +95,21 @@ const lessons = [
 				description: "Lav et budget med faste og variable poster samt buffer.",
 				video: null,
 				faq: [
-					{ question: "Kan jeg begynde at investere, hvis jeg kun kan undvære 500 kr. om måneden?", answer: "Ja. Det vigtigste i starten er vanen og regelmæssigheden, ikke et stort beløb fra dag et." },
-					{ question: "Skal nødopsparingen stå på en investeringskonto?", answer: "Nej. Nødopsparingen bør stå kontant på en separat opsparingskonto, så pengene er tilgængelige med det samme." },
-					{ question: "Hvor tit bør jeg opdatere mit budget?", answer: "Som minimum kvartalsvist. Og altid når din økonomi ændrer sig markant, fx ved nyt job, flytning eller ændrede faste udgifter." },
+					{
+						question: "Kan jeg begynde at investere, hvis jeg kun kan undvære 500 kr. om måneden?",
+						answer:
+							"Ja. Det vigtigste i starten er vanen og regelmæssigheden, ikke et stort beløb fra dag et.",
+					},
+					{
+						question: "Skal nødopsparingen stå på en investeringskonto?",
+						answer:
+							"Nej. Nødopsparingen bør stå kontant på en separat opsparingskonto, så pengene er tilgængelige med det samme.",
+					},
+					{
+						question: "Hvor tit bør jeg opdatere mit budget?",
+						answer:
+							"Som minimum kvartalsvist. Og altid når din økonomi ændrer sig markant, fx ved nyt job, flytning eller ændrede faste udgifter.",
+					},
 				],
 			},
 			{
@@ -93,10 +125,26 @@ const lessons = [
 				description: "Skelne mellem frihedsmål og investeringsmål; undgå urealistiske tal.",
 				video: null,
 				faq: [
-					{ question: "Er 4%-reglen realistisk i Danmark?", answer: "4%-reglen er et nyttigt udgangspunkt, men den er udviklet på amerikanske markedsdata. I Danmark skal du tage højde for, at afkast beskattes løbende, og det reducerer det reelle beløb, du kan hæve. En dansk tilpasning ligger typisk på 3-3,5% som en mere konservativ SWR." },
-					{ question: "Hvornår kan jeg kalde mig økonomisk fri?", answer: "Det er individuelt. En tommelfingerregel er, at du er økonomisk fri, når din portefølje kan generere nok til at dække dine leveomkostninger, uden at du behøver røre kapitalen. Det sker typisk, når din formue er 25 gange dine årlige udgifter." },
-					{ question: "Skal jeg bruge aktiesparekonto eller frie midler til FIRE?", answer: "Begge dele, men i den rigtige rækkefølge. Brug aktiesparekontoen (ASK) til din 17%-beskatning, fordi den er langt mere skatteeffektiv end frie midler. ASK har dog et loft (174.200 kr. i 2026), så når du rammer det, investerer du videre i frie midler." },
-					{ question: "Hvad er den største fejl, folk begår på vejen mod FIRE?", answer: "Den hyppigste fejl er at undervurdere tidshorisonten og overvurdere forventet afkast. Mange starter med urealistiske antagelser om 15-20% afkast om året. Hold dig til 7% nominelt som udgangspunkt, og byg en plan, du faktisk kan holde i 20-30 år." },
+					{
+						question: "Er 4%-reglen realistisk i Danmark?",
+						answer:
+							"4%-reglen er et nyttigt udgangspunkt, men den er udviklet på amerikanske markedsdata. I Danmark skal du tage højde for, at afkast beskattes løbende, og det reducerer det reelle beløb, du kan hæve. En dansk tilpasning ligger typisk på 3-3,5% som en mere konservativ SWR.",
+					},
+					{
+						question: "Hvornår kan jeg kalde mig økonomisk fri?",
+						answer:
+							"Det er individuelt. En tommelfingerregel er, at du er økonomisk fri, når din portefølje kan generere nok til at dække dine leveomkostninger, uden at du behøver røre kapitalen. Det sker typisk, når din formue er 25 gange dine årlige udgifter.",
+					},
+					{
+						question: "Skal jeg bruge aktiesparekonto eller frie midler til FIRE?",
+						answer:
+							"Begge dele, men i den rigtige rækkefølge. Brug aktiesparekontoen (ASK) til din 17%-beskatning, fordi den er langt mere skatteeffektiv end frie midler. ASK har dog et loft (174.200 kr. i 2026), så når du rammer det, investerer du videre i frie midler.",
+					},
+					{
+						question: "Hvad er den største fejl, folk begår på vejen mod FIRE?",
+						answer:
+							"Den hyppigste fejl er at undervurdere tidshorisonten og overvurdere forventet afkast. Mange starter med urealistiske antagelser om 15-20% afkast om året. Hold dig til 7% nominelt som udgangspunkt, og byg en plan, du faktisk kan holde i 20-30 år.",
+					},
 				],
 			},
 			{
@@ -119,9 +167,21 @@ const lessons = [
 				description: "Sammenlign sikkert afkast ved gældsafvikling med markedsrisiko.",
 				video: null,
 				faq: [
-					{ question: "Skal jeg altid afvikle gæld, før jeg investerer?", answer: "Nej — det afhænger af den effektive rente efter skattefradrag. Billig gæld som SU-lån og realkreditlån kan sagtens køre sideløbende med investering. Dyr forbrugsgæld bør altid væk først." },
-					{ question: "Hvad tæller mest — renten eller restgælden?", answer: "Renten. En lille kassekredit til 18% koster dig forholdsmæssigt langt mere end et stort realkreditlån til 3,5%." },
-					{ question: "Hvad hvis min rente er variabel?", answer: "Så regn med den rente, du betaler nu, men vær opmærksom på at den kan stige. Har du et F-kort-lån og er nervøs for rentestigninger, kan det tale for at afdrage mere." },
+					{
+						question: "Skal jeg altid afvikle gæld, før jeg investerer?",
+						answer:
+							"Nej — det afhænger af den effektive rente efter skattefradrag. Billig gæld som SU-lån og realkreditlån kan sagtens køre sideløbende med investering. Dyr forbrugsgæld bør altid væk først.",
+					},
+					{
+						question: "Hvad tæller mest — renten eller restgælden?",
+						answer:
+							"Renten. En lille kassekredit til 18% koster dig forholdsmæssigt langt mere end et stort realkreditlån til 3,5%.",
+					},
+					{
+						question: "Hvad hvis min rente er variabel?",
+						answer:
+							"Så regn med den rente, du betaler nu, men vær opmærksom på at den kan stige. Har du et F-kort-lån og er nervøs for rentestigninger, kan det tale for at afdrage mere.",
+					},
 				],
 			},
 		],
@@ -138,10 +198,26 @@ const lessons = [
 				description: "Lær at skelne inspiration fra metode og undgå survivorship bias.",
 				video: null,
 				faq: [
-					{ question: "Er det aldrig en god ide at følge andres investeringer?", answer: "Det kan være fint at lade sig inspirere til at undersøge en aktie eller sektor nærmere. Men inspirere til at undersøge er ikke det samme som kopiere blindt. Gør altid din egen research." },
-					{ question: "Hvad er forskellen på en investeringsmetode og en investeringsstrategi?", answer: "I praksis bruges ordene ofte synonymt. Det afgørende er, at du har et sæt regler, du følger konsekvent: hvad du køber, hvornår du køber, hvor meget du investerer, og hvornår du sælger." },
-					{ question: "Hvordan undgår jeg FOMO, når alle taler om en bestemt aktie?", answer: "Din bedste forsikring mod FOMO er en fast investeringsplan med automatiske indbetalinger. Når planen kører, behøver du ikke reagere på hver ny bølge." },
-					{ question: "Hvornår kan enkeltaktier give mening?", answer: "Enkeltaktier kan give mening, hvis de kun udgør en mindre del af din portefølje — f.eks. 5-10% — og du kan tåle store udsving uden at ændre plan. For de fleste begyndere er brede indeksfonde et bedre udgangspunkt." },
+					{
+						question: "Er det aldrig en god ide at følge andres investeringer?",
+						answer:
+							"Det kan være fint at lade sig inspirere til at undersøge en aktie eller sektor nærmere. Men inspirere til at undersøge er ikke det samme som kopiere blindt. Gør altid din egen research.",
+					},
+					{
+						question: "Hvad er forskellen på en investeringsmetode og en investeringsstrategi?",
+						answer:
+							"I praksis bruges ordene ofte synonymt. Det afgørende er, at du har et sæt regler, du følger konsekvent: hvad du køber, hvornår du køber, hvor meget du investerer, og hvornår du sælger.",
+					},
+					{
+						question: "Hvordan undgår jeg FOMO, når alle taler om en bestemt aktie?",
+						answer:
+							"Din bedste forsikring mod FOMO er en fast investeringsplan med automatiske indbetalinger. Når planen kører, behøver du ikke reagere på hver ny bølge.",
+					},
+					{
+						question: "Hvornår kan enkeltaktier give mening?",
+						answer:
+							"Enkeltaktier kan give mening, hvis de kun udgør en mindre del af din portefølje — f.eks. 5-10% — og du kan tåle store udsving uden at ændre plan. For de fleste begyndere er brede indeksfonde et bedre udgangspunkt.",
+					},
 				],
 			},
 			{
@@ -264,11 +340,31 @@ const lessons = [
 				description: "Forstå hvornår og hvordan du genopretter din målallokering.",
 				video: null,
 				faq: [
-					{ question: "Hvor ofte skal man rebalancere sin portefølje?", answer: "For de fleste private investorer er det rigeligt at rebalancere en til to gange om året. Ved at gøre det halvårligt eller årligt sikrer du, at din risiko forbliver på det ønskede niveau." },
-					{ question: "Hvad er fordelen ved rebalancering?", answer: "Den primære fordel er risikostyring. Rebalancering sikrer, at din portefølje ikke bliver for risikabel. Samtidig tvinger det dig til at købe billigt og sælge dyrt på en systematisk måde." },
-					{ question: "Hvordan undgår man skat ved rebalancering?", answer: "I frie midler kan du benytte tilkøbsrebalancering, hvor du køber op i de undervægtede aktiver med nye indbetalinger i stedet for at sælge. På lagerbeskattede konti som aktiesparekontoen udløser selve handlen ingen ekstra skat." },
-					{ question: "Hvornår er det nødvendigt at rebalancere?", answer: "En god tommelfingerregel er 5-procent-reglen. Hvis en aktivklasse afviger mere end 5 procentpoint fra din oprindelige plan, er det tid til at overveje en justering." },
-					{ question: "Kan man automatisere rebalancering?", answer: "Ja, til en vis grad. Du kan bruge værktøjer som Nordnets månedsopsparing eller Saxos AutoInvest til at styre dine løbende indbetalinger ind i de rigtige fonde. Selve salget af overvægtede aktiver skal du dog typisk stadig foretage manuelt." },
+					{
+						question: "Hvor ofte skal man rebalancere sin portefølje?",
+						answer:
+							"For de fleste private investorer er det rigeligt at rebalancere en til to gange om året. Ved at gøre det halvårligt eller årligt sikrer du, at din risiko forbliver på det ønskede niveau.",
+					},
+					{
+						question: "Hvad er fordelen ved rebalancering?",
+						answer:
+							"Den primære fordel er risikostyring. Rebalancering sikrer, at din portefølje ikke bliver for risikabel. Samtidig tvinger det dig til at købe billigt og sælge dyrt på en systematisk måde.",
+					},
+					{
+						question: "Hvordan undgår man skat ved rebalancering?",
+						answer:
+							"I frie midler kan du benytte tilkøbsrebalancering, hvor du køber op i de undervægtede aktiver med nye indbetalinger i stedet for at sælge. På lagerbeskattede konti som aktiesparekontoen udløser selve handlen ingen ekstra skat.",
+					},
+					{
+						question: "Hvornår er det nødvendigt at rebalancere?",
+						answer:
+							"En god tommelfingerregel er 5-procent-reglen. Hvis en aktivklasse afviger mere end 5 procentpoint fra din oprindelige plan, er det tid til at overveje en justering.",
+					},
+					{
+						question: "Kan man automatisere rebalancering?",
+						answer:
+							"Ja, til en vis grad. Du kan bruge værktøjer som Nordnets månedsopsparing eller Saxos AutoInvest til at styre dine løbende indbetalinger ind i de rigtige fonde. Selve salget af overvægtede aktiver skal du dog typisk stadig foretage manuelt.",
+					},
 				],
 			},
 			{
@@ -312,10 +408,26 @@ const lessons = [
 				description: "Forstå støtte/modstand, trend og volumen som sprog, ikke garanti.",
 				video: null,
 				faq: [
-					{ question: "Kan man leve af teknisk analyse?", answer: "Nogle daytradere forsøger, men forskningen viser, at langt de fleste aktive tradere taber penge over tid, når man regner kurtage, spread og skat med. For privatinvestorer er teknisk analyse bedst som supplement til fundamental analyse." },
-					{ question: "Hvad er forskellen på teknisk og fundamental analyse?", answer: "Fundamental analyse vurderer, hvad en virksomhed er værd baseret på økonomi og fremtidsudsigter. Teknisk analyse kigger udelukkende på kursgrafer og handelsvolumen for at vurdere timing. De to tilgange supplerer hinanden." },
-					{ question: "Hvilke indikatorer skal en begynder starte med?", answer: "Start med SMA 200 og volumen. Det giver dig et overblik over den langsigtede trend og markedets overbevisning, uden at du drukner i signaler." },
-					{ question: "Er teknisk analyse bedre til aktier eller indeksfonde?", answer: "Teknisk analyse bruges primært på enkeltaktier og indekser, hvor der er tilstrækkeligt handelsvolumen til at mønstrene giver mening. For passive indeksinvestorer, der køber op fast, er teknisk analyse sjældent relevant." },
+					{
+						question: "Kan man leve af teknisk analyse?",
+						answer:
+							"Nogle daytradere forsøger, men forskningen viser, at langt de fleste aktive tradere taber penge over tid, når man regner kurtage, spread og skat med. For privatinvestorer er teknisk analyse bedst som supplement til fundamental analyse.",
+					},
+					{
+						question: "Hvad er forskellen på teknisk og fundamental analyse?",
+						answer:
+							"Fundamental analyse vurderer, hvad en virksomhed er værd baseret på økonomi og fremtidsudsigter. Teknisk analyse kigger udelukkende på kursgrafer og handelsvolumen for at vurdere timing. De to tilgange supplerer hinanden.",
+					},
+					{
+						question: "Hvilke indikatorer skal en begynder starte med?",
+						answer:
+							"Start med SMA 200 og volumen. Det giver dig et overblik over den langsigtede trend og markedets overbevisning, uden at du drukner i signaler.",
+					},
+					{
+						question: "Er teknisk analyse bedre til aktier eller indeksfonde?",
+						answer:
+							"Teknisk analyse bruges primært på enkeltaktier og indekser, hvor der er tilstrækkeligt handelsvolumen til at mønstrene giver mening. For passive indeksinvestorer, der køber op fast, er teknisk analyse sjældent relevant.",
+					},
 				],
 			},
 			{

@@ -14,7 +14,10 @@ if (!channel) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
-const videos = await convex.query(api.videos.listByChannel, { channelId: channel.channelId, limit: 50 });
+const videos = await convex.query(api.videos.listByChannel, {
+	channelId: channel.channelId,
+	limit: 50,
+});
 
 function videoUrl(v: { slug?: string; videoId: string }) {
 	return `/youtube/${handle}/${v.slug ?? v.videoId}`;

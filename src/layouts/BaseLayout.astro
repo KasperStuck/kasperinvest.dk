@@ -20,13 +20,7 @@ const { title = "KasperInvest", description } = Astro.props;
 		{description && <meta name="description" content={description} />}
 		<title>{title}</title>
 		<slot name="head" />
-		<script is:inline>
-			(function() {
-				var c = document.cookie.match(/(?:^|; )theme=(\w+)/);
-				var theme = c ? c[1] : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-				if (theme === "dark") document.documentElement.classList.add("dark");
-			})();
-		</script>
+		<script is:inline src="/theme-init.js"></script>
 	</head>
 	<body>
 		<div class="isolate">

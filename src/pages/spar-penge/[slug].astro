@@ -1,15 +1,13 @@
 ---
+export const prerender = false;
+
 import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import LinkCard from "@/components/LinkCard.astro";
 import ProviderCard from "@/components/ProviderCard.astro";
-import { getSavingsCategories, getSavingsCategory } from "@/data/savings";
+import { getSavingsCategory } from "@/data/savings";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 
-export function getStaticPaths() {
-	return getSavingsCategories().map((c) => ({ params: { slug: c.id } }));
-}
-
-const category = Astro.params.slug ? getSavingsCategory(Astro.params.slug) : null;
+const category = Astro.params.slug ? await getSavingsCategory(Astro.params.slug) : null;
 if (!category) return new Response(null, { status: 404, statusText: "Not Found" });
 
 const isComparison = !!category.priceLabel;

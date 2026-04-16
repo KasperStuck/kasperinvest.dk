@@ -28,7 +28,8 @@ function videoUrl(v: { slug?: string; videoId: string; channelId: string }) {
 	return `/youtube/${handle}/${v.slug ?? v.videoId}`;
 }
 
-const featuredVideo = safePage === 1 ? videos.find((v) => !v.isShort) : undefined;
+const featuredVideo =
+	safePage === 1 ? videos.find((v) => (v.durationSeconds ?? 0) > 90) : undefined;
 const gridVideos = videos.filter((v) => v !== featuredVideo);
 
 const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))].sort();
@@ -40,7 +41,7 @@ const activeChannels = [...new Set(allVideos.map((v) => v.channelId))].map((id) 
 
 const latestVideoByChannel = new Map<string, string>();
 for (const v of allVideos) {
-	if (v.isShort) continue;
+	if ((v.durationSeconds ?? 0) <= 90) continue;
 	const existing = latestVideoByChannel.get(v.channelId);
 	if (!existing || v.publishedAt > existing) {
 		latestVideoByChannel.set(v.channelId, v.publishedAt);
@@ -237,7 +238,7 @@ function capitalize(s: string): string {
 		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
 			{gridVideos.map((video) => (
 				<div
-					data-is-short={video.isShort ? "true" : "false"}
+					data-is-short={(video.durationSeconds ?? 0) <= 90 ? "true" : "false"}
 					data-categories={JSON.stringify(video.categories ?? [])}
 					data-channel={video.channelId}
 				>

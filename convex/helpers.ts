@@ -11,11 +11,8 @@ export interface TranscriptSegment {
 	text: string;
 }
 
-/** Duration (seconds) below which a video is assumed to be a Short when no Shorts metadata is available. */
-export const SHORTS_FALLBACK_THRESHOLD = 90 as const;
-
-/** Duration (seconds) at or above which a video can never be a Short (early-return guard). */
-export const SHORTS_MAX_DURATION = 180 as const;
+/** Duration (seconds) at or below which a video is classified as a Short. */
+export const SHORTS_THRESHOLD = 90 as const;
 
 export function parseDuration(iso: string): number {
 	const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);

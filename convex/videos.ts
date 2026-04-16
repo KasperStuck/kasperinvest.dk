@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { SHORTS_FALLBACK_THRESHOLD } from "./helpers";
+import { SHORTS_THRESHOLD } from "./helpers";
 
 // --- Internal mutations (called from actions) ---
 
@@ -20,7 +20,6 @@ export const insert = internalMutation({
 		likeCount: v.optional(v.number()),
 		tags: v.optional(v.array(v.string())),
 		hashtags: v.optional(v.array(v.string())),
-		isShort: v.optional(v.boolean()),
 	},
 	handler: async (ctx, args) => {
 		const id = await ctx.db.insert("videos", args);
@@ -120,10 +119,9 @@ export const updateStats = internalMutation({
 		videoId: v.string(),
 		viewCount: v.number(),
 		likeCount: v.number(),
-		isShort: v.optional(v.boolean()),
 		thumbnailUrl: v.optional(v.string()),
 	},
-	handler: async (ctx, { videoId, viewCount, likeCount, isShort, thumbnailUrl }) => {
+	handler: async (ctx, { videoId, viewCount, likeCount, thumbnailUrl }) => {
 		const video = await ctx.db
 			.query("videos")
 			.withIndex("by_videoId", (q) => q.eq("videoId", videoId))
@@ -131,7 +129,6 @@ export const updateStats = internalMutation({
 
 		if (video) {
 			const patch: Record<string, unknown> = { viewCount, likeCount };
-			if (isShort !== undefined) patch.isShort = isShort;
 			if (thumbnailUrl && (!video.thumbnailUrl || video.thumbnailUrl === "")) {
 				patch.thumbnailUrl = thumbnailUrl;
 			}
@@ -222,12 +219,15 @@ export const listRecent = query({
 
 export const listRecentVideosOnly = query({
 	args: { limit: v.optional(v.number()) },
-	handler: async (ctx, { limit }) =>
-		ctx.db
+	handler: async (ctx, { limit }) => {
+		const videos = await ctx.db
 			.query("videos")
-			.withIndex("by_isShort_publishedAt", (q) => q.eq("isShort", false))
+			.withIndex("by_publishedAt")
 			.order("desc")
-			.take(limit ?? 20),
+			.take((limit ?? 20) * 3);
+
+		return videos.filter((v) => (v.durationSeconds ?? 0) > SHORTS_THRESHOLD).slice(0, limit ?? 20);
+	},
 });
 
 export const listByCategory = query({
@@ -278,33 +278,6 @@ export const needsTranscript = query({
 			.query("videos")
 			.filter((q) => q.eq(q.field("transcript"), undefined))
 			.take(50),
-});
-
-export const needsBackfill = query({
-	args: {},
-	handler: async (ctx) =>
-		ctx.db
-			.query("videos")
-			.filter((q) => q.eq(q.field("isShort"), undefined))
-			.take(50),
-});
-
-export const backfillIsShort = mutation({
-	args: { maxSeconds: v.optional(v.number()) },
-	handler: async (ctx, { maxSeconds }) => {
-		const threshold = maxSeconds ?? SHORTS_FALLBACK_THRESHOLD;
-		const videos = await ctx.db.query("videos").collect();
-		let updated = 0;
-		for (const video of videos) {
-			const seconds = video.durationSeconds ?? 0;
-			const isShort = seconds <= threshold && seconds > 0;
-			if (video.isShort !== isShort) {
-				await ctx.db.patch(video._id, { isShort });
-				updated++;
-			}
-		}
-		return { updated, total: videos.length };
-	},
 });
 
 export const resetProcessing = mutation({

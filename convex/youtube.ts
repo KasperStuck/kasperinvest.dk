@@ -18,8 +18,6 @@ import {
 	forEachSafe,
 	getTranscriptText,
 	parseDuration,
-	SHORTS_FALLBACK_THRESHOLD,
-	SHORTS_MAX_DURATION,
 } from "./helpers";
 
 // --- Config ---
@@ -89,28 +87,6 @@ async function ytFetch<T>(path: string): Promise<T> {
 	const res = await fetch(`${YOUTUBE_API}/${path}&key=${requireEnv("YOUTUBE_API_KEY")}`);
 	if (!res.ok) throw new Error(`YouTube API error: ${res.statusText}`);
 	return res.json();
-}
-
-// --- Shorts detection ---
-
-async function detectIsShort(videoId: string, durationSeconds: number): Promise<boolean> {
-	if (durationSeconds > SHORTS_MAX_DURATION) return false;
-
-	// Shorts can be up to 3 minutes — verify via YouTube /shorts/ URL redirect
-	try {
-		const res = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
-			method: "HEAD",
-			redirect: "manual",
-		});
-		return (
-			res.status === 200 ||
-			(res.status >= 300 &&
-				res.status < 400 &&
-				(res.headers.get("location")?.includes("/shorts/") ?? false))
-		);
-	} catch {
-		return durationSeconds <= SHORTS_FALLBACK_THRESHOLD;
-	}
 }
 
 // --- AI schemas ---
@@ -356,7 +332,6 @@ export const syncChannelVideos = internalAction({
 				likeCount: Number(vid.statistics?.likeCount) || 0,
 				tags: vid.snippet.tags ?? [],
 				hashtags: extractHashtags(description),
-				isShort: await detectIsShort(vid.id, durationSeconds),
 			});
 			synced++;
 		}
@@ -550,12 +525,10 @@ export const refreshVideoStats = internalAction({
 			);
 
 			for (const vid of data.items ?? []) {
-				const durationSeconds = parseDuration(vid.contentDetails?.duration ?? "");
 				await ctx.runMutation(internal.videos.updateStats, {
 					videoId: vid.id,
 					viewCount: Number(vid.statistics?.viewCount) || 0,
 					likeCount: Number(vid.statistics?.likeCount) || 0,
-					isShort: await detectIsShort(vid.id, durationSeconds),
 					thumbnailUrl: bestThumbnail(vid.snippet.thumbnails),
 				});
 			}

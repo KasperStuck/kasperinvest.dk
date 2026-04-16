@@ -19,6 +19,34 @@ const category = v.union(
 );
 
 export default defineSchema({
+	affiliatePrograms: defineTable({
+		network: v.string(),
+		externalId: v.string(),
+		name: v.string(),
+		url: v.string(),
+		trackingUrl: v.optional(v.string()),
+		logoUrl: v.optional(v.string()),
+		market: v.string(),
+		currency: v.string(),
+		cookieDuration: v.optional(v.number()),
+		networkCategory: v.optional(v.string()),
+		savingsCategories: v.array(v.string()),
+		commissions: v.array(
+			v.object({
+				name: v.string(),
+				value: v.number(),
+				type: v.string(),
+				transactionType: v.string(),
+			}),
+		),
+		status: v.string(),
+		epc: v.optional(v.number()),
+		lastSyncedAt: v.number(),
+	})
+		.index("by_network_externalId", ["network", "externalId"])
+		.index("by_savingsCategory", ["market", "status"])
+		.index("by_network", ["network"]),
+
 	channels: defineTable({
 		channelId: v.string(),
 		name: v.string(),
@@ -52,6 +80,7 @@ export default defineSchema({
 		likeCount: v.optional(v.number()),
 		tags: v.optional(v.array(v.string())),
 		hashtags: v.optional(v.array(v.string())),
+		/** @deprecated No longer used — shorts determined by durationSeconds. Kept for existing data. */
 		isShort: v.optional(v.boolean()),
 
 		// Transcript
@@ -88,6 +117,5 @@ export default defineSchema({
 		.index("by_slug", ["slug"])
 		.index("by_channelId", ["channelId"])
 		.index("by_publishedAt", ["publishedAt"])
-		.index("by_channelId_publishedAt", ["channelId", "publishedAt"])
-		.index("by_isShort_publishedAt", ["isShort", "publishedAt"]),
+		.index("by_channelId_publishedAt", ["channelId", "publishedAt"]),
 });

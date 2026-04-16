@@ -39,7 +39,8 @@ function capitalize(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-const featuredVideo = safePage === 1 ? videos.find((v) => !v.isShort) : undefined;
+const featuredVideo =
+	safePage === 1 ? videos.find((v) => (v.durationSeconds ?? 0) > 90) : undefined;
 const gridVideos = videos.filter((v) => v !== featuredVideo);
 
 const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))].sort();
@@ -139,7 +140,7 @@ const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))]
 		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
 			{gridVideos.map((video) => (
 				<div
-					data-is-short={video.isShort ? "true" : "false"}
+					data-is-short={(video.durationSeconds ?? 0) <= 90 ? "true" : "false"}
 					data-categories={JSON.stringify(video.categories ?? [])}
 				>
 					<VideoCard

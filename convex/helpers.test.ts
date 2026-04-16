@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-	SHORTS_FALLBACK_THRESHOLD,
-	SHORTS_MAX_DURATION,
+	SHORTS_THRESHOLD,
 	type Thumbnails,
 	type TranscriptSegment,
 	bestThumbnail,
@@ -241,16 +240,20 @@ describe("cleanDescription", () => {
 
 // --- Shorts constants ---
 
-describe("shorts constants", () => {
-	it("SHORTS_FALLBACK_THRESHOLD is 90 seconds", () => {
-		expect(SHORTS_FALLBACK_THRESHOLD).toBe(90);
+describe("shorts threshold", () => {
+	it("SHORTS_THRESHOLD is 90 seconds", () => {
+		expect(SHORTS_THRESHOLD).toBe(90);
 	});
 
-	it("SHORTS_MAX_DURATION is 180 seconds", () => {
-		expect(SHORTS_MAX_DURATION).toBe(180);
+	it("classifies typical short durations correctly", () => {
+		for (const seconds of [15, 30, 45, 60, 66, 90]) {
+			expect(seconds <= SHORTS_THRESHOLD).toBe(true);
+		}
 	});
 
-	it("fallback threshold is less than max duration", () => {
-		expect(SHORTS_FALLBACK_THRESHOLD).toBeLessThan(SHORTS_MAX_DURATION);
+	it("classifies longer videos as non-shorts", () => {
+		for (const seconds of [91, 120, 180, 600]) {
+			expect(seconds <= SHORTS_THRESHOLD).toBe(false);
+		}
 	});
 });

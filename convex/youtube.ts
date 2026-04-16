@@ -11,12 +11,15 @@ import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { action, internalAction } from "./_generated/server";
 import {
+	type Thumbnails,
 	bestThumbnail,
 	cleanDescription,
 	extractHashtags,
 	forEachSafe,
 	getTranscriptText,
 	parseDuration,
+	SHORTS_FALLBACK_THRESHOLD,
+	SHORTS_MAX_DURATION,
 } from "./helpers";
 
 // --- Config ---
@@ -49,8 +52,6 @@ function openRouter(model: string) {
 
 // --- YouTube API types ---
 
-type YouTubeThumbnails = Record<string, { url: string }>;
-
 type YouTubeChannelItem = {
 	id: string;
 	snippet: {
@@ -58,7 +59,7 @@ type YouTubeChannelItem = {
 		description?: string;
 		customUrl?: string;
 		country?: string;
-		thumbnails?: YouTubeThumbnails;
+		thumbnails?: Thumbnails;
 	};
 	contentDetails: { relatedPlaylists: { uploads: string } };
 	statistics: { subscriberCount?: string; videoCount?: string };
@@ -70,7 +71,7 @@ type YouTubeVideoItem = {
 		title: string;
 		description?: string;
 		publishedAt: string;
-		thumbnails: YouTubeThumbnails;
+		thumbnails: Thumbnails;
 		tags?: string[];
 		resourceId?: { videoId: string };
 	};
@@ -93,9 +94,9 @@ async function ytFetch<T>(path: string): Promise<T> {
 // --- Shorts detection ---
 
 async function detectIsShort(videoId: string, durationSeconds: number): Promise<boolean> {
-	if (durationSeconds > 180) return false;
+	if (durationSeconds > SHORTS_MAX_DURATION) return false;
 
-	// Shorts can be up to 3 minutes — always verify via YouTube /shorts/ URL redirect
+	// Shorts can be up to 3 minutes — verify via YouTube /shorts/ URL redirect
 	try {
 		const res = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
 			method: "HEAD",
@@ -108,7 +109,7 @@ async function detectIsShort(videoId: string, durationSeconds: number): Promise<
 				(res.headers.get("location")?.includes("/shorts/") ?? false))
 		);
 	} catch {
-		return durationSeconds <= 60;
+		return durationSeconds <= SHORTS_FALLBACK_THRESHOLD;
 	}
 }
 
@@ -555,6 +556,7 @@ export const refreshVideoStats = internalAction({
 					viewCount: Number(vid.statistics?.viewCount) || 0,
 					likeCount: Number(vid.statistics?.likeCount) || 0,
 					isShort: await detectIsShort(vid.id, durationSeconds),
+					thumbnailUrl: bestThumbnail(vid.snippet.thumbnails),
 				});
 			}
 		}

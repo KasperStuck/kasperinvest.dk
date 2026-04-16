@@ -1,12 +1,29 @@
 /** Pure helper functions shared between Convex actions and tests. */
 
+/** Known YouTube thumbnail size keys. */
+export type ThumbnailKey = "default" | "medium" | "high" | "standard" | "maxres";
+
+/** YouTube thumbnail map — each key is optional, but only known sizes are allowed. */
+export type Thumbnails = Partial<Record<ThumbnailKey, { url: string }>>;
+
+/** A single segment from a transcript. */
+export interface TranscriptSegment {
+	text: string;
+}
+
+/** Duration (seconds) below which a video is assumed to be a Short when no Shorts metadata is available. */
+export const SHORTS_FALLBACK_THRESHOLD = 90 as const;
+
+/** Duration (seconds) at or above which a video can never be a Short (early-return guard). */
+export const SHORTS_MAX_DURATION = 180 as const;
+
 export function parseDuration(iso: string): number {
 	const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
 	if (!m) return 0;
 	return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
 }
 
-export function bestThumbnail(thumbnails: Record<string, { url: string }>): string {
+export function bestThumbnail(thumbnails: Thumbnails): string {
 	return thumbnails?.maxres?.url ?? thumbnails?.high?.url ?? thumbnails?.medium?.url ?? "";
 }
 
@@ -20,7 +37,7 @@ export function extractHashtags(raw: string): string[] {
 }
 
 export function getTranscriptText(
-	transcript: { text: string }[] | undefined,
+	transcript: TranscriptSegment[] | undefined,
 	maxLength: number,
 ): string {
 	if (!transcript?.length) return "";
@@ -44,7 +61,7 @@ export async function forEachSafe<T>(
 	}
 }
 
-const SKIP_SECTION_PATTERNS = [
+const SKIP_SECTION_PATTERNS: readonly RegExp[] = [
 	/^Spar eller tjen penge via mine/i,
 	/^\(?Annoncelinks?\)?/i,
 	/^Mine? andre kanaler/i,
@@ -54,15 +71,15 @@ const SKIP_SECTION_PATTERNS = [
 	/^Affiliate/i,
 	/^Sponsoreret/i,
 	/^Annoncelinks/i,
-];
+] as const;
 
-const SKIP_LINE_PATTERNS = [
+const SKIP_LINE_PATTERNS: readonly RegExp[] = [
 	/^https?:\/\/\S+$/,
 	/^HUSK:?\s*Jeg er ikke r[aå]dgiver/i,
 	/^Disclaimer/i,
 	/^Dette er ikke (?:finansiel |investerings)?r[aå]dgivning/i,
 	/^(#\S+\s*)+$/,
-];
+] as const;
 
 export function cleanDescription(raw: string): string {
 	const cleaned: string[] = [];

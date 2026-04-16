@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as affiliatePrograms from "../affiliatePrograms.js";
+import type * as affiliateSync from "../affiliateSync.js";
 import type * as channels from "../channels.js";
 import type * as crons from "../crons.js";
 import type * as helpers from "../helpers.js";
@@ -21,6 +23,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  affiliatePrograms: typeof affiliatePrograms;
+  affiliateSync: typeof affiliateSync;
   channels: typeof channels;
   crons: typeof crons;
   helpers: typeof helpers;

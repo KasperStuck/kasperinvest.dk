@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+	SHORTS_FALLBACK_THRESHOLD,
+	SHORTS_MAX_DURATION,
+	type Thumbnails,
+	type TranscriptSegment,
 	bestThumbnail,
 	cleanDescription,
 	extractHashtags,
@@ -46,22 +50,20 @@ describe("parseDuration", () => {
 
 describe("bestThumbnail", () => {
 	it("prefers maxres", () => {
-		expect(
-			bestThumbnail({
-				maxres: { url: "maxres.jpg" },
-				high: { url: "high.jpg" },
-				medium: { url: "medium.jpg" },
-			}),
-		).toBe("maxres.jpg");
+		const thumbnails: Thumbnails = {
+			maxres: { url: "maxres.jpg" },
+			high: { url: "high.jpg" },
+			medium: { url: "medium.jpg" },
+		};
+		expect(bestThumbnail(thumbnails)).toBe("maxres.jpg");
 	});
 
 	it("falls back to high", () => {
-		expect(
-			bestThumbnail({
-				high: { url: "high.jpg" },
-				medium: { url: "medium.jpg" },
-			}),
-		).toBe("high.jpg");
+		const thumbnails: Thumbnails = {
+			high: { url: "high.jpg" },
+			medium: { url: "medium.jpg" },
+		};
+		expect(bestThumbnail(thumbnails)).toBe("high.jpg");
 	});
 
 	it("falls back to medium", () => {
@@ -70,6 +72,14 @@ describe("bestThumbnail", () => {
 
 	it("returns empty string when no thumbnails", () => {
 		expect(bestThumbnail({})).toBe("");
+	});
+
+	it("ignores default and standard thumbnails", () => {
+		const thumbnails: Thumbnails = {
+			default: { url: "default.jpg" },
+			standard: { url: "standard.jpg" },
+		};
+		expect(bestThumbnail(thumbnails)).toBe("");
 	});
 });
 
@@ -105,12 +115,12 @@ describe("extractHashtags", () => {
 
 describe("getTranscriptText", () => {
 	it("joins segments with spaces", () => {
-		const segments = [{ text: "Hello" }, { text: "world" }];
+		const segments: TranscriptSegment[] = [{ text: "Hello" }, { text: "world" }];
 		expect(getTranscriptText(segments, 100)).toBe("Hello world");
 	});
 
 	it("truncates to maxLength", () => {
-		const segments = [{ text: "Hello" }, { text: "world" }];
+		const segments: TranscriptSegment[] = [{ text: "Hello" }, { text: "world" }];
 		expect(getTranscriptText(segments, 7)).toBe("Hello w");
 	});
 
@@ -226,5 +236,21 @@ describe("cleanDescription", () => {
 
 	it("removes leading emojis from lines", () => {
 		expect(cleanDescription("🔥 Hot take on markets")).toBe("Hot take on markets");
+	});
+});
+
+// --- Shorts constants ---
+
+describe("shorts constants", () => {
+	it("SHORTS_FALLBACK_THRESHOLD is 90 seconds", () => {
+		expect(SHORTS_FALLBACK_THRESHOLD).toBe(90);
+	});
+
+	it("SHORTS_MAX_DURATION is 180 seconds", () => {
+		expect(SHORTS_MAX_DURATION).toBe(180);
+	});
+
+	it("fallback threshold is less than max duration", () => {
+		expect(SHORTS_FALLBACK_THRESHOLD).toBeLessThan(SHORTS_MAX_DURATION);
 	});
 });

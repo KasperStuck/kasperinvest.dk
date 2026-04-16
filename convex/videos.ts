@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { SHORTS_FALLBACK_THRESHOLD } from "./helpers";
 
 // --- Internal mutations (called from actions) ---
 
@@ -120,8 +121,9 @@ export const updateStats = internalMutation({
 		viewCount: v.number(),
 		likeCount: v.number(),
 		isShort: v.optional(v.boolean()),
+		thumbnailUrl: v.optional(v.string()),
 	},
-	handler: async (ctx, { videoId, viewCount, likeCount, isShort }) => {
+	handler: async (ctx, { videoId, viewCount, likeCount, isShort, thumbnailUrl }) => {
 		const video = await ctx.db
 			.query("videos")
 			.withIndex("by_videoId", (q) => q.eq("videoId", videoId))
@@ -130,6 +132,9 @@ export const updateStats = internalMutation({
 		if (video) {
 			const patch: Record<string, unknown> = { viewCount, likeCount };
 			if (isShort !== undefined) patch.isShort = isShort;
+			if (thumbnailUrl && (!video.thumbnailUrl || video.thumbnailUrl === "")) {
+				patch.thumbnailUrl = thumbnailUrl;
+			}
 			await ctx.db.patch(video._id, patch);
 		}
 	},
@@ -287,7 +292,7 @@ export const needsBackfill = query({
 export const backfillIsShort = mutation({
 	args: { maxSeconds: v.optional(v.number()) },
 	handler: async (ctx, { maxSeconds }) => {
-		const threshold = maxSeconds ?? 90;
+		const threshold = maxSeconds ?? SHORTS_FALLBACK_THRESHOLD;
 		const videos = await ctx.db.query("videos").collect();
 		let updated = 0;
 		for (const video of videos) {

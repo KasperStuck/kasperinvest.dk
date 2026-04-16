@@ -8,6 +8,8 @@ interface Props {
 }
 
 const { title = "KasperInvest", description } = Astro.props;
+
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? "https://kasperinvest.dk").href;
 ---
 
 <html lang="da" class="scroll-pt-16 font-sans antialiased text-gray-950 dark:bg-gray-950 dark:text-white">
@@ -18,6 +20,7 @@ const { title = "KasperInvest", description } = Astro.props;
 		<meta name="viewport" content="width=device-width" />
 		<meta name="google-site-verification" content="CBj3TEDfutmUBZt1pTjvitR7T2R_1q8Rp6ToPE-Cy1Q" />
 		{description && <meta name="description" content={description} />}
+		<link rel="canonical" href={canonicalUrl} />
 		<title>{title}</title>
 		<slot name="head" />
 		<script is:inline src="/theme-init.js"></script>

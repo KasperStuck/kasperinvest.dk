@@ -6,11 +6,21 @@ import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import { api, convex } from "@/lib/convex";
 
-const [videos, channels] = await Promise.all([
-	convex.query(api.videos.listRecent, { limit: 50 }),
+const VIDEOS_PER_PAGE = 36;
+
+const pageParam = Number(Astro.url.searchParams.get("page")) || 1;
+const currentPage = Math.max(1, pageParam);
+
+const [allVideos, channels] = await Promise.all([
+	convex.query(api.videos.listRecent, { limit: 200 }),
 	convex.query(api.channels.list, {}),
 ]);
 const channelMap = new Map(channels.map((ch) => [ch.channelId, ch]));
+
+const totalPages = Math.max(1, Math.ceil(allVideos.length / VIDEOS_PER_PAGE));
+const safePage = Math.min(currentPage, totalPages);
+const startIndex = (safePage - 1) * VIDEOS_PER_PAGE;
+const videos = allVideos.slice(startIndex, startIndex + VIDEOS_PER_PAGE);
 
 function videoUrl(v: { slug?: string; videoId: string; channelId: string }) {
 	const ch = channelMap.get(v.channelId);
@@ -18,18 +28,18 @@ function videoUrl(v: { slug?: string; videoId: string; channelId: string }) {
 	return `/youtube/${handle}/${v.slug ?? v.videoId}`;
 }
 
-const featuredVideo = videos.find((v) => !v.isShort);
+const featuredVideo = safePage === 1 ? videos.find((v) => !v.isShort) : undefined;
 const gridVideos = videos.filter((v) => v !== featuredVideo);
 
-const allCategories = [...new Set(videos.flatMap((v) => v.categories ?? []))].sort();
+const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))].sort();
 
-const activeChannels = [...new Set(videos.map((v) => v.channelId))].map((id) => ({
+const activeChannels = [...new Set(allVideos.map((v) => v.channelId))].map((id) => ({
 	id,
 	name: channelMap.get(id)?.name ?? id,
 }));
 
 const latestVideoByChannel = new Map<string, string>();
-for (const v of videos) {
+for (const v of allVideos) {
 	if (v.isShort) continue;
 	const existing = latestVideoByChannel.get(v.channelId);
 	if (!existing || v.publishedAt > existing) {
@@ -224,7 +234,7 @@ function capitalize(s: string): string {
 	<p id="video-count" class="mt-4 text-sm/7 text-gray-600 dark:text-gray-400"></p>
 
 	{gridVideos.length > 0 ? (
-		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 pb-32 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
+		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
 			{gridVideos.map((video) => (
 				<div
 					data-is-short={video.isShort ? "true" : "false"}
@@ -248,6 +258,41 @@ function capitalize(s: string): string {
 		<p class="mt-8 text-sm/7 text-gray-600 dark:text-gray-400">
 			Ingen videoer endnu. Videoer synkroniseres automatisk fra YouTube.
 		</p>
+	)}
+
+	{totalPages > 1 && (
+		<nav aria-label="Pagination" class="mt-12 flex items-center justify-center gap-2 pb-32">
+			{safePage > 1 && (
+				<a
+					href={safePage === 2 ? "/youtube" : `/youtube?page=${safePage - 1}`}
+					class="rounded-lg px-3 py-2 text-sm/6 font-medium text-gray-700 transition hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+				>
+					Forrige
+				</a>
+			)}
+			{Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+				<a
+					href={page === 1 ? "/youtube" : `/youtube?page=${page}`}
+					class:list={[
+						"rounded-lg px-3 py-2 text-sm/6 font-medium transition",
+						page === safePage
+							? "bg-gray-950 text-white dark:bg-white dark:text-gray-950"
+							: "text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10",
+					]}
+					aria-current={page === safePage ? "page" : undefined}
+				>
+					{page}
+				</a>
+			))}
+			{safePage < totalPages && (
+				<a
+					href={`/youtube?page=${safePage + 1}`}
+					class="rounded-lg px-3 py-2 text-sm/6 font-medium text-gray-700 transition hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/10"
+				>
+					Næste
+				</a>
+			)}
+		</nav>
 	)}
 </CenteredLayout>
 

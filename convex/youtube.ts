@@ -94,9 +94,8 @@ async function ytFetch<T>(path: string): Promise<T> {
 
 async function detectIsShort(videoId: string, durationSeconds: number): Promise<boolean> {
 	if (durationSeconds > 180) return false;
-	if (durationSeconds <= 60) return true;
 
-	// For 61-180s videos, verify via YouTube /shorts/ URL redirect
+	// Shorts can be up to 3 minutes — always verify via YouTube /shorts/ URL redirect
 	try {
 		const res = await fetch(`https://www.youtube.com/shorts/${videoId}`, {
 			method: "HEAD",
@@ -109,7 +108,7 @@ async function detectIsShort(videoId: string, durationSeconds: number): Promise<
 				(res.headers.get("location")?.includes("/shorts/") ?? false))
 		);
 	} catch {
-		return true;
+		return durationSeconds <= 60;
 	}
 }
 

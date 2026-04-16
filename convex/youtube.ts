@@ -557,7 +557,7 @@ export const syncAllChannels = internalAction({
 			console.log(`[1/3] Syncing videos for "${ch.name}" (${ch.channelId})`);
 			await retrier.run(ctx, internal.youtube.syncChannelVideos, {
 				channelId: ch.channelId,
-				maxResults: 5,
+				maxResults: 50,
 			});
 		}
 

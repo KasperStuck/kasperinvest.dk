@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .
-ENV CONVEX_URL=https://combative-spider-931.convex.cloud
+ENV CONVEX_URL=https://proper-lark-950.eu-west-1.convex.cloud
 RUN bun run build
 RUN rm -rf node_modules && bun install --frozen-lockfile --production
 
@@ -16,7 +16,7 @@ COPY --from=build /app/dist ./dist
 
 ENV HOST=0.0.0.0
 ENV PORT=80
-ENV CONVEX_URL=https://combative-spider-931.convex.cloud
+ENV CONVEX_URL=https://proper-lark-950.eu-west-1.convex.cloud
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

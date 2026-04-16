@@ -11,13 +11,13 @@ import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { action, internalAction } from "./_generated/server";
 import {
-	type Thumbnails,
 	bestThumbnail,
 	cleanDescription,
 	extractHashtags,
 	forEachSafe,
 	getTranscriptText,
 	parseDuration,
+	type Thumbnails,
 } from "./helpers";
 
 // --- Config ---

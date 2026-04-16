@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-	SHORTS_THRESHOLD,
-	type Thumbnails,
-	type TranscriptSegment,
 	bestThumbnail,
 	cleanDescription,
 	extractHashtags,
 	forEachSafe,
 	getTranscriptText,
 	parseDuration,
+	SHORTS_THRESHOLD,
+	type Thumbnails,
+	type TranscriptSegment,
 } from "./helpers";
 
 // --- parseDuration ---

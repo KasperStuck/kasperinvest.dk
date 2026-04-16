@@ -49,56 +49,64 @@ const categoryDefs: Record<string, CategoryDef> = {
 		id: "el",
 		title: "El",
 		description: "Sammenlign elselskaber og find den billigste elaftale i Danmark.",
-		intro: "Elpriser svinger fra selskab til selskab. Sammenlign aktuelle aftaler nedenfor og skift til en billigere udbyder på få minutter.",
+		intro:
+			"Elpriser svinger fra selskab til selskab. Sammenlign aktuelle aftaler nedenfor og skift til en billigere udbyder på få minutter.",
 		buildProvider: (p) => defaultProvider(p, "Sammenlign elpriser og skift udbyder"),
 	},
 	mobil: {
 		id: "mobil",
 		title: "Mobilabonnement",
 		description: "Find det billigste mobilabonnement med data, taletid og sms.",
-		intro: "Mobilabonnementer er en af de letteste poster at spare penge på. Sammenlign udbydere og skift til en billigere aftale uden at skifte nummer.",
+		intro:
+			"Mobilabonnementer er en af de letteste poster at spare penge på. Sammenlign udbydere og skift til en billigere aftale uden at skifte nummer.",
 		buildProvider: (p) => defaultProvider(p, "Sammenlign mobilabonnementer"),
 	},
 	internet: {
 		id: "internet",
 		title: "Internet",
 		description: "Sammenlign internetudbydere og find det hurtigste bredbånd til den bedste pris.",
-		intro: "Hastighed og pris varierer kraftigt mellem udbyderne. Sammenlign aktuelle aftaler og find den bedste internetforbindelse til din adresse.",
+		intro:
+			"Hastighed og pris varierer kraftigt mellem udbyderne. Sammenlign aktuelle aftaler og find den bedste internetforbindelse til din adresse.",
 		buildProvider: (p) => defaultProvider(p, "Sammenlign internetudbydere"),
 	},
 	tv: {
 		id: "tv",
 		title: "TV",
 		description: "Sammenlign TV-pakker og find det bedste tilbud til din husstand.",
-		intro: "TV-pakker varierer i pris og kanaludvalg. Sammenlign udbydere og find den bedste løsning til dit forbrug.",
+		intro:
+			"TV-pakker varierer i pris og kanaludvalg. Sammenlign udbydere og find den bedste løsning til dit forbrug.",
 		buildProvider: (p) => defaultProvider(p, "Sammenlign TV-pakker"),
 	},
 	streaming: {
 		id: "streaming",
 		title: "Streaming",
 		description: "Find den billigste streamingtjeneste til film, serier og sport.",
-		intro: "Streamingtjenester varierer i pris og indhold. Sammenlign udbydere og find den bedste løsning til din husstand.",
+		intro:
+			"Streamingtjenester varierer i pris og indhold. Sammenlign udbydere og find den bedste løsning til din husstand.",
 		buildProvider: (p) => defaultProvider(p, "Sammenlign streamingtjenester"),
 	},
 	"bank-laan": {
 		id: "bank-laan",
 		title: "Bank & lån",
 		description: "Sammenlign banker og find det billigste lån.",
-		intro: "Bank- og låneomkostninger kan variere markant. Sammenlign og find den bedste aftale for dig.",
+		intro:
+			"Bank- og låneomkostninger kan variere markant. Sammenlign og find den bedste aftale for dig.",
 		buildProvider: (p) => defaultProvider(p, "Sammenlign banker og lån"),
 	},
 	investering: {
 		id: "investering",
 		title: "Investering",
 		description: "Sammenlign investeringsplatforme og kurtage.",
-		intro: "Investeringsplatforme varierer i pris, produkter og brugervenlighed. Find den bedste platform til dine behov.",
+		intro:
+			"Investeringsplatforme varierer i pris, produkter og brugervenlighed. Find den bedste platform til dine behov.",
 		buildProvider: (p) => defaultProvider(p, "Sammenlign investeringsplatforme"),
 	},
 	"tjen-penge": {
 		id: "tjen-penge",
 		title: "Tjen penge",
 		description: "Tjen penge online via undersøgelser og paneler.",
-		intro: "Deltag i betalte undersøgelser og paneler — en nem måde at tjene lidt ekstra ved siden af.",
+		intro:
+			"Deltag i betalte undersøgelser og paneler — en nem måde at tjene lidt ekstra ved siden af.",
 		buildProvider: (p) => defaultProvider(p, "Deltag i betalte undersøgelser"),
 	},
 };

@@ -13,15 +13,17 @@ const { provider } = Astro.props;
 	<div class="flex-1">
 		{provider.logoUrl ? (
 			<>
-				<img
-					src={provider.logoUrl}
-					alt={provider.name}
-					class="max-h-10"
-					loading="lazy"
-					data-provider-logo
-					onload="this.parentElement.querySelector('[data-provider-name]').hidden=true"
-					onerror="this.hidden=true;this.parentElement.querySelector('[data-provider-name]').hidden=false"
-				/>
+				<span class="inline-block dark:rounded-md dark:bg-white dark:px-2 dark:py-1">
+					<img
+						src={provider.logoUrl}
+						alt={provider.name}
+						class="max-h-10"
+						loading="lazy"
+						data-provider-logo
+						onload="this.parentElement.parentElement.querySelector('[data-provider-name]').hidden=true"
+						onerror="this.parentElement.hidden=true;this.parentElement.parentElement.querySelector('[data-provider-name]').hidden=false"
+					/>
+				</span>
 				<p class="text-lg font-semibold text-gray-950 dark:text-white" data-provider-name hidden>{provider.name}</p>
 			</>
 		) : (

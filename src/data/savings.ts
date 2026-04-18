@@ -113,7 +113,9 @@ export async function getSavingsCategories(): Promise<Category[]> {
 	return Object.entries(categoryDefs)
 		.map(([, def]) => {
 			const matched = grouped.get(def.id) ?? [];
-			const providers = matched.map(buildProvider);
+			const providers = matched
+				.map(buildProvider)
+				.sort((a, b) => a.name.localeCompare(b.name, "da"));
 			return { ...def, providers };
 		})
 		.filter((c) => c.providers.length > 0);

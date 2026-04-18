@@ -1,8 +1,6 @@
 "use node";
 
-import { createOpenAI } from "@ai-sdk/openai";
 import { ActionRetrier } from "@convex-dev/action-retrier";
-import { generateText as aiGenerateText, generateObject } from "ai";
 import { v } from "convex/values";
 import slugify from "slugify";
 import { z } from "zod";
@@ -23,11 +21,13 @@ import {
 // --- Config ---
 
 const YOUTUBE_API = "https://www.googleapis.com/youtube/v3";
-const PRIMARY_MODEL = "stepfun/step-3.5-flash:free";
+const PRIMARY_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
 const FALLBACK_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
 const MODELS = [PRIMARY_MODEL, FALLBACK_MODEL] as const;
 const MAX_QUALITY_ATTEMPTS = 3;
-const MIN_QUALITY_SCORE = 9;
+const MIN_QUALITY_SCORE = 5;
+// Reasoning-mode models burn tokens on internal "thinking"; give enough headroom for JSON output
+const MAX_TOKENS = 10000;
 
 const retrier = new ActionRetrier(components.actionRetrier, {
 	initialBackoffMs: 500,
@@ -41,11 +41,81 @@ function requireEnv(name: string): string {
 	return value;
 }
 
-function openRouter(model: string) {
-	return createOpenAI({
-		apiKey: requireEnv("OPENROUTER_API_KEY"),
-		baseURL: "https://openrouter.ai/api/v1",
-	})(model);
+// Direct /chat/completions fetch. ai-sdk v5 generateObject interacts badly with reasoning-mode
+// models on OpenRouter (truncated output, nonsense), so we bypass it.
+type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+
+async function openRouterChat(
+	model: string,
+	messages: ChatMessage[],
+	responseFormat?: { name: string; schema: object },
+): Promise<string> {
+	const body: Record<string, unknown> = {
+		model,
+		messages,
+		max_tokens: MAX_TOKENS,
+		// Disable reasoning on OpenRouter: reasoning-mode models (nemotron) otherwise burn 800-1000
+		// tokens "thinking" before output, producing truncated/empty content and slow (30s+) calls.
+		// Disabled: 4s, clean output.
+		reasoning: { enabled: false },
+	};
+	if (responseFormat) {
+		body.response_format = {
+			type: "json_schema",
+			json_schema: { name: responseFormat.name, strict: false, schema: responseFormat.schema },
+		};
+	}
+	const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+		method: "POST",
+		headers: {
+			Authorization: `Bearer ${requireEnv("OPENROUTER_API_KEY")}`,
+			"Content-Type": "application/json",
+		},
+		body: JSON.stringify(body),
+	});
+	if (!res.ok) {
+		const text = await res.text();
+		throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 300)}`);
+	}
+	const data = (await res.json()) as {
+		choices?: { message?: { content?: string } }[];
+		error?: { message?: string };
+	};
+	if (data.error) throw new Error(`OpenRouter error: ${data.error.message}`);
+	const content = data.choices?.[0]?.message?.content;
+	if (!content) throw new Error("OpenRouter returned empty content");
+	return content;
+}
+
+async function generateObjectDirect<T>(
+	model: string,
+	schema: z.ZodSchema<T>,
+	system: string,
+	user: string,
+	schemaName = "response",
+): Promise<T> {
+	const jsonSchema = z.toJSONSchema(schema);
+	const content = await openRouterChat(
+		model,
+		[
+			{ role: "system", content: system },
+			{ role: "user", content: user },
+		],
+		{ name: schemaName, schema: jsonSchema },
+	);
+	try {
+		return schema.parse(JSON.parse(content));
+	} catch (e) {
+		console.error(`generateObjectDirect parse failure. Raw content: ${content.slice(0, 600)}`);
+		throw e;
+	}
+}
+
+async function generateTextDirect(model: string, system: string, user: string): Promise<string> {
+	return openRouterChat(model, [
+		{ role: "system", content: system },
+		{ role: "user", content: user },
+	]);
 }
 
 // --- YouTube API types ---
@@ -96,12 +166,29 @@ const qualitySchema = z.object({
 	reason: z.string(),
 });
 
+const CATEGORIES = [
+	"privatøkonomi",
+	"aktier",
+	"ETF",
+	"obligationer",
+	"skat",
+	"pension",
+	"strategi",
+	"psykologi",
+	"analyse",
+	"krypto",
+	"bolig",
+	"FIRE",
+	"marked",
+	"andet",
+] as const;
+
 const videoAnalysisSchema = z.object({
 	summary: z.string(),
 	seoTitle: z.string(),
 	seoDescription: z.string(),
 	themes: z.array(z.string()),
-	categories: z.array(z.string()),
+	categories: z.array(z.enum(CATEGORIES)),
 	keyTakeaways: z.array(z.string()),
 	faq: z.array(z.object({ question: z.string(), answer: z.string() })),
 	relevanceScore: z.number().min(0).max(100),
@@ -166,13 +253,13 @@ Regler:
 // --- AI quality validation ---
 
 async function validateQuality(text: string, context: string) {
-	const { object } = await generateObject({
-		model: openRouter(PRIMARY_MODEL),
-		schema: qualitySchema,
-		system: QUALITY_SYSTEM,
-		prompt: `Kontekst: ${context}\n\nTekst der skal bedømmes:\n${text}`,
-	});
-	return object;
+	return generateObjectDirect(
+		PRIMARY_MODEL,
+		qualitySchema,
+		QUALITY_SYSTEM,
+		`Kontekst: ${context}\n\nTekst der skal bedømmes:\n${text}`,
+		"quality",
+	);
 }
 
 async function generateWithQuality<T>(opts: {
@@ -219,7 +306,7 @@ async function generateTextWithQuality(
 ): Promise<string | null> {
 	return generateWithQuality({
 		generate: async (model) => {
-			const { text } = await aiGenerateText({ model: openRouter(model), system, prompt });
+			const text = await generateTextDirect(model, system, prompt);
 			return text.trim();
 		},
 		extractText: (t) => t,
@@ -386,21 +473,20 @@ export const processVideo = internalAction({
 		const transcriptSection = transcriptText ? `\nTransskription (uddrag):\n${transcriptText}` : "";
 
 		const result = await generateWithQuality<VideoAnalysis>({
-			generate: async (model) => {
-				const { object } = await generateObject({
-					model: openRouter(model),
-					schema: videoAnalysisSchema,
-					system: VIDEO_ANALYSIS_SYSTEM,
-					prompt: `Analysér denne video:
+			generate: (model) =>
+				generateObjectDirect(
+					model,
+					videoAnalysisSchema,
+					VIDEO_ANALYSIS_SYSTEM,
+					`Analysér denne video:
 
 Titel: ${video.title}
 Beskrivelse: ${cleanDescription(video.description).slice(0, 1500)}
 ${transcriptSection}
 
 Generér 3-5 FAQ-spørgsmål baseret på videoens indhold. Spørgsmålene skal være naturlige søgeforespørgsler en dansk investor ville stille.`,
-				});
-				return object;
-			},
+					"video_analysis",
+				),
 			extractText: (r) => [r.summary, r.seoTitle, r.seoDescription, ...r.keyTakeaways].join(" "),
 			context: `Video-analyse af "${video.title}"`,
 		});

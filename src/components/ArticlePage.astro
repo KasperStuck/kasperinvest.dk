@@ -1,0 +1,64 @@
+---
+import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+import AuthorBox from "@/components/AuthorBox.astro";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import Disclaimer from "@/components/Disclaimer.astro";
+import Prose from "@/components/Prose.astro";
+import TableOfContents from "@/components/TableOfContents.astro";
+import type { Article } from "@/data/articles";
+import { sectionMeta } from "@/data/articles";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+interface Props {
+	article: Article;
+	Content: AstroComponentFactory;
+}
+
+const { article, Content } = Astro.props;
+const section = sectionMeta[article.section];
+const canonical = new URL(`${section.href}/${article.id}/`, Astro.site ?? "https://kasperinvest.dk")
+	.href;
+const articleSchema = {
+	"@context": "https://schema.org",
+	"@type": "Article",
+	headline: article.title,
+	description: article.description,
+	datePublished: article.publishedAt,
+	dateModified: article.updatedAt,
+	mainEntityOfPage: canonical,
+	author: {
+		"@type": "Person",
+		"@id": "https://kasperinvest.dk/om/#kasper-stuck",
+		name: "Kasper Stuck",
+		url: "https://kasperinvest.dk/om/",
+	},
+	publisher: { "@type": "Organization", name: "KasperInvest", url: "https://kasperinvest.dk" },
+};
+---
+
+<CenteredLayout
+	title={`${article.seoTitle} - KasperInvest`}
+	description={article.description}
+	canonical={canonical}
+	ogType="article"
+>
+	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+	<Breadcrumbs
+		slot="breadcrumbs"
+		items={[
+			{ label: "KasperInvest", href: "/" },
+			{ label: section.title, href: section.href },
+			{ label: article.title },
+		]}
+	/>
+	<div class="mx-auto max-w-5xl py-10 sm:py-14">
+		<div class="flex gap-x-10">
+			<article class="min-w-0 flex-1">
+				<AuthorBox updatedAt={article.updatedAt} />
+				<Prose relatedLinks={article.related}><Content /></Prose>
+				<Disclaimer />
+			</article>
+			<div class="hidden w-66 lg:block"><TableOfContents contentId="content" /></div>
+		</div>
+	</div>
+</CenteredLayout>

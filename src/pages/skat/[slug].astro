@@ -1,0 +1,13 @@
+---
+import ArticlePage from "@/components/ArticlePage.astro";
+import { getArticle, getArticleContent, getArticles } from "@/data/articles";
+export function getStaticPaths() {
+	return getArticles("skat").map((article) => ({ params: { slug: article.id } }));
+}
+const slug = Astro.params.slug;
+if (!slug) return new Response(null, { status: 404 });
+const article = getArticle("skat", slug);
+if (!article) return new Response(null, { status: 404 });
+const Content = await getArticleContent("skat", slug);
+---
+<ArticlePage article={article} Content={Content} />

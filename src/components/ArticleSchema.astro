@@ -1,0 +1,34 @@
+---
+interface Props {
+	headline: string;
+	description: string;
+	datePublished?: string;
+	dateModified?: string;
+}
+
+const { headline, description, datePublished, dateModified } = Astro.props;
+const siteUrl = Astro.site?.origin ?? "https://kasperinvest.dk";
+const canonicalPath =
+	Astro.url.pathname === "/" || Astro.url.pathname.endsWith("/")
+		? Astro.url.pathname
+		: `${Astro.url.pathname}/`;
+const canonical = new URL(canonicalPath, siteUrl).href;
+const schema = {
+	"@context": "https://schema.org",
+	"@type": "Article",
+	headline,
+	description,
+	mainEntityOfPage: canonical,
+	...(datePublished ? { datePublished } : {}),
+	...(dateModified ? { dateModified } : {}),
+	author: {
+		"@type": "Person",
+		"@id": `${siteUrl}/om/#kasper-stuck`,
+		name: "Kasper Stuck",
+		url: new URL("/om/", siteUrl).href,
+	},
+	publisher: { "@id": `${siteUrl}/#organization` },
+};
+---
+
+<script is:inline type="application/ld+json" set:html={JSON.stringify(schema)} />

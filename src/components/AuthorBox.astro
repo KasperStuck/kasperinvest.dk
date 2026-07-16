@@ -1,0 +1,23 @@
+---
+interface Props {
+	updatedAt?: string;
+}
+
+const { updatedAt } = Astro.props;
+const formatted = updatedAt
+	? new Date(updatedAt).toLocaleDateString("da-DK", {
+			day: "numeric",
+			month: "long",
+			year: "numeric",
+		})
+	: null;
+---
+
+<aside class="not-prose my-8 rounded-xl border border-gray-950/10 bg-gray-950/[0.025] p-5 dark:border-white/10 dark:bg-white/[0.025]">
+	<p class="text-sm font-semibold text-gray-950 dark:text-white">
+		Skrevet og redigeret af <a href="/om" class="underline decoration-gray-950/25 underline-offset-2 hover:decoration-gray-950 dark:decoration-white/25 dark:hover:decoration-white">Kasper Stuck</a>
+	</p>
+	<p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">
+		Indholdet følger KasperInvests <a href="/redaktionel-metode" class="underline">redaktionelle metode</a>.{formatted && ` Senest opdateret og kontrolleret ${formatted}.`}
+	</p>
+</aside>

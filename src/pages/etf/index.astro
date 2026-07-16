@@ -1,0 +1,14 @@
+---
+import { getArticles, sectionMeta } from "@/data/articles";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+const section = sectionMeta.etf;
+const articles = getArticles("etf");
+---
+<CenteredLayout title="ETF'er - guide til danske investorer - KasperInvest" description={section.description}>
+	<div class="py-10 sm:py-14">
+		<h1 class="text-3xl/10 font-semibold tracking-tight text-gray-950 dark:text-white">ETF'er for danske investorer</h1>
+		<p class="mt-4 max-w-2xl text-base/7 text-gray-600 dark:text-gray-400">{section.description} Begynd med kriterierne, og kontrollér altid de aktuelle skatteregler og produktdata hos de officielle kilder.</p>
+		<div class="mt-10 grid gap-4 sm:grid-cols-2">{articles.map((article) => <a href={`/etf/${article.id}`} class="rounded-xl border border-gray-950/10 p-5 hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"><h2 class="font-semibold text-gray-950 dark:text-white">{article.title}</h2><p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">{article.description}</p></a>)}</div>
+	</div>
+</CenteredLayout>

@@ -1,0 +1,23 @@
+---
+import type { RelatedLink } from "@/data/articles";
+
+interface Props {
+	links: RelatedLink[];
+}
+
+const { links } = Astro.props;
+---
+
+{links.length > 0 && (
+	<section class="not-prose mt-12 border-t border-gray-200 pt-8 dark:border-white/10" aria-labelledby="related-heading">
+		<h2 id="related-heading" class="text-lg font-semibold text-gray-950 dark:text-white">Læs også</h2>
+		<div class="mt-4 grid gap-3 sm:grid-cols-2">
+			{links.map((link) => (
+				<a href={link.href} class="rounded-xl border border-gray-950/10 p-4 hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]">
+					<h3 class="text-sm font-semibold text-gray-950 dark:text-white">{link.title}</h3>
+					<p class="mt-1 text-sm/6 text-gray-600 dark:text-gray-400">{link.description}</p>
+				</a>
+			))}
+		</div>
+	</section>
+)}

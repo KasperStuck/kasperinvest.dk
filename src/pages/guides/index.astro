@@ -1,0 +1,16 @@
+---
+import { getArticles, sectionMeta } from "@/data/articles";
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+const section = sectionMeta.guides;
+const articles = getArticles("guides");
+---
+<CenteredLayout title="Investeringsguides - KasperInvest" description={section.description}>
+	<div class="py-10 sm:py-14">
+		<h1 class="text-3xl/10 font-semibold tracking-tight text-gray-950 dark:text-white">{section.title}</h1>
+		<p class="mt-4 max-w-2xl text-base/7 text-gray-600 dark:text-gray-400">{section.description}</p>
+		<div class="mt-10 grid gap-4 sm:grid-cols-2">
+			{articles.map((article) => <a href={`/guides/${article.id}`} class="rounded-xl border border-gray-950/10 p-5 hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"><h2 class="font-semibold text-gray-950 dark:text-white">{article.title}</h2><p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">{article.description}</p></a>)}
+		</div>
+	</div>
+</CenteredLayout>

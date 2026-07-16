@@ -1,10 +1,13 @@
 ---
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+import ArticleSchema from "@/components/ArticleSchema.astro";
+import AuthorBox from "@/components/AuthorBox.astro";
 import Disclaimer from "@/components/Disclaimer.astro";
 import Prose from "@/components/Prose.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import VideoPlayer from "@/components/VideoPlayer.astro";
 import { getLesson, getModules } from "@/data/lessons";
+import { getRelatedLinks } from "@/data/related";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import SidebarLayout from "@/layouts/SidebarLayout.astro";
 
@@ -38,15 +41,32 @@ const breadcrumbItems = [
 	{ label: lesson.module.title, href: `/#${lesson.module.id}`, class: "max-md:hidden" },
 	{ label: lesson.title },
 ];
+const explicitRelatedLinks = getRelatedLinks(Astro.url.pathname);
+const lessonIndex = lesson.module.lessons.findIndex((item) => item.id === lesson.id);
+const relatedLinks =
+	explicitRelatedLinks.length > 0
+		? explicitRelatedLinks
+		: lesson.module.lessons
+				.map((item, index) => ({ item, distance: Math.abs(index - lessonIndex) }))
+				.filter(({ item }) => item.id !== lesson.id)
+				.sort((a, b) => a.distance - b.distance)
+				.slice(0, 3)
+				.map(({ item }) => ({
+					title: item.title,
+					description: item.description,
+					href: `/${item.id}`,
+				}));
 ---
 
 <SidebarLayout
-	title={`${lesson.title} - KasperInvest`}
+	title={`${lesson.seoTitle ?? lesson.title} - KasperInvest`}
 	description={lesson.description}
 	breadcrumbItems={breadcrumbItems}
+	ogType="article"
 >
+	<ArticleSchema slot="head" headline={lesson.title} description={lesson.description} />
 	{lesson.faq && lesson.faq.length > 0 && (
-		<script slot="head" type="application/ld+json" set:html={JSON.stringify({
+		<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
 			"@context": "https://schema.org",
 			"@type": "FAQPage",
 			mainEntity: lesson.faq.map((item) => ({
@@ -69,7 +89,8 @@ const breadcrumbItems = [
 		</div>}
 		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 lg:max-w-5xl">
 			<div class="w-full flex-1">
-				<Prose empty={!Content} emptyMessage="Denne lektion er under udarbejdelse.">
+				<AuthorBox />
+				<Prose empty={!Content} emptyMessage="Denne lektion er under udarbejdelse." relatedLinks={relatedLinks}>
 					{Content && <Content />}
 				</Prose>
 				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">

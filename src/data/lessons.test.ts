@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { getLesson, getModules } from "./lessons";
 
@@ -34,6 +36,22 @@ describe("getModules", () => {
 	it("all module IDs are unique", () => {
 		const ids = getModules().map((m) => m.id);
 		expect(new Set(ids).size).toBe(ids.length);
+	});
+
+	it("every indexable lesson has an MDX document", () => {
+		for (const mod of getModules()) {
+			for (const lesson of mod.lessons) {
+				const contentPath = resolve(
+					process.cwd(),
+					"src",
+					"data",
+					"lessons",
+					mod.id,
+					`${lesson.id}.mdx`,
+				);
+				expect(existsSync(contentPath), `Missing content for /${lesson.id}`).toBe(true);
+			}
+		}
 	});
 });
 

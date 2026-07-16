@@ -8,6 +8,7 @@ export type Module = {
 export type Lesson = {
 	id: string;
 	title: string;
+	seoTitle?: string;
 	description: string;
 	video: {
 		thumbnail: string;
@@ -244,8 +245,10 @@ const lessons = [
 			},
 			{
 				id: "valuta-og-international-investering",
-				title: "Valuta og international investering",
-				description: "Forstå valutarisiko ved udenlandske ETF'er og eksponering mod USD/EUR.",
+				title: "Investér internationalt og forstå valutarisiko",
+				seoTitle: "Investere i valuta? Guide til valutarisiko og ETF'er",
+				description:
+					"Lær hvordan valutarisiko, noteringsvaluta og vekslegebyrer påvirker danske investorer i udenlandske aktier og ETF'er.",
 				video: null,
 				faq: [],
 			},
@@ -308,13 +311,25 @@ const lessons = [
 		lessons: [
 			{
 				id: "hvad-er-en-investeringsstrategi",
-				title: "Definér din investeringsstrategi",
-				description: "Skelne mellem strategi, taktik og spekulation.",
+				title: "Investeringsstrategi for begyndere",
+				description:
+					"Lær hvad en investeringsstrategi er, og byg en enkel plan for mål, risiko, produkter og faste investeringer.",
 				video: null,
-				faq: [],
+				faq: [
+					{
+						question: "Hvad er en investeringsstrategi?",
+						answer:
+							"En investeringsstrategi er et sæt faste regler for, hvorfor du investerer, hvad du køber, hvor meget risiko du tager, og hvornår du ændrer porteføljen.",
+					},
+					{
+						question: "Hvilken investeringsstrategi er bedst for begyndere?",
+						answer:
+							"For mange begyndere er en enkel, langsigtet strategi med brede fonde, lave omkostninger, fast månedsopsparing og årlig kontrol et robust udgangspunkt.",
+					},
+				],
 			},
 			{
-				id: "risiko-og-risikoprofil",
+				id: "risikoprofil",
 				title: "Kortlæg din risikoprofil",
 				description: "Forstå tabstolerance, tidshorisont og kapacitet til risiko.",
 				video: null,
@@ -368,7 +383,7 @@ const lessons = [
 				],
 			},
 			{
-				id: "investering-i-nedture",
+				id: "disciplin-i-nedture",
 				title: "Investér disciplineret i nedture",
 				description: "Forstå planlagt adfærd ved fald og stress-scenarier.",
 				video: null,
@@ -390,8 +405,10 @@ const lessons = [
 			},
 			{
 				id: "fundamental-analyse",
-				title: "Lav en fundamental analyse",
-				description: "Strukturer analyse: forretningsmodel, moat, risici og værdi.",
+				title: "Fundamental analyse trin for trin",
+				seoTitle: "Fundamental analyse: trin-for-trin guide med eksempel",
+				description:
+					"Lav en fundamental analyse af forretningsmodel, regnskab, konkurrencefordele, værdiansættelse og risici med en praktisk tjekliste.",
 				video: null,
 				faq: [],
 			},
@@ -468,8 +485,10 @@ const lessons = [
 			},
 			{
 				id: "maanedsopsparing",
-				title: "Automatisér med månedsopsparing",
-				description: "Implementer regelmæssig investering og reducér timing-stress.",
+				title: "Månedsopsparing: automatisér dine investeringer",
+				seoTitle: "Månedsopsparing: sådan vælger og opretter du den",
+				description:
+					"Forstå månedsopsparing, omkostninger, produktvalg og automatisering, og sammenlign de vigtigste løsninger for danske investorer.",
 				video: null,
 				faq: [],
 			},

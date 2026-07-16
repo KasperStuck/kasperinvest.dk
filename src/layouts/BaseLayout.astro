@@ -1,15 +1,61 @@
 ---
 import { Font } from "astro:assets";
+import WebVitals from "@/components/WebVitals.astro";
 import "@/styles/globals.css";
 
 interface Props {
 	title?: string;
 	description?: string;
+	canonical?: string;
+	noindex?: boolean;
+	ogType?: "website" | "article" | "profile";
+	image?: string;
 }
 
-const { title = "KasperInvest", description } = Astro.props;
+const {
+	title = "KasperInvest",
+	description = "En platform om investering for danske investorer.",
+	canonical,
+	noindex = false,
+	ogType = "website",
+	image = "/og-default.png",
+} = Astro.props;
 
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? "https://kasperinvest.dk").href;
+const siteUrl = Astro.site ? Astro.site.origin : "https://kasperinvest.dk";
+const canonicalTarget = new URL(canonical ?? Astro.url.pathname, siteUrl);
+if (
+	canonicalTarget.origin === siteUrl &&
+	canonicalTarget.pathname !== "/" &&
+	!canonicalTarget.pathname.endsWith("/")
+) {
+	canonicalTarget.pathname += "/";
+}
+const canonicalUrl = canonicalTarget.href;
+const ogImage = image ? new URL(image, siteUrl).href : undefined;
+
+const jsonLd = {
+	"@context": "https://schema.org",
+	"@graph": [
+		{
+			"@type": "WebSite",
+			"@id": `${siteUrl}/#website`,
+			url: siteUrl,
+			name: "KasperInvest",
+			description: "Lær om investering, skat og opsparing i Danmark.",
+			publisher: { "@id": `${siteUrl}/#organization` },
+		},
+		{
+			"@type": "Organization",
+			"@id": `${siteUrl}/#organization`,
+			name: "KasperInvest",
+			url: siteUrl,
+			logo: {
+				"@type": "ImageObject",
+				url: `${siteUrl}/favicon.svg`,
+			},
+		},
+	],
+};
 ---
 
 <html lang="da" class="scroll-pt-16 font-sans antialiased text-gray-950 dark:bg-gray-950 dark:text-white">
@@ -19,9 +65,30 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? "https://kasperin
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="google-site-verification" content="CBj3TEDfutmUBZt1pTjvitR7T2R_1q8Rp6ToPE-Cy1Q" />
+		{noindex ? <meta name="robots" content="noindex, nofollow" /> : <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />}
+
+		<title>{title}</title>
 		{description && <meta name="description" content={description} />}
 		<link rel="canonical" href={canonicalUrl} />
-		<title>{title}</title>
+
+		<meta property="og:title" content={title} />
+		{description && <meta property="og:description" content={description} />}
+		<meta property="og:url" content={canonicalUrl} />
+		<meta property="og:type" content={ogType} />
+		{ogImage && <meta property="og:image" content={ogImage} />}
+		{ogImage && <meta property="og:image:width" content="1200" />}
+		{ogImage && <meta property="og:image:height" content="630" />}
+		{ogImage && <meta property="og:image:alt" content="KasperInvest — danske guider om investering og privatøkonomi" />}
+		<meta property="og:site_name" content="KasperInvest" />
+
+		<meta name="twitter:card" content={ogImage ? "summary_large_image" : "summary"} />
+		<meta name="twitter:title" content={title} />
+		{description && <meta name="twitter:description" content={description} />}
+		{ogImage && <meta name="twitter:image" content={ogImage} />}
+		{ogImage && <meta name="twitter:image:alt" content="KasperInvest — danske guider om investering og privatøkonomi" />}
+
+		<script is:inline type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+
 		<slot name="head" />
 		<script is:inline src="/theme-init.js"></script>
 	</head>
@@ -29,5 +96,6 @@ const canonicalUrl = new URL(Astro.url.pathname, Astro.site ?? "https://kasperin
 		<div class="isolate">
 			<slot />
 		</div>
+		<WebVitals />
 	</body>
 </html>

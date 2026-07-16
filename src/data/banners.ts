@@ -2,14 +2,7 @@ import norminvestKvinder from "@/assets/partners/norminvest-gratis-investeringsp
 import norminvestPar from "@/assets/partners/norminvest-gratis-investeringsplan-par.png";
 import saxoBedste from "@/assets/partners/saxo-bedste-investeringsplatform.png";
 
-const NORMINVEST_EXCLUDE = [
-	"saxo",
-	"lunar",
-	"maj invest",
-	"majinvest",
-	"june",
-	"frinans",
-];
+const NORMINVEST_EXCLUDE = ["saxo", "lunar", "maj invest", "majinvest", "june", "frinans"];
 
 const SAXO_EXCLUDE = [
 	"norm invest",

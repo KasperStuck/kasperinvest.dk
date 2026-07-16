@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">KasperInvest</title>
+  <desc id="description">Danske guider om investering, ETF, skat og pension</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07111f" />
+      <stop offset="1" stop-color="#16243a" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5ee7a0" />
+      <stop offset="1" stop-color="#36b7d7" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#background)" />
+  <circle cx="1040" cy="95" r="235" fill="#ffffff" opacity="0.035" />
+  <circle cx="1110" cy="570" r="315" fill="#5ee7a0" opacity="0.04" />
+  <g transform="translate(80 78)">
+    <rect width="82" height="82" rx="22" fill="url(#accent)" />
+    <path d="M23 61 39 20h10l16 41H53l-3-10H37l-3 10H23Zm17-20h8l-4-13-4 13Z" fill="#07111f" />
+  </g>
+  <text x="190" y="137" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="46" font-weight="700" letter-spacing="-1">KasperInvest</text>
+  <text x="80" y="286" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="70" font-weight="700" letter-spacing="-2">Forstå dine penge.</text>
+  <text x="80" y="370" fill="#f8fafc" font-family="Inter, Arial, sans-serif" font-size="70" font-weight="700" letter-spacing="-2">Investér med en plan.</text>
+  <text x="82" y="448" fill="#a8b5c7" font-family="Inter, Arial, sans-serif" font-size="29">Danske guider om investering, ETF, skat og pension</text>
+  <g transform="translate(82 518)" fill="#d8e2ee" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="600">
+    <text x="0" y="0">Kursus</text>
+    <circle cx="100" cy="-7" r="3" fill="#5ee7a0" />
+    <text x="122" y="0">Guides</text>
+    <circle cx="215" cy="-7" r="3" fill="#5ee7a0" />
+    <text x="237" y="0">Ordbog</text>
+    <circle cx="337" cy="-7" r="3" fill="#5ee7a0" />
+    <text x="359" y="0">Værktøjer</text>
+  </g>
+  <rect x="80" y="580" width="1040" height="2" fill="url(#accent)" opacity="0.8" />
+</svg>

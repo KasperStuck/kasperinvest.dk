@@ -1,0 +1,26 @@
+---
+import CenteredLayout from "@/layouts/CenteredLayout.astro";
+
+const authorSchema = {
+	"@context": "https://schema.org",
+	"@type": "Person",
+	"@id": "https://kasperinvest.dk/om/#kasper-stuck",
+	name: "Kasper Stuck",
+	url: "https://kasperinvest.dk/om/",
+	worksFor: { "@id": "https://kasperinvest.dk/#organization" },
+	knowsAbout: ["Investering", "Privatøkonomi", "ETF", "Pension", "Skat af investering"],
+};
+---
+<CenteredLayout title="Om KasperInvest og Kasper Stuck" description="Læs hvem der står bag KasperInvest, og hvad sitets investerings- og privatøkonomiske indhold skal hjælpe med." ogType="profile">
+	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(authorSchema)} />
+	<article class="prose prose-sm mx-auto py-10 dark:prose-invert sm:py-14">
+		<h1>Om KasperInvest</h1>
+		<p>KasperInvest er et dansk læringssite om investering og privatøkonomi. Målet er at gøre kontotyper, risiko, produkter, skat og pension lettere at forstå, så læseren kan træffe mere oplyste beslutninger.</p>
+		<h2>Hvem står bag?</h2>
+		<p>Indholdet skrives og redigeres af Kasper Stuck. Artiklerne er uddannelse og generel information — ikke individuel investerings-, skatte- eller pensionsrådgivning.</p>
+		<h2>Sådan arbejder vi</h2>
+		<p>Tidsfølsomme oplysninger kontrolleres så vidt muligt mod primære kilder som Skattestyrelsen, myndigheder, produktudbydere og officielle dokumenter. Se den fulde <a href="/redaktionel-metode">redaktionelle metode</a>, og læs hvordan kommercielle links håndteres i vores <a href="/affiliatepolitik">affiliatepolitik</a>.</p>
+		<h2>Rettelser</h2>
+		<p>Finansielle regler og priser ændrer sig. Finder du en fejl eller en oplysning, der bør opdateres, er det vigtigt at kontrollere den konkrete beslutning hos den relevante myndighed eller udbyder.</p>
+	</article>
+</CenteredLayout>

@@ -19,14 +19,18 @@ interface Props {
 	title?: string;
 	description?: string;
 	breadcrumbItems?: BreadcrumbItem[];
+	canonical?: string;
+	noindex?: boolean;
+	ogType?: "website" | "article" | "profile";
+	image?: string;
 }
 
-const { title, description, breadcrumbItems = [] } = Astro.props;
+const { title, description, breadcrumbItems = [], canonical, noindex, ogType, image } = Astro.props;
 const modules = getModules();
 const pathname = Astro.url.pathname;
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} canonical={canonical} noindex={noindex} ogType={ogType} image={image}>
 	<slot name="head" slot="head" />
 	<div class="flex min-h-screen">
 		<!-- Desktop Sidebar -->

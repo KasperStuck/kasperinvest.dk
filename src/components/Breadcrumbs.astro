@@ -9,8 +9,20 @@ interface Props {
 }
 
 const { items } = Astro.props;
+const siteUrl = Astro.site?.origin ?? "https://kasperinvest.dk";
+const breadcrumbSchema = {
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: items.map((item, index) => ({
+		"@type": "ListItem",
+		position: index + 1,
+		name: item.label,
+		item: item.href ? new URL(item.href, siteUrl).href : new URL(Astro.url.pathname, siteUrl).href,
+	})),
+};
 ---
 
+<script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 <nav aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
 	{items.map((item, i) => (
 		<>

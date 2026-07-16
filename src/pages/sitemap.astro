@@ -1,4 +1,5 @@
 ---
+import { type ArticleSection, getArticles, sectionMeta } from "@/data/articles";
 import { getElections } from "@/data/elections";
 import { getGlossaryTerms } from "@/data/glossary";
 import { getModules } from "@/data/lessons";
@@ -11,6 +12,11 @@ const elections = getElections();
 const pensionTypes = getPensionTypes();
 const platforms = getPlatforms();
 const glossaryTerms = getGlossaryTerms();
+const articleSections = (["guides", "etf", "skat"] as ArticleSection[]).map((id) => ({
+	...sectionMeta[id],
+	id,
+	articles: getArticles(id),
+}));
 ---
 
 <CenteredLayout title="Sitemap - KasperInvest" description="Komplet oversigt over alle sider på KasperInvest.">
@@ -39,11 +45,30 @@ const glossaryTerms = getGlossaryTerms();
 			<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
 				<ul class="space-y-3 text-sm/7">
 					<li><a href="/" class="text-gray-950 underline decoration-gray-950/25 hover:decoration-gray-950 dark:text-white dark:decoration-white/25 dark:hover:decoration-white">Kursusoversigt</a></li>
-					<li><a href="/resources" class="text-gray-950 underline decoration-gray-950/25 hover:decoration-gray-950 dark:text-white dark:decoration-white/25 dark:hover:decoration-white">Resources</a></li>
+					<li><a href="/resources" class="text-gray-950 underline decoration-gray-950/25 hover:decoration-gray-950 dark:text-white dark:decoration-white/25 dark:hover:decoration-white">Investeringsværktøjer</a></li>
+					<li><a href="/om" class="text-gray-950 underline decoration-gray-950/25 hover:decoration-gray-950 dark:text-white dark:decoration-white/25 dark:hover:decoration-white">Om KasperInvest</a></li>
+					<li><a href="/redaktionel-metode" class="text-gray-950 underline decoration-gray-950/25 hover:decoration-gray-950 dark:text-white dark:decoration-white/25 dark:hover:decoration-white">Redaktionel metode</a></li>
 					<li><a href="/youtube" class="text-gray-950 underline decoration-gray-950/25 hover:decoration-gray-950 dark:text-white dark:decoration-white/25 dark:hover:decoration-white">YouTube</a></li>
 				</ul>
 			</div>
 		</section>
+
+		{articleSections.map((section) => (
+			<section class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10">
+				<div class="col-span-full sm:col-span-1">
+					<div class="-mt-px inline-flex border-t border-gray-950 pt-px dark:border-white">
+						<div class="pt-4 text-sm/7 font-semibold text-gray-950 sm:pt-10 dark:text-white"><h2>{section.title}</h2></div>
+					</div>
+				</div>
+				<div class="col-span-full pt-6 sm:col-span-3 sm:pt-10">
+					<p class="text-sm/7 text-gray-600 dark:text-gray-400">{section.description}</p>
+					<ul class="mt-4 space-y-3 text-sm/7">
+						<li><a href={section.href} class="font-medium text-gray-950 underline decoration-gray-950/25 dark:text-white">Oversigt</a></li>
+						{section.articles.map((article) => <li><a href={`${section.href}/${article.id}`} class="text-gray-700 underline decoration-gray-950/25 hover:text-gray-950 dark:text-gray-400 dark:decoration-white/25 dark:hover:text-white">{article.title}</a></li>)}
+					</ul>
+				</div>
+			</section>
+		))}
 
 		{modules.map((mod, i) => (
 			<section class="grid grid-cols-4 border-t border-gray-950/10 dark:border-white/10">

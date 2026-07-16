@@ -1,8 +1,12 @@
 ---
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+import ArticleSchema from "@/components/ArticleSchema.astro";
+import AuthorBox from "@/components/AuthorBox.astro";
+import Disclaimer from "@/components/Disclaimer.astro";
 import Prose from "@/components/Prose.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import { getPlatform, getPlatformContent, getPlatforms } from "@/data/platforms";
+import { getRelatedLinks } from "@/data/related";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import SectionLayout from "@/layouts/SectionLayout.astro";
 
@@ -38,19 +42,23 @@ const breadcrumbItems = [
 	{ label: "Platforme", href: "/platforme", class: "max-md:hidden" },
 	{ label: platform.title },
 ];
+const relatedLinks = getRelatedLinks(Astro.url.pathname);
 ---
 
 <SectionLayout
-	title={`${platform.title} - Platforme - KasperInvest`}
+	title={`${platform.seoTitle ?? `${platform.title} - Platforme`} - KasperInvest`}
 	description={platform.description}
 	breadcrumbItems={breadcrumbItems}
 	sectionTitle="Platforme"
 	sidebarItems={sidebarItems}
+	ogType="article"
 >
+	<ArticleSchema headline={platform.title} description={platform.description} />
 	<div class="mx-auto max-w-7xl">
 		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 lg:max-w-5xl">
 			<div class="w-full flex-1">
-				<Prose empty={!Content}>
+				<AuthorBox />
+				<Prose empty={!Content} relatedLinks={relatedLinks}>
 					{Content && <Content />}
 				</Prose>
 				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
@@ -92,6 +100,7 @@ const breadcrumbItems = [
 						</div>
 					)}
 				</div>
+				<Disclaimer />
 			</div>
 			<div class="hidden w-66 lg:block">
 				<TableOfContents contentId="content" />

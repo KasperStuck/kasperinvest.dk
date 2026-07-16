@@ -2,6 +2,7 @@
 import Footer from "@/components/Footer.astro";
 import Logo from "@/components/Logo.astro";
 import Navbar from "@/components/Navbar.astro";
+import { getGlossaryTermsByLetter } from "@/data/glossary";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
 import CloseIcon from "@/icons/CloseIcon.astro";
@@ -27,6 +28,11 @@ interface Props {
 	sectionTitle: string;
 	sidebarItems: SidebarItem[];
 	groupByLetter?: boolean;
+	canonical?: string;
+	noindex?: boolean;
+	ogType?: "website" | "article" | "profile";
+	image?: string;
+	isGlossaryCompact?: boolean;
 }
 
 const {
@@ -36,8 +42,17 @@ const {
 	sectionTitle,
 	sidebarItems,
 	groupByLetter = false,
+	canonical,
+	noindex,
+	ogType,
+	image,
+	isGlossaryCompact = false,
 } = Astro.props;
 const pathname = Astro.url.pathname;
+
+const letters = isGlossaryCompact
+	? Object.keys(getGlossaryTermsByLetter()).sort((a, b) => a.localeCompare(b, "da"))
+	: [];
 
 // Group items by first letter if requested
 type GroupedItems = { letter: string; items: SidebarItem[] }[];
@@ -54,7 +69,7 @@ const groupedItems: GroupedItems | null = groupByLetter
 	: null;
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} canonical={canonical} noindex={noindex} ogType={ogType} image={image}>
 	<div class="flex min-h-screen">
 		<!-- Desktop Sidebar -->
 		<aside class="hidden w-72 shrink-0 border-r border-gray-950/10 dark:border-white/10 lg:block">
@@ -64,23 +79,47 @@ const groupedItems: GroupedItems | null = groupByLetter
 						<Logo class="text-xl text-gray-950 dark:text-white" />
 					</a>
 				</div>
-				<!-- Search -->
-				<div class="mb-4 px-1">
-					<div class="relative">
-						<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-						</svg>
-						<input
-							type="text"
-							placeholder="Filtrer..."
-							data-sidebar-search="desktop"
-							class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-9 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
-						/>
-						<kbd class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-gray-950/10 px-1.5 text-[10px] font-medium text-gray-400 dark:border-white/10 dark:text-gray-500" data-search-kbd>
-							<span data-search-kbd-prefix></span>K
-						</kbd>
+				<!-- Search / Alphabet Navigation -->
+				{isGlossaryCompact ? (
+					<div class="mb-6 px-1">
+						<h4 class="text-xs/6 font-semibold text-gray-600 dark:text-gray-400 mb-2">Søg på bogstav</h4>
+						<div class="grid grid-cols-7 gap-1 text-center">
+							{letters.map((letter) => (
+								<a
+									href={`/ordbog#${letter}`}
+									class="inline-flex size-7 items-center justify-center rounded-md text-[11px] font-semibold text-gray-700 bg-gray-950/4 hover:bg-gray-950/8 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
+								>
+									{letter}
+								</a>
+							))}
+						</div>
+						<div class="mt-3">
+							<a
+								href="/ordbog"
+								class="flex items-center justify-center gap-1.5 rounded-lg border border-gray-950/10 dark:border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-950 hover:bg-gray-950/4 dark:text-white dark:hover:bg-white/5 w-full text-center transition-all"
+							>
+								Se alle ord (A-Å) &rarr;
+							</a>
+						</div>
 					</div>
-				</div>
+				) : (
+					<div class="mb-4 px-1">
+						<div class="relative">
+							<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+							</svg>
+							<input
+								type="text"
+								placeholder="Filtrer..."
+								data-sidebar-search="desktop"
+								class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-9 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
+							/>
+							<kbd class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-gray-950/10 px-1.5 text-[10px] font-medium text-gray-400 dark:border-white/10 dark:text-gray-500" data-search-kbd>
+								<span data-search-kbd-prefix></span>K
+							</kbd>
+						</div>
+					</div>
+				)}
 				<nav class="flex-1 space-y-6">
 					<div>
 						<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
@@ -167,20 +206,44 @@ const groupedItems: GroupedItems | null = groupByLetter
 							<CloseIcon class="text-gray-950 dark:text-white" />
 						</button>
 					</div>
-					<!-- Mobile Search -->
-					<div class="mb-4 px-1">
-						<div class="relative">
-							<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-							</svg>
-							<input
-								type="text"
-								placeholder="Filtrer..."
-								data-sidebar-search="mobile"
-								class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-3 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
-							/>
+					<!-- Mobile Search / Alphabet Navigation -->
+					{isGlossaryCompact ? (
+						<div class="mb-6 px-1">
+							<h4 class="text-xs/6 font-semibold text-gray-600 dark:text-gray-400 mb-2">Søg på bogstav</h4>
+							<div class="grid grid-cols-7 gap-1 text-center">
+								{letters.map((letter) => (
+									<a
+										href={`/ordbog#${letter}`}
+										class="inline-flex size-7 items-center justify-center rounded-md text-[11px] font-semibold text-gray-700 bg-gray-950/4 hover:bg-gray-950/8 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
+									>
+										{letter}
+									</a>
+								))}
+							</div>
+							<div class="mt-3">
+								<a
+									href="/ordbog"
+									class="flex items-center justify-center gap-1.5 rounded-lg border border-gray-950/10 dark:border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-950 hover:bg-gray-950/4 dark:text-white dark:hover:bg-white/5 w-full text-center transition-all"
+								>
+									Se alle ord (A-Å) &rarr;
+								</a>
+							</div>
 						</div>
-					</div>
+					) : (
+						<div class="mb-4 px-1">
+							<div class="relative">
+								<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+								</svg>
+								<input
+									type="text"
+									placeholder="Filtrer..."
+									data-sidebar-search="mobile"
+									class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-3 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
+								/>
+							</div>
+						</div>
+					)}
 					<nav class="space-y-6">
 						<div>
 							<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
@@ -355,7 +418,7 @@ const groupedItems: GroupedItems | null = groupByLetter
 	// Cmd/Ctrl+K to focus desktop search
 	const kbdPrefix = document.querySelector("[data-search-kbd-prefix]");
 	if (kbdPrefix) {
-		kbdPrefix.textContent = navigator.platform.includes("Mac") ? "\u2318" : "Ctrl+";
+		kbdPrefix.textContent = navigator.userAgent.includes("Mac") ? "\u2318" : "Ctrl+";
 	}
 
 	document.addEventListener("keydown", (e) => {

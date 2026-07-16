@@ -1,24 +1,89 @@
 export type GlossaryTerm = {
 	id: string;
 	title: string;
+	seoTitle?: string;
 	description: string;
 	publishedAt: string;
 	updatedAt: string;
 	draft?: boolean;
 };
 
+// These terms are already linked from published course and glossary content.
+// Keep them indexable even if their original editorial schedule date is later,
+// so published pages never point users or crawlers at a 404.
+const linkedGlossaryIds = new Set([
+	"afkast",
+	"aktie",
+	"aktieindkomst",
+	"aktiesplit",
+	"aktietilbagekoeb",
+	"aktivt-ejerskab",
+	"aktive-investeringsforeninger",
+	"aktivt-styrede-afdelinger",
+	"aldersopsparing",
+	"baeredygtig-investering",
+	"barista-fire",
+	"bear-certifikat",
+	"bear-market",
+	"bear-market-rally",
+	"beholdningslister",
+	"beskaeftigelsesfradrag",
+	"blue-chip",
+	"boerneopsparing",
+	"boersen",
+	"boersnotering",
+	"bruttoresultat",
+	"budget",
+	"budgetkonto",
+	"bullish",
+	"cagr",
+	"cash-flow",
+	"cykliske-aktier",
+	"fill-and-kill",
+	"fire",
+	"fn-17-verdensmaal",
+	"fondsboers",
+	"frit-cash-flow",
+	"fundamental-analyse",
+	"futures",
+	"investeringsforening",
+	"kapitalfond",
+	"pe-tallet",
+	"rentes-rente-effekten",
+	"sharpe-ratio",
+	"short",
+	"skattesatser",
+	"spread",
+	"standardafvigelse",
+	"statsobligation",
+	"stop-loss",
+	"value-trap",
+]);
+const LINKED_RELEASE_DATE = "2026-07-16T00:00:00";
+
 function isPublished(t: GlossaryTerm): boolean {
-	return !t.draft && new Date(t.publishedAt) <= new Date();
+	return !t.draft && (linkedGlossaryIds.has(t.id) || new Date(t.publishedAt) <= new Date());
+}
+
+function publishedTerms(): GlossaryTerm[] {
+	return glossary.filter(isPublished).map((term) => {
+		if (!linkedGlossaryIds.has(term.id) || new Date(term.publishedAt) <= new Date()) return term;
+		return {
+			...term,
+			publishedAt: LINKED_RELEASE_DATE,
+			updatedAt: new Date(term.updatedAt) > new Date() ? LINKED_RELEASE_DATE : term.updatedAt,
+		};
+	});
 }
 
 export function getGlossaryTerms(): GlossaryTerm[] {
-	return glossary.filter(isPublished);
+	return publishedTerms();
 }
 
 export function getGlossaryTerm(
 	slug: string,
 ): (GlossaryTerm & { next: GlossaryTerm | null }) | null {
-	const published = glossary.filter(isPublished);
+	const published = publishedTerms();
 	const index = published.findIndex((t) => t.id === slug);
 	if (index === -1) return null;
 
@@ -39,7 +104,7 @@ export async function getGlossaryTermContent(slug: string) {
 
 export function getGlossaryTermsByLetter(): Record<string, GlossaryTerm[]> {
 	const grouped: Record<string, GlossaryTerm[]> = {};
-	for (const term of glossary.filter(isPublished)) {
+	for (const term of publishedTerms()) {
 		const first = term.title[0].toUpperCase();
 		const letter = /\d/.test(first) ? "0-9" : first;
 		if (!grouped[letter]) grouped[letter] = [];
@@ -198,9 +263,11 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "aktiesparekonto",
 		title: "Aktiesparekonto",
-		description: "Skat på kun 17 %",
-		publishedAt: "2026-07-31T12:37:00",
-		updatedAt: "2026-08-10T06:04:00",
+		seoTitle: "Aktiesparekonto: skat, regler og indskudsloft",
+		description:
+			"Forstå aktiesparekontoens lagerbeskatning, indskudsloft, tilladte investeringer samt fordele og ulemper.",
+		publishedAt: "2026-07-16T00:00:00",
+		updatedAt: "2026-07-16T00:00:00",
 	},
 	{
 		id: "aktiesplit",
@@ -544,6 +611,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "boligopsparing",
 		title: "Boligopsparing",
+		seoTitle: "Boligopsparing: hvad er det, og hvordan kommer du i mål?",
 		description:
 			"Boligopsparing er en opsparingsform målrettet unge, der vil spare op til deres første boligkøb.",
 		publishedAt: "2026-03-16T09:55:00",
@@ -1369,7 +1437,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "forrentede-penge",
 		title: "Forrentede penge",
-		description: "Når dine penge arbejder for dig",
+		description: "Penge eller kapital, der løbende giver renter eller andet afkast",
 		publishedAt: "2026-04-20T11:44:00",
 		updatedAt: "2026-05-01T10:46:00",
 	},
@@ -1857,7 +1925,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "kapitaludvidelse",
 		title: "Kapitaludvidelse",
-		description: "Når virksomheder udsteder nye aktier",
+		description: "Når en virksomhed øger sin egenkapital gennem nye indskud eller aktier",
 		publishedAt: "2026-06-01T13:23:00",
 		updatedAt: "2026-06-15T09:34:00",
 	},
@@ -2197,6 +2265,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "markedsvaerdi",
 		title: "Markedsværdi (Market Cap)",
+		seoTitle: "Markedsværdi (market cap): beregning og eksempel",
 		description:
 			"Den samlede børsværdi af et selskabs aktier — og et centralt mål for selskabets størrelse",
 		publishedAt: "2026-04-14T10:12:00",
@@ -2432,7 +2501,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "omxc25",
 		title: "OMXC25",
-		description: "Danmarks vigtigste aktieindeks",
+		description: "Indekset over de 25 mest handlede store aktier på Nasdaq Copenhagen",
 		publishedAt: "2026-03-09T09:40:00",
 		updatedAt: "2026-03-16T08:54:00",
 	},
@@ -3647,7 +3716,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "oekonomisk-frihed",
 		title: "Økonomisk frihed",
-		description: "Når dine penge arbejder for dig",
+		description: "Når din økonomi giver frihed til at vælge arbejde og liv uden lønpres",
 		publishedAt: "2026-03-16T06:58:00",
 		updatedAt: "2026-03-23T10:29:00",
 	},
@@ -3777,7 +3846,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "aktieemission",
 		title: "Aktieemission",
-		description: "Når virksomheder udsteder nye aktier",
+		description: "En konkret udstedelse af nye aktier for at rejse kapital",
 		publishedAt: "2026-06-23T10:25:00",
 		updatedAt: "2026-07-07T11:17:00",
 	},
@@ -4574,13 +4643,14 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "omxc20",
 		title: "OMXC20",
-		description: "Danmarks vigtigste aktieindeks",
+		description: "Det tidligere danske eliteindeks med 20 toneangivende børsaktier",
 		publishedAt: "2026-04-23T10:19:00",
 		updatedAt: "2026-05-01T10:10:00",
 	},
 	{
 		id: "paalydende-rente",
 		title: "Pålydende rente",
+		seoTitle: "Pålydende rente: betydning, beregning og eksempel",
 		description: "Den rente, obligationen lover at betale",
 		publishedAt: "2026-03-09T12:06:00",
 		updatedAt: "2026-03-17T08:40:00",
@@ -4602,6 +4672,7 @@ const glossary: GlossaryTerm[] = [
 	{
 		id: "pensionsopsparing",
 		title: "Pensionsopsparing",
+		seoTitle: "Pensionsopsparing: typer, skat og valg",
 		description: "Din langtidsopsparing til livet efter arbejdslivet",
 		publishedAt: "2026-03-09T10:51:00",
 		updatedAt: "2026-03-23T10:58:00",

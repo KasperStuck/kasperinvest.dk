@@ -1,8 +1,12 @@
 ---
 import type { AstroComponentFactory } from "astro/runtime/server/index.js";
+import ArticleSchema from "@/components/ArticleSchema.astro";
+import AuthorBox from "@/components/AuthorBox.astro";
+import Disclaimer from "@/components/Disclaimer.astro";
 import Prose from "@/components/Prose.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import { getPensionContent, getPensionType, getPensionTypes } from "@/data/pension";
+import { getRelatedLinks } from "@/data/related";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import SectionLayout from "@/layouts/SectionLayout.astro";
 
@@ -38,6 +42,7 @@ const breadcrumbItems = [
 	{ label: "Pension", href: "/pension", class: "max-md:hidden" },
 	{ label: pension.title },
 ];
+const relatedLinks = getRelatedLinks(Astro.url.pathname);
 ---
 
 <SectionLayout
@@ -46,11 +51,14 @@ const breadcrumbItems = [
 	breadcrumbItems={breadcrumbItems}
 	sectionTitle="Pension"
 	sidebarItems={sidebarItems}
+	ogType="article"
 >
+	<ArticleSchema headline={pension.title} description={pension.description} />
 	<div class="mx-auto max-w-7xl">
 		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 lg:max-w-5xl">
 			<div class="w-full flex-1">
-				<Prose empty={!Content}>
+				<AuthorBox />
+				<Prose empty={!Content} relatedLinks={relatedLinks}>
 					{Content && <Content />}
 				</Prose>
 				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
@@ -92,6 +100,7 @@ const breadcrumbItems = [
 						</div>
 					)}
 				</div>
+				<Disclaimer />
 			</div>
 			<div class="hidden w-66 lg:block">
 				<TableOfContents contentId="content" />

@@ -64,4 +64,16 @@ const pensionTypes: PensionType[] = [
 		description:
 			"Den eneste pensionstype i Danmark der garanterer udbetaling resten af dit liv — uanset hvor gammel du bliver.",
 	},
+	{
+		id: "livrente-vs-ratepension",
+		title: "Livrente vs. ratepension",
+		description:
+			"Sammenlign livsvarig udbetaling med ratepensionens tidsbegrænsede udbetaling, herunder fradrag, arv, fleksibilitet og risiko.",
+	},
+	{
+		id: "aldersopsparing-vs-ratepension",
+		title: "Aldersopsparing vs. ratepension",
+		description:
+			"Se forskellen på fradrag, skat ved udbetaling, indbetalingsgrænser, modregning og fleksibilitet.",
+	},
 ];

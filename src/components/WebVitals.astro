@@ -1,0 +1,26 @@
+<script>
+	import { onCLS, onINP, onLCP, type Metric } from "web-vitals";
+
+	function report(metric: Metric) {
+		const payload = JSON.stringify({
+			name: metric.name,
+			value: metric.value,
+			rating: metric.rating,
+			navigationType: metric.navigationType,
+			path: window.location.pathname,
+		});
+		const body = new Blob([payload], { type: "application/json" });
+		if (!navigator.sendBeacon("/api/web-vitals", body)) {
+			fetch("/api/web-vitals", {
+				method: "POST",
+				body: payload,
+				headers: { "Content-Type": "application/json" },
+				keepalive: true,
+			}).catch(() => undefined);
+		}
+	}
+
+	onCLS(report);
+	onINP(report);
+	onLCP(report);
+</script>

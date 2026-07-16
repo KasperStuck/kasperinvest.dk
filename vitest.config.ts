@@ -4,4 +4,4 @@ export default getViteConfig({
 	test: {
 		globals: true,
 	},
-} as any);
+} as Parameters<typeof getViteConfig>[0]);

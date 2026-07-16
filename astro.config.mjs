@@ -5,8 +5,15 @@ import { defineConfig, envField, fontProviders } from "astro/config";
 
 export default defineConfig({
 	site: "https://kasperinvest.dk",
+	redirects: {
+		"/risiko-og-risikoprofil": "/risikoprofil",
+		"/investering-i-nedture": "/disciplin-i-nedture",
+	},
 	adapter: node({ mode: "standalone" }),
 	integrations: [mdx()],
+	markdown: {
+		syntaxHighlight: false,
+	},
 	image: {
 		remotePatterns: [
 			{
@@ -17,7 +24,11 @@ export default defineConfig({
 	},
 	env: {
 		schema: {
-			CONVEX_URL: envField.string({ context: "server", access: "secret" }),
+			CONVEX_URL: envField.string({
+				context: "server",
+				access: "secret",
+				optional: true,
+			}),
 		},
 	},
 	fonts: [

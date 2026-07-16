@@ -7,23 +7,43 @@ import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import ClockIcon from "@/icons/ClockIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import { api, convex } from "@/lib/convex";
+import { serviceUnavailable } from "@/lib/http";
 
 const { slug, handle } = Astro.params;
 if (!slug) return new Response(null, { status: 404, statusText: "Not Found" });
 
-const video = await convex.query(api.videos.getBySlug, { slug });
+let video: Awaited<ReturnType<typeof convex.query<typeof api.videos.getBySlug>>> = null;
+try {
+	video = await convex.query(api.videos.getBySlug, { slug });
+} catch (error) {
+	console.warn("[youtube] Kunne ikke hente video", error);
+	const response = serviceUnavailable("Videoen kan ikke hentes lige nu. Prøv igen om få minutter.");
+	Astro.response.status = response.status;
+	return response;
+}
 
 if (!video) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
 }
 
-const [channel, nextVideo] = await Promise.all([
-	convex.query(api.channels.get, { channelId: video.channelId }),
-	convex.query(api.videos.getNextByChannel, {
-		channelId: video.channelId,
-		publishedAt: video.publishedAt,
-	}),
-]);
+let channel: Awaited<ReturnType<typeof convex.query<typeof api.channels.get>>>;
+let nextVideo: Awaited<ReturnType<typeof convex.query<typeof api.videos.getNextByChannel>>>;
+try {
+	[channel, nextVideo] = await Promise.all([
+		convex.query(api.channels.get, { channelId: video.channelId }),
+		convex.query(api.videos.getNextByChannel, {
+			channelId: video.channelId,
+			publishedAt: video.publishedAt,
+		}),
+	]);
+} catch (error) {
+	console.warn("[youtube] Kunne ikke hente videorelationer", error);
+	const response = serviceUnavailable(
+		"Videoens oplysninger kan ikke hentes lige nu. Prøv igen om få minutter.",
+	);
+	Astro.response.status = response.status;
+	return response;
+}
 
 function formatDuration(seconds: number): string {
 	const h = Math.floor(seconds / 3600);
@@ -49,7 +69,7 @@ function videoUrl(v: { slug?: string; videoId: string }) {
 
 const articleHtml = video.article ? await marked.parse(video.article) : null;
 
-const canonicalUrl = `https://kasperinvest.dk/youtube/${handle}/${video.slug ?? video.videoId}`;
+const canonicalUrl = `https://kasperinvest.dk/youtube/${handle}/${video.slug ?? video.videoId}/`;
 
 function isoDuration(seconds: number): string {
 	const h = Math.floor(seconds / 3600);
@@ -102,11 +122,12 @@ const breadcrumbSchema = {
 <CenteredLayout
 	title={video.seoTitle ? `${video.seoTitle} - KasperInvest` : `${video.title} - KasperInvest`}
 	description={video.seoDescription ?? video.summary ?? video.description.slice(0, 160)}
+	canonical={canonicalUrl}
 >
-	<script slot="head" type="application/ld+json" set:html={JSON.stringify(videoSchema)} />
-	<script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(videoSchema)} />
+	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
 	{video.faq && video.faq.length > 0 && (
-		<script slot="head" type="application/ld+json" set:html={JSON.stringify({
+		<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
 			"@context": "https://schema.org",
 			"@type": "FAQPage",
 			mainEntity: video.faq.map((item) => ({
@@ -119,7 +140,6 @@ const breadcrumbSchema = {
 			})),
 		})} />
 	)}
-	<link slot="head" rel="canonical" href={canonicalUrl} />
 	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
 		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
 		<span class="text-gray-950/25 dark:text-white/25">/</span>

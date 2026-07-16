@@ -11,10 +11,15 @@ const VIDEOS_PER_PAGE = 36;
 const pageParam = Number(Astro.url.searchParams.get("page")) || 1;
 const currentPage = Math.max(1, pageParam);
 
+let dataUnavailable = false;
 const [allVideos, channels] = await Promise.all([
 	convex.query(api.videos.listRecent, { limit: 200 }),
 	convex.query(api.channels.list, {}),
-]);
+]).catch((error) => {
+	dataUnavailable = true;
+	console.warn("[youtube] Kunne ikke hente videooversigten", error);
+	return [[], []] as const;
+});
 const channelMap = new Map(channels.map((ch) => [ch.channelId, ch]));
 
 const totalPages = Math.max(1, Math.ceil(allVideos.length / VIDEOS_PER_PAGE));
@@ -109,6 +114,11 @@ function capitalize(s: string): string {
 			</div>
 		)}
 	</div>
+	{dataUnavailable && (
+		<p class="mt-10 rounded-xl border border-amber-300/40 bg-amber-50 p-4 text-sm/6 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
+			Videooversigten kan ikke hentes lige nu. Prøv igen om lidt.
+		</p>
+	)}
 
 	{recentChannels.length > 0 && (
 		<div class="relative mt-10" id="channel-scroll-wrapper">

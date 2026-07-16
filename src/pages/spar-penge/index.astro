@@ -6,7 +6,14 @@ import LinkCard from "@/components/LinkCard.astro";
 import { getSavingsCategories } from "@/data/savings";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 
-const categories = await getSavingsCategories();
+let categories: Awaited<ReturnType<typeof getSavingsCategories>> = [];
+let dataUnavailable = false;
+try {
+	categories = await getSavingsCategories();
+} catch (error) {
+	dataUnavailable = true;
+	console.warn("[spar-penge] Kunne ikke hente kategorier", error);
+}
 ---
 
 <CenteredLayout
@@ -27,4 +34,9 @@ const categories = await getSavingsCategories();
 			<LinkCard href={`/spar-penge/${c.id}`} title={c.title} description={c.description} />
 		))}
 	</div>
+	{dataUnavailable && (
+		<p class="mt-10 rounded-xl border border-amber-300/40 bg-amber-50 p-4 text-sm/6 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100">
+			Sammenligningerne kan ikke hentes lige nu. Prøv igen om lidt.
+		</p>
+	)}
 </CenteredLayout>

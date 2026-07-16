@@ -5,8 +5,19 @@ import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import ProviderCard from "@/components/ProviderCard.astro";
 import { getSavingsCategory } from "@/data/savings";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import { serviceUnavailable } from "@/lib/http";
 
-const category = Astro.params.slug ? await getSavingsCategory(Astro.params.slug) : null;
+let category: Awaited<ReturnType<typeof getSavingsCategory>> = null;
+try {
+	category = Astro.params.slug ? await getSavingsCategory(Astro.params.slug) : null;
+} catch (error) {
+	console.warn("[spar-penge] Kunne ikke hente kategori", error);
+	const response = serviceUnavailable(
+		"Sammenligningen kan ikke hentes lige nu. Prøv igen om få minutter.",
+	);
+	Astro.response.status = response.status;
+	return response;
+}
 if (!category) return new Response(null, { status: 404, statusText: "Not Found" });
 ---
 

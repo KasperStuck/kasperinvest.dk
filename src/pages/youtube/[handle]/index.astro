@@ -5,10 +5,19 @@ import VideoCard from "@/components/VideoCard.astro";
 import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import { api, convex } from "@/lib/convex";
+import { serviceUnavailable } from "@/lib/http";
 
 const { handle } = Astro.params;
 
-const channel = handle ? await convex.query(api.channels.getByHandle, { handle }) : null;
+let channel: Awaited<ReturnType<typeof convex.query<typeof api.channels.getByHandle>>> = null;
+try {
+	channel = handle ? await convex.query(api.channels.getByHandle, { handle }) : null;
+} catch (error) {
+	console.warn("[youtube] Kunne ikke hente kanal", error);
+	const response = serviceUnavailable("Kanalen kan ikke hentes lige nu. Prøv igen om få minutter.");
+	Astro.response.status = response.status;
+	return response;
+}
 
 if (!channel) {
 	return new Response(null, { status: 404, statusText: "Not Found" });
@@ -19,10 +28,20 @@ const VIDEOS_PER_PAGE = 36;
 const pageParam = Number(Astro.url.searchParams.get("page")) || 1;
 const currentPage = Math.max(1, pageParam);
 
-const allVideos = await convex.query(api.videos.listByChannel, {
-	channelId: channel.channelId,
-	limit: 200,
-});
+let allVideos: Awaited<ReturnType<typeof convex.query<typeof api.videos.listByChannel>>>;
+try {
+	allVideos = await convex.query(api.videos.listByChannel, {
+		channelId: channel.channelId,
+		limit: 200,
+	});
+} catch (error) {
+	console.warn("[youtube] Kunne ikke hente kanalvideoer", error);
+	const response = serviceUnavailable(
+		"Kanalens videoer kan ikke hentes lige nu. Prøv igen om få minutter.",
+	);
+	Astro.response.status = response.status;
+	return response;
+}
 
 const totalPages = Math.max(1, Math.ceil(allVideos.length / VIDEOS_PER_PAGE));
 const safePage = Math.min(currentPage, totalPages);

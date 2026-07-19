@@ -13,15 +13,16 @@ const { provider } = Astro.props;
 	<div class="flex-1">
 		{provider.logoUrl ? (
 			<>
-				<span class="inline-flex items-center leading-none dark:rounded-md dark:bg-white dark:px-2 dark:py-1">
+				<span
+					class="inline-flex items-center leading-none dark:rounded-md dark:bg-white dark:px-2 dark:py-1"
+					data-provider-logo-container
+				>
 					<img
 						src={provider.logoUrl}
 						alt={provider.name}
 						class="max-h-10"
 						loading="lazy"
 						data-provider-logo
-						onload="this.parentElement.parentElement.querySelector('[data-provider-name]').hidden=true"
-						onerror="this.parentElement.hidden=true;this.parentElement.parentElement.querySelector('[data-provider-name]').hidden=false"
 					/>
 				</span>
 				<p class="text-lg font-semibold text-gray-950 dark:text-white" data-provider-name hidden>{provider.name}</p>
@@ -40,3 +41,33 @@ const { provider } = Astro.props;
 		<ChevronRightIcon />
 	</a>
 </div>
+
+<script>
+	function initProviderLogoFallbacks() {
+		document
+			.querySelectorAll<HTMLElement>("[data-provider]:not([data-logo-fallback-bound])")
+			.forEach((provider) => {
+				provider.dataset.logoFallbackBound = "true";
+
+				const logoContainer = provider.querySelector<HTMLElement>("[data-provider-logo-container]");
+				const logo = provider.querySelector<HTMLImageElement>("[data-provider-logo]");
+				const providerName = provider.querySelector<HTMLElement>("[data-provider-name]");
+				if (!logoContainer || !logo || !providerName) return;
+
+				const showProviderName = () => {
+					logoContainer.hidden = true;
+					providerName.hidden = false;
+				};
+
+				logo.addEventListener("error", showProviderName, { once: true });
+
+				// The error may have fired before this deferred script was initialized.
+				if (logo.complete && logo.naturalWidth === 0) {
+					showProviderName();
+				}
+			});
+	}
+
+	document.addEventListener("astro:page-load", initProviderLogoFallbacks);
+	initProviderLogoFallbacks();
+</script>

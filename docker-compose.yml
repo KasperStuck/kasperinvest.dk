@@ -1,8 +1,0 @@
-services:
-  web:
-    build: .
-    ports:
-      - "8080:80"
-    environment:
-      - CONVEX_URL=https://combative-spider-931.convex.cloud
-    restart: unless-stopped

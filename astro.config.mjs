@@ -1,6 +1,7 @@
 // @ts-check
 import mdx from "@astrojs/mdx";
 import node from "@astrojs/node";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, envField, fontProviders } from "astro/config";
 
 export default defineConfig({
@@ -9,6 +10,7 @@ export default defineConfig({
 		"/risiko-og-risikoprofil": "/risikoprofil",
 		"/investering-i-nedture": "/disciplin-i-nedture",
 	},
+	output: "server",
 	adapter: node({ mode: "standalone" }),
 	integrations: [mdx()],
 	markdown: {
@@ -38,6 +40,9 @@ export default defineConfig({
 			cssVariable: "--font-inter",
 		},
 	],
+	vite: {
+		plugins: [tailwindcss()],
+	},
 	security: {
 		csp: {
 			directives: [
@@ -47,8 +52,5 @@ export default defineConfig({
 				"connect-src 'self' https://*.convex.cloud",
 			],
 		},
-	},
-	experimental: {
-		rustCompiler: true,
 	},
 });

@@ -8,8 +8,6 @@ import { getPlatforms } from "@/data/platforms";
 import { getSavingsCategories } from "@/data/savings";
 import { api, convex } from "@/lib/convex";
 
-export const prerender = false;
-
 const SITE_URL = "https://kasperinvest.dk";
 
 function escapeXml(unsafe: string): string {

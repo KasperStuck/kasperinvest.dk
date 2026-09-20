@@ -1,7 +1,5 @@
 import type { APIRoute } from "astro";
 
-export const prerender = false;
-
 const names = new Set(["CLS", "INP", "LCP"]);
 const ratings = new Set(["good", "needs-improvement", "poor"]);
 

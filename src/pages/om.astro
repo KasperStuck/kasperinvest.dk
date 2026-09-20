@@ -1,18 +1,12 @@
 ---
+import { authorSchema } from "@/data/author";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 
-const authorSchema = {
-	"@context": "https://schema.org",
-	"@type": "Person",
-	"@id": "https://kasperinvest.dk/om/#kasper-stuck",
-	name: "Kasper Stuck",
-	url: "https://kasperinvest.dk/om/",
-	worksFor: { "@id": "https://kasperinvest.dk/#organization" },
-	knowsAbout: ["Investering", "Privatøkonomi", "ETF", "Pension", "Skat af investering"],
-};
+const siteUrl = Astro.site?.origin ?? "https://kasperinvest.dk";
+const schema = { "@context": "https://schema.org", ...authorSchema(siteUrl) };
 ---
 <CenteredLayout title="Om KasperInvest og Kasper Stuck" description="Læs hvem der står bag KasperInvest, og hvad sitets investerings- og privatøkonomiske indhold skal hjælpe med." ogType="profile">
-	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(authorSchema)} />
+	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(schema)} />
 	<article class="prose prose-sm mx-auto py-10 dark:prose-invert sm:py-14">
 		<h1>Om KasperInvest</h1>
 		<p>KasperInvest er et dansk læringssite om investering og privatøkonomi. Målet er at gøre kontotyper, risiko, produkter, skat og pension lettere at forstå, så læseren kan træffe mere oplyste beslutninger.</p>

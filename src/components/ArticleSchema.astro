@@ -1,4 +1,6 @@
 ---
+import { authorSchema } from "@/data/author";
+
 interface Props {
 	headline: string;
 	description: string;
@@ -21,12 +23,7 @@ const schema = {
 	mainEntityOfPage: canonical,
 	...(datePublished ? { datePublished } : {}),
 	...(dateModified ? { dateModified } : {}),
-	author: {
-		"@type": "Person",
-		"@id": `${siteUrl}/om/#kasper-stuck`,
-		name: "Kasper Stuck",
-		url: new URL("/om/", siteUrl).href,
-	},
+	author: authorSchema(siteUrl),
 	publisher: { "@id": `${siteUrl}/#organization` },
 };
 ---

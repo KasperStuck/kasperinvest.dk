@@ -7,6 +7,7 @@ import Prose from "@/components/Prose.astro";
 import TableOfContents from "@/components/TableOfContents.astro";
 import type { Article } from "@/data/articles";
 import { sectionMeta } from "@/data/articles";
+import { authorSchema } from "@/data/author";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 
 interface Props {
@@ -26,12 +27,7 @@ const articleSchema = {
 	datePublished: article.publishedAt,
 	dateModified: article.updatedAt,
 	mainEntityOfPage: canonical,
-	author: {
-		"@type": "Person",
-		"@id": "https://kasperinvest.dk/om/#kasper-stuck",
-		name: "Kasper Stuck",
-		url: "https://kasperinvest.dk/om/",
-	},
+	author: authorSchema(Astro.site?.origin ?? "https://kasperinvest.dk"),
 	publisher: { "@type": "Organization", name: "KasperInvest", url: "https://kasperinvest.dk" },
 };
 ---

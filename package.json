@@ -33,6 +33,7 @@
 		"@convex-dev/action-retrier": "^0.3.0",
 		"@convex-dev/agent": "^0.3.2",
 		"@egoist/youtube-transcript-plus": "^1.1.2",
+		"@sentry/astro": "10.75.0",
 		"ai": "^5.0.154",
 		"astro": "^7.3.3",
 		"convex": "^1.32.0",

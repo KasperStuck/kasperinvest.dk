@@ -1,6 +1,7 @@
 // @ts-check
 import mdx from "@astrojs/mdx";
 import node from "@astrojs/node";
+import sentry from "@sentry/astro";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, envField, fontProviders } from "astro/config";
 
@@ -12,7 +13,7 @@ export default defineConfig({
 	},
 	output: "server",
 	adapter: node({ mode: "standalone" }),
-	integrations: [mdx()],
+	integrations: [sentry({ sourcemaps: { disable: true }, telemetry: false }), mdx()],
 	markdown: {
 		syntaxHighlight: false,
 	},
@@ -49,7 +50,7 @@ export default defineConfig({
 				"default-src 'self'",
 				"img-src 'self' https://i.ytimg.com https://img.youtube.com https://*.convex.cloud https://adtraction.com data:",
 				"frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-				"connect-src 'self' https://*.convex.cloud",
+				"connect-src 'self' https://glitchtip.eagleapp.dk https://*.convex.cloud",
 			],
 		},
 	},

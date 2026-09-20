@@ -1,3 +1,4 @@
+import { captureException } from "@sentry/astro";
 import type { APIRoute } from "astro";
 import { getArticles } from "@/data/articles";
 import { getElections } from "@/data/elections";
@@ -107,6 +108,7 @@ export const GET: APIRoute = async () => {
 			add(`${SITE_URL}/spar-penge/${cat.id}`);
 		}
 	} catch (error) {
+		captureException(error);
 		console.error("[sitemap] Failed to get savings categories", error);
 	}
 
@@ -136,6 +138,7 @@ export const GET: APIRoute = async () => {
 			}
 		}
 	} catch (error) {
+		captureException(error);
 		console.error("[sitemap] Convex query failed, skipping YouTube URLs", error);
 	}
 

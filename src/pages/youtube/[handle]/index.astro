@@ -1,4 +1,5 @@
 ---
+import { captureException } from "@sentry/astro";
 
 import VideoCard from "@/components/VideoCard.astro";
 import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
@@ -12,6 +13,7 @@ let channel: Awaited<ReturnType<typeof convex.query<typeof api.channels.getByHan
 try {
 	channel = handle ? await convex.query(api.channels.getByHandle, { handle }) : null;
 } catch (error) {
+	captureException(error);
 	console.warn("[youtube] Kunne ikke hente kanal", error);
 	const response = serviceUnavailable("Kanalen kan ikke hentes lige nu. Prøv igen om få minutter.");
 	Astro.response.status = response.status;
@@ -34,6 +36,7 @@ try {
 		limit: 200,
 	});
 } catch (error) {
+	captureException(error);
 	console.warn("[youtube] Kunne ikke hente kanalvideoer", error);
 	const response = serviceUnavailable(
 		"Kanalens videoer kan ikke hentes lige nu. Prøv igen om få minutter.",

@@ -1,3 +1,4 @@
+import "../sentry.server.config";
 import { defineMiddleware } from "astro:middleware";
 
 const STATIC_ASSET = /\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/;

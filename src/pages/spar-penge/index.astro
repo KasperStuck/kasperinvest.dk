@@ -1,4 +1,5 @@
 ---
+import { captureException } from "@sentry/astro";
 
 import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import LinkCard from "@/components/LinkCard.astro";
@@ -10,6 +11,7 @@ let dataUnavailable = false;
 try {
 	categories = await getSavingsCategories();
 } catch (error) {
+	captureException(error);
 	dataUnavailable = true;
 	console.warn("[spar-penge] Kunne ikke hente kategorier", error);
 }

@@ -30,6 +30,8 @@ jobs:
         with:
           context: .
           push: true
+          build-args: |
+            PUBLIC_SENTRY_DSN=${{ vars.PUBLIC_SENTRY_DSN }}
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}

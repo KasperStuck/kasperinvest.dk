@@ -10,6 +10,8 @@ RUN --mount=type=cache,target=/root/.bun/install/cache bun install --frozen-lock
 
 # Stage 2: build the Astro site
 FROM base AS build
+ARG PUBLIC_SENTRY_DSN
+ENV PUBLIC_SENTRY_DSN=$PUBLIC_SENTRY_DSN
 # CONVEX_URL is read via astro:env at build time for prerendered data
 ARG CONVEX_URL
 

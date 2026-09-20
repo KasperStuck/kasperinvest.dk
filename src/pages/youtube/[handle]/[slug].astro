@@ -1,4 +1,5 @@
 ---
+import { captureException } from "@sentry/astro";
 
 import { marked } from "marked";
 import Prose from "@/components/Prose.astro";
@@ -15,6 +16,7 @@ let video: Awaited<ReturnType<typeof convex.query<typeof api.videos.getBySlug>>>
 try {
 	video = await convex.query(api.videos.getBySlug, { slug });
 } catch (error) {
+	captureException(error);
 	console.warn("[youtube] Kunne ikke hente video", error);
 	const response = serviceUnavailable("Videoen kan ikke hentes lige nu. Prøv igen om få minutter.");
 	Astro.response.status = response.status;
@@ -36,6 +38,7 @@ try {
 		}),
 	]);
 } catch (error) {
+	captureException(error);
 	console.warn("[youtube] Kunne ikke hente videorelationer", error);
 	const response = serviceUnavailable(
 		"Videoens oplysninger kan ikke hentes lige nu. Prøv igen om få minutter.",

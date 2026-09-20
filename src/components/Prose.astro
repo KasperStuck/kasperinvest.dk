@@ -54,6 +54,8 @@ const banners = await Promise.all(
 		<script is:inline define:vars={{ banners }}>
 			const content = document.getElementById("content");
 			const pageText = (document.title + " " + content.textContent).toLowerCase();
+			// A passing mention of a competitor is fine; only a page about that platform (named in the title) excludes it.
+			const pageTitle = (document.title + " " + (document.querySelector("h1")?.textContent ?? "")).toLowerCase();
 			const headings = content.querySelectorAll(":scope > h2");
 			const contextualLinks = content.querySelector(":scope > [data-contextual-links]");
 			const contextualAnchor = headings[1] ?? headings[0];
@@ -65,7 +67,7 @@ const banners = await Promise.all(
 				(b) =>
 					b.keywords.length > 0 &&
 					b.keywords.some((kw) => pageText.includes(kw)) &&
-					!b.exclude.some((kw) => pageText.includes(kw)),
+					!b.exclude.some((kw) => pageTitle.includes(kw)),
 			);
 			function createBanner(b) {
 				const wrapper = document.createElement("aside");

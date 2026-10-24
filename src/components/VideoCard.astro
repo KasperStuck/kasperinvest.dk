@@ -1,5 +1,6 @@
 ---
 import { Image } from "astro:assets";
+import { formatViews } from "@/lib/format-views";
 
 interface Props {
 	title: string;
@@ -38,12 +39,6 @@ function formatDuration(seconds: number): string {
 	const m = Math.floor(seconds / 60);
 	const s = seconds % 60;
 	return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-function formatViews(count: number): string {
-	if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M visninger`;
-	if (count >= 1_000) return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}K visninger`;
-	return `${count} visninger`;
 }
 ---
 
@@ -89,12 +84,12 @@ function formatViews(count: number): string {
 		)}
 	</div>
 	{(publishedAt || viewCount) && (
-		<p class="mt-2 flex items-center justify-between text-sm/7 text-gray-600 dark:text-gray-400">
-			{publishedAt && <span>{formatDate(publishedAt)}</span>}
-			{viewCount != null && viewCount > 0 && <span>{formatViews(viewCount)}</span>}
+		<p class="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 text-sm/7 sm:max-md:min-h-15 sm:max-md:flex-col sm:max-md:items-start text-gray-600 dark:text-gray-400">
+			{publishedAt && <span class="whitespace-nowrap">{formatDate(publishedAt)}</span>}
+			{viewCount != null && viewCount > 0 && <span class="whitespace-nowrap">{formatViews(viewCount)}</span>}
 		</p>
 	)}
-	<p class="mt-1 text-sm/7 font-semibold text-gray-950 dark:text-white">{title}</p>
+	<p class="mt-1 text-sm/6 font-semibold text-gray-950 dark:text-white">{title}</p>
 </a>
 
 <script>

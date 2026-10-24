@@ -14,10 +14,7 @@ export const navLinks: readonly NavLink[] = [
 	{ href: "/youtube", label: "YouTube" },
 ];
 
-/**
- * Meta descriptions of the section index pages that have no data module of their own,
- * shared with the homepage entry cards (guides, ETF and skat use `sectionMeta`).
- */
+/** Meta descriptions of the section index pages that have no data module of their own. */
 export const sectionDescriptions = {
 	pension:
 		"Overblik over de danske pensionstyper — aldersopsparing, ratepension, folkepension, livrente og mere. Forstå forskellen og vælg den rigtige pensionsordning.",

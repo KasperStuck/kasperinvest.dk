@@ -1,6 +1,5 @@
 ---
 import LinkCard from "@/components/LinkCard.astro";
-import { sectionMeta } from "@/data/articles";
 import { getModules, type Module } from "@/data/lessons";
 import ArticleIcon from "@/icons/ArticleIcon.astro";
 import BookIcon from "@/icons/BookIcon.astro";
@@ -9,22 +8,41 @@ import ClockIcon from "@/icons/ClockIcon.astro";
 import LessonsIcon from "@/icons/LessonsIcon.astro";
 import PlayIcon from "@/icons/PlayIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
-import { focusRing, primaryButton, sectionDescriptions } from "@/lib/navigation";
+import { focusRing, primaryButton } from "@/lib/navigation";
 
 const modules = getModules();
 const lessons = modules.flatMap(({ lessons }) => lessons);
 const duration = lessons.reduce((sum, { video }) => sum + (video?.duration ?? 0), 0);
 
-// Entry cards reuse each section's own meta description; no new copy.
 const sections = [
-	{ href: "/guides", title: "Guides", description: sectionMeta.guides.description },
-	{ href: "/etf", title: "ETF", description: sectionMeta.etf.description },
-	{ href: "/pension", title: "Pension", description: sectionDescriptions.pension },
-	{ href: "/platforme", title: "Platforme", description: sectionDescriptions.platforme },
-	{ href: "/ordbog", title: "Ordbog", description: sectionDescriptions.ordbog },
-	{ href: "/youtube", title: "YouTube", description: sectionDescriptions.youtube },
-	{ href: "/spar-penge", title: "Spar penge", description: sectionDescriptions.sparPenge },
-	{ href: "/skat", title: "Skat", description: sectionMeta.skat.description },
+	{
+		href: "/guides",
+		title: "Guides",
+		description: "Få praktiske råd om investering og privatøkonomi.",
+	},
+	{
+		href: "/etf",
+		title: "ETF",
+		description: "Forstå ETF'er, omkostninger og beskatning i Danmark.",
+	},
+	{
+		href: "/pension",
+		title: "Pension",
+		description: "Få overblik over pensionstyper og regler i Danmark.",
+	},
+	{ href: "/platforme", title: "Platforme", description: "Sammenlign platforme til investering." },
+	{ href: "/ordbog", title: "Ordbog", description: "Slå begreber om investering og økonomi op." },
+	{
+		href: "/youtube",
+		title: "YouTube",
+		description: "Se udvalgte videoer om investering og privatøkonomi.",
+	},
+	{
+		href: "/spar-penge",
+		title: "Spar penge",
+		description: "Sammenlign udbydere og sænk dine faste udgifter.",
+	},
+	{ href: "/skat", title: "Skat", description: "Forstå skatten på dine investeringer." },
 ];
 
 function formatDuration(seconds: number): string {

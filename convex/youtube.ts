@@ -7,35 +7,24 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import { internalAction } from "./_generated/server";
+import type { ChannelJobResult, RepairReceipt, TranscriptEntry, VideoJobResult } from "./aiPosts";
+import { regenerateInvalidPostsArgs, rerunChannelDescriptionArgs, rerunVideoArgs } from "./aiPosts";
 import {
 	bestThumbnail,
 	extractHashtags,
 	forEachSafe,
 	parseDuration,
-	SHORTS_THRESHOLD,
 	type Thumbnails,
 } from "./helpers";
-import type { ValidationIssue, VideoAnalysis } from "./lib/contentRules";
-import { type FetchLike, LlmHttpError, resolveLlmConfig } from "./lib/llm";
+import { resolveLlmConfig } from "./lib/llm";
 import {
 	type AuditPage,
-	type auditStoredPost,
 	clampPageSize,
-	isEligibleForAi,
-	JOB_DEADLINE_MS,
 	JOB_STAGGER_MS,
-	MAX_REPAIR_TARGETS,
-	pickVideoForSlug,
 	type SweepRow,
 	selectSweepCandidates,
-	storedAnalysisOf,
+	TRANSCRIPT_FETCH_MAX_MS,
 } from "./lib/pipeline";
-import {
-	type GenerationContext,
-	generateChannelDescription as generateChannelDescriptionText,
-	generateVideoPost,
-	type PostAttempts,
-} from "./lib/videoPost";
 
 // --- Config ---
 
@@ -223,8 +212,6 @@ export const syncChannelVideos = internalAction({
 
 // --- Transcript ---
 
-type TranscriptEntry = { text: string; offset: number; duration: number };
-
 async function fetchTranscriptSegments(
 	videoId: string,
 	signal: AbortSignal,
@@ -242,7 +229,7 @@ async function fetchTranscriptSegments(
 }
 
 /**
- * Transcript only, no LLM call. The sweep no longer schedules it (processNewVideo fetches the
+ * Transcript only, no LLM call. The sweep no longer schedules it (the aiPosts job fetches the
  * transcript itself); it stays so already-scheduled runs remain valid. Failures are logged.
  */
 export const fetchTranscript = internalAction({
@@ -254,7 +241,7 @@ export const fetchTranscript = internalAction({
 		try {
 			const transcript = await fetchTranscriptSegments(
 				videoId,
-				AbortSignal.timeout(JOB_DEADLINE_MS),
+				AbortSignal.timeout(TRANSCRIPT_FETCH_MAX_MS),
 			);
 			if (transcript.length === 0) return;
 			await ctx.runMutation(internal.videos.updateTranscript, { videoId, transcript });
@@ -264,309 +251,68 @@ export const fetchTranscript = internalAction({
 	},
 });
 
-// --- AI jobs ---
-
-/** Everything a job touches, injectable so the jobs run in tests without Convex or network. */
-export type JobDeps = Pick<ActionCtx, "runQuery" | "runMutation"> & {
-	env: Record<string, string | undefined>;
-	now: () => number;
-	fetchImpl?: FetchLike;
-	sleep?: (ms: number) => Promise<void>;
-	fetchTranscriptSegments: (videoId: string, signal: AbortSignal) => Promise<TranscriptEntry[]>;
-	log?: (line: string) => void;
-};
-
-function jobDeps(ctx: ActionCtx): JobDeps {
-	return {
-		runQuery: ctx.runQuery.bind(ctx),
-		runMutation: ctx.runMutation.bind(ctx),
-		env: process.env,
-		now: Date.now,
-		fetchTranscriptSegments,
-	};
-}
-
-/** An exhausted generation run; the message carries the part and issue codes only. */
-export class AiGenerationError extends Error {
-	name = "AiGenerationError";
-}
-
-function issueCodes(issues: ValidationIssue[]): string[] {
-	return [...new Set(issues.map((issue) => issue.code))];
-}
-
-export type VideoJobOptions = {
-	/** Regenerate even when the post is complete (manual rerun). */
-	force?: boolean;
-	/** Generate and validate only; no Convex writes. Provider calls are still made and billed. */
-	dryRun?: boolean;
-	/** "article" keeps the stored analysis and regenerates only the article. */
-	parts?: "all" | "article";
-	deadlineAt?: number;
-};
-
-export type VideoJobResult =
-	| { status: "not_found" | "skipped" }
-	| { status: "insufficient_source"; reason: string }
-	| {
-			status: "dry_run";
-			attempts: PostAttempts;
-			analysis?: VideoAnalysis;
-			article: string;
-	  }
-	| { status: "published" | "stale"; attempts: PostAttempts }
-	| { status: "invalid"; issues: string[] };
-
-/** The transcript fetch shares the job deadline: it is aborted when the deadline is reached. */
-async function fetchTranscriptBefore(
-	deps: JobDeps,
-	videoId: string,
-	deadlineAt: number,
-): Promise<TranscriptEntry[] | undefined> {
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), Math.max(0, deadlineAt - deps.now()));
-	try {
-		return await deps.fetchTranscriptSegments(videoId, controller.signal);
-	} catch (e) {
-		console.error(`Transcript fetch failed for ${videoId}:`, e);
-		return undefined;
-	} finally {
-		clearTimeout(timer);
-	}
-}
-
-// Only 413 (request too large) is specific to this video. 400 is also returned when an
-// organization or workspace spend limit is reached, so it may affect every video:
-// https://platform.claude.com/docs/en/api/errors
-const REQUEST_SPECIFIC_STATUSES = new Set([413]);
-
 /**
- * One video post: transcript → analysis → article → one publish mutation. Nothing is written
- * unless both parts pass; an exhausted run records the failure codes and throws.
+ * The transcript for an aiPosts job, which runs in the Convex runtime: the transcript library
+ * needs Node. Gives up after `timeoutMs` (the job's time left), at most TRANSCRIPT_FETCH_MAX_MS.
+ * Writes nothing; failures are thrown to the job.
  */
-export async function runVideoPostJob(
-	deps: JobDeps,
-	videoId: string,
-	options: VideoJobOptions = {},
-): Promise<VideoJobResult> {
-	const log = deps.log ?? console.log;
-	const deadlineAt = options.deadlineAt ?? deps.now() + JOB_DEADLINE_MS;
-	const video = await deps.runQuery(internal.videos.getByVideoId, { videoId });
-	if (!video) return { status: "not_found" };
-	if (!options.force && video.processedAt !== undefined && video.article) {
-		return { status: "skipped" };
-	}
+export const fetchTranscriptForJob = internalAction({
+	args: { videoId: v.string(), timeoutMs: v.number() },
+	handler: (_ctx, { videoId, timeoutMs }): Promise<TranscriptEntry[]> =>
+		fetchTranscriptSegments(
+			videoId,
+			AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, TRANSCRIPT_FETCH_MAX_MS))),
+		),
+});
 
-	// Shorts never get a post, so their transcript is not fetched.
-	let transcript = video.transcript;
-	if ((video.durationSeconds ?? 0) > SHORTS_THRESHOLD && !transcript?.length) {
-		transcript = await fetchTranscriptBefore(deps, videoId, deadlineAt);
-		if (transcript?.length && !options.dryRun && deps.now() <= deadlineAt) {
-			await deps.runMutation(internal.videos.updateTranscript, { videoId, transcript });
-		}
-	}
-	const eligibility = isEligibleForAi({ durationSeconds: video.durationSeconds, transcript });
-	if (!eligibility.eligible) {
-		log(`video ${videoId}: insufficient_source reason=${eligibility.reason}`);
-		return { status: "insufficient_source", reason: eligibility.reason };
-	}
-
-	const config = resolveLlmConfig(deps.env);
-	const storedAnalysis = options.parts === "article" ? storedAnalysisOf(video) : undefined;
-	if (options.parts === "article" && !storedAnalysis) {
-		throw new Error(`Video ${videoId} has no stored analysis; rerun with parts "all"`);
-	}
-	const channel = await deps.runQuery(internal.channels.getByChannelId, {
-		channelId: video.channelId,
-	});
-	const ctx: GenerationContext = {
-		config,
-		deadlineAt,
-		now: deps.now,
-		llm: { fetchImpl: deps.fetchImpl, sleep: deps.sleep },
-		log,
-		label: `video ${videoId}`,
-	};
-
-	let result: Awaited<ReturnType<typeof generateVideoPost>>;
-	try {
-		result = await generateVideoPost(
-			{ title: video.title, description: video.description, transcript },
-			channel?.name ?? "YouTube",
-			ctx,
-			{ storedAnalysis },
-		);
-	} catch (error) {
-		// Only a request-specific rejection counts against this video. Auth, permission, model
-		// and other provider errors affect every video, so they must not gate this one.
-		if (error instanceof LlmHttpError && REQUEST_SPECIFIC_STATUSES.has(error.status)) {
-			if (!options.dryRun) {
-				await deps.runMutation(internal.videos.recordAiFailure, {
-					videoId,
-					issues: ["provider_rejected_request"],
-				});
-			}
-		} else if (error instanceof LlmHttpError) {
-			console.error(`video ${videoId}: provider error, fix the AI configuration: ${error.message}`);
-		}
-		throw error;
-	}
-
-	const fail = async (part: string, codes: string[]): Promise<never> => {
-		if (!options.dryRun) {
-			await deps.runMutation(internal.videos.recordAiFailure, { videoId, issues: codes });
-		}
-		throw new AiGenerationError(`AI post failed for ${videoId}: ${part} issues=${codes.join(",")}`);
-	};
-	if (!result.ok) return fail(result.part, issueCodes(result.lastIssues));
-
-	if (options.dryRun) {
-		return {
-			status: "dry_run",
-			attempts: result.attempts,
-			analysis: result.analysis,
-			article: result.article,
-		};
-	}
-
-	if (deps.now() > deadlineAt) return fail("publish", ["deadline"]);
-	const published = await deps.runMutation(internal.videos.publishPost, {
-		videoId,
-		expectedProcessedAt: video.processedAt,
-		...(result.analysis ? { analysis: result.analysis } : {}),
-		article: result.article,
-		deadlineAt,
-	});
-	log(`video ${videoId}: publish ${published.status}`);
-	if (published.status === "published" || published.status === "stale") {
-		return { status: published.status, attempts: result.attempts };
-	}
-	if (published.status === "deadline") return fail("publish", ["deadline"]);
-	if (published.status === "invalid") return published;
-	return { status: "not_found" };
-}
-
-export type ChannelJobResult =
-	| { status: "not_found" }
-	| { status: "dry_run"; attempts: number; aiDescription: string }
-	| { status: "published" | "stale"; attempts: number }
-	| { status: "invalid"; issues: string[] };
-
-/** One channel description: generate → validate → judge → guarded publish. Throws when exhausted. */
-export async function runChannelDescriptionJob(
-	deps: JobDeps,
-	channelId: string,
-	options: { dryRun?: boolean; deadlineAt?: number } = {},
-): Promise<ChannelJobResult> {
-	const log = deps.log ?? console.log;
-	const channel = await deps.runQuery(internal.channels.getByChannelId, { channelId });
-	if (!channel) return { status: "not_found" };
-	const config = resolveLlmConfig(deps.env);
-	const recentVideos = await deps.runQuery(internal.videos.listRecentByChannel, {
-		channelId,
-		limit: 10,
-	});
-
-	const deadlineAt = options.deadlineAt ?? deps.now() + JOB_DEADLINE_MS;
-	const result = await generateChannelDescriptionText(
-		{ name: channel.name, description: channel.description },
-		recentVideos,
-		{
-			config,
-			deadlineAt,
-			now: deps.now,
-			llm: { fetchImpl: deps.fetchImpl, sleep: deps.sleep },
-			log,
-			label: `channel ${channelId}`,
-		},
-	);
-	if (!result.ok) {
-		throw new AiGenerationError(
-			`AI channel description failed for ${channelId}: issues=${issueCodes(result.lastIssues).join(",")}`,
-		);
-	}
-	if (options.dryRun) {
-		return { status: "dry_run", attempts: result.attempts, aiDescription: result.value };
-	}
-
-	const deadlineError = new AiGenerationError(
-		`AI channel description not published for ${channelId}: issues=deadline`,
-	);
-	if (deps.now() > deadlineAt) throw deadlineError;
-	const published = await deps.runMutation(internal.channels.publishAiDescription, {
-		channelId,
-		aiDescription: result.value,
-		expectedAiDescription: channel.aiDescription,
-		deadlineAt,
-	});
-	log(`channel ${channelId}: publish ${published.status}`);
-	if (published.status === "published" || published.status === "stale") {
-		return { status: published.status, attempts: result.attempts };
-	}
-	if (published.status === "deadline") throw deadlineError;
-	return published;
-}
+// --- Old AI job names ---
+// Jobs already scheduled in production still call these names, so they keep their args. Each
+// hands the job to aiPosts (Convex runtime, 30-minute limit) instead of running it here (Node,
+// 10-minute limit).
 
 const videoIdArgs = { videoId: v.string() };
 
-// processVideo and generateArticle keep their names so already-scheduled runs stay valid;
-// both run the full job, because analysis and article are published together.
-export const processVideo = internalAction({
-	args: videoIdArgs,
-	handler: (ctx, { videoId }) => runVideoPostJob(jobDeps(ctx), videoId),
-});
+async function forwardVideoJob(ctx: ActionCtx, { videoId }: { videoId: string }): Promise<null> {
+	await ctx.scheduler.runAfter(0, internal.aiPosts.generateVideoPost, { videoId });
+	return null;
+}
 
-export const generateArticle = internalAction({
-	args: videoIdArgs,
-	handler: (ctx, { videoId }) => runVideoPostJob(jobDeps(ctx), videoId),
-});
+export const processNewVideo = internalAction({ args: videoIdArgs, handler: forwardVideoJob });
+export const processVideo = internalAction({ args: videoIdArgs, handler: forwardVideoJob });
+export const generateArticle = internalAction({ args: videoIdArgs, handler: forwardVideoJob });
 
 export const generateChannelDescription = internalAction({
 	args: { channelId: v.string() },
-	handler: (ctx, { channelId }) => runChannelDescriptionJob(jobDeps(ctx), channelId),
+	handler: async (ctx, { channelId }): Promise<null> => {
+		await ctx.scheduler.runAfter(0, internal.aiPosts.generateChannelDescription, { channelId });
+		return null;
+	},
+});
+
+// The old CLI names wait for the aiPosts action and return its result, so they stay bound by
+// this Node action's 10-minute limit; use the aiPosts names for long runs.
+
+/** Deprecated: use aiPosts:rerunVideo. */
+export const rerunVideo = internalAction({
+	args: rerunVideoArgs,
+	handler: (ctx, args): Promise<VideoJobResult> => ctx.runAction(internal.aiPosts.rerunVideo, args),
+});
+
+/** Deprecated: use aiPosts:rerunChannelDescription. */
+export const rerunChannelDescription = internalAction({
+	args: rerunChannelDescriptionArgs,
+	handler: (ctx, args): Promise<ChannelJobResult> =>
+		ctx.runAction(internal.aiPosts.rerunChannelDescription, args),
+});
+
+/** Deprecated: use aiPosts:regenerateInvalidPosts. */
+export const regenerateInvalidPosts = internalAction({
+	args: regenerateInvalidPostsArgs,
+	handler: (ctx, args): Promise<RepairReceipt[]> =>
+		ctx.runAction(internal.aiPosts.regenerateInvalidPosts, args),
 });
 
 // --- CLI commands (internal; run with `npx convex run youtube:<name> '<json>'`) ---
-
-type VideoTarget = { videoId: string } | { slug: string; channelId?: string };
-
-export async function resolveVideoTarget(
-	deps: Pick<ActionCtx, "runQuery">,
-	target: VideoTarget,
-): Promise<string> {
-	if ("videoId" in target) return target.videoId;
-	const matches = await deps.runQuery(internal.videos.findBySlug, {
-		slug: target.slug,
-		...(target.channelId ? { channelId: target.channelId } : {}),
-	});
-	return pickVideoForSlug(matches, target);
-}
-
-/**
- * Regenerates one video post now, ignoring the failure gate. With dryRun the result is returned
- * and nothing is written, but the provider calls are still made and billed.
- */
-export const rerunVideo = internalAction({
-	args: {
-		target: v.union(
-			v.object({ videoId: v.string() }),
-			v.object({ slug: v.string(), channelId: v.optional(v.string()) }),
-		),
-		parts: v.optional(v.union(v.literal("all"), v.literal("article"))),
-		dryRun: v.optional(v.boolean()),
-	},
-	handler: async (ctx, { target, parts, dryRun }): Promise<VideoJobResult> => {
-		const videoId = await resolveVideoTarget(ctx, target);
-		return runVideoPostJob(jobDeps(ctx), videoId, { force: true, parts, dryRun });
-	},
-});
-
-/** Regenerates one channel description now; dryRun returns it without writing (still billed). */
-export const rerunChannelDescription = internalAction({
-	args: { channelId: v.string(), dryRun: v.optional(v.boolean()) },
-	handler: (ctx, { channelId, dryRun }): Promise<ChannelJobResult> =>
-		runChannelDescriptionJob(jobDeps(ctx), channelId, { dryRun }),
-});
 
 type AuditArgs = { table: "videos" | "channels"; cursor?: string | null; pageSize?: number };
 
@@ -588,45 +334,6 @@ export const auditContent = internalAction({
 		pageSize: v.optional(v.number()),
 	},
 	handler: (ctx, args): Promise<AuditPage> => runAudit(ctx, args),
-});
-
-export type RepairReceipt =
-	| { videoId: string; status: "scheduled"; delayMs: number; issues: string[] }
-	| { videoId: string; status: "valid" | "not_found" };
-
-/** Re-validates each target and schedules a forced rerun only for failing or missing posts. */
-export async function queueRepairs(deps: FanOutDeps, targets: string[]): Promise<RepairReceipt[]> {
-	if (targets.length > MAX_REPAIR_TARGETS) {
-		throw new Error(`regenerateInvalidPosts takes at most ${MAX_REPAIR_TARGETS} targets`);
-	}
-	const log = deps.log ?? console.log;
-	const receipts: RepairReceipt[] = [];
-	let scheduled = 0;
-	for (const videoId of targets) {
-		const audit: ReturnType<typeof auditStoredPost> | null = await deps.runQuery(
-			internal.videos.auditOne,
-			{ videoId },
-		);
-		if (!audit) {
-			receipts.push({ videoId, status: "not_found" });
-			continue;
-		}
-		const issues = audit.missing ? ["missing"] : audit.findings.flatMap((f) => f.issues);
-		if (issues.length === 0) {
-			receipts.push({ videoId, status: "valid" });
-			continue;
-		}
-		const delayMs = scheduled++ * JOB_STAGGER_MS;
-		await deps.scheduler.runAfter(delayMs, internal.youtube.rerunVideo, { target: { videoId } });
-		receipts.push({ videoId, status: "scheduled", delayMs, issues });
-	}
-	log(`regenerateInvalidPosts: scheduled ${scheduled} of ${targets.length}`);
-	return receipts;
-}
-
-export const regenerateInvalidPosts = internalAction({
-	args: { targets: v.array(v.string()) },
-	handler: (ctx, { targets }): Promise<RepairReceipt[]> => queueRepairs(ctx, targets),
 });
 
 // --- Pipeline ---
@@ -658,16 +365,14 @@ export async function sweepVideos(
 		isDone = result.isDone;
 	}
 
-	// One job type: processNewVideo fetches a missing transcript first and makes no LLM call
+	// One job type: the aiPosts job fetches a missing transcript first and makes no LLM call
 	// when the source is insufficient.
 	const videoIds = selectSweepCandidates(rows, deps.now());
 	for (const videoId of videoIds) {
 		await deps.scheduler.runAfter(
 			stagger.queued++ * JOB_STAGGER_MS,
-			internal.youtube.processNewVideo,
-			{
-				videoId,
-			},
+			internal.aiPosts.generateVideoPost,
+			{ videoId },
 		);
 	}
 	log(`sweep: checked ${rows.length} video(s), queued ${videoIds.length} job(s)`);
@@ -679,19 +384,13 @@ export async function queueChannelDescriptionJobs(deps: FanOutDeps) {
 	const log = deps.log ?? console.log;
 	const channels = await deps.runQuery(internal.channels.listAll);
 	for (const [i, channel] of channels.entries()) {
-		await deps.scheduler.runAfter(i * JOB_STAGGER_MS, internal.youtube.generateChannelDescription, {
+		await deps.scheduler.runAfter(i * JOB_STAGGER_MS, internal.aiPosts.generateChannelDescription, {
 			channelId: channel.channelId,
 		});
 	}
 	log(`channel descriptions: queued ${channels.length} job(s)`);
 	return { queued: channels.length };
 }
-
-/** Full job for one video: transcript → analysis → article → publish, in order. */
-export const processNewVideo = internalAction({
-	args: videoIdArgs,
-	handler: (ctx, { videoId }) => runVideoPostJob(jobDeps(ctx), videoId),
-});
 
 export const refreshVideoStats = internalAction({
 	args: {},

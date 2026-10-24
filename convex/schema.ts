@@ -83,6 +83,10 @@ export default defineSchema({
 		/** @deprecated No longer used — shorts determined by durationSeconds. Kept for existing data. */
 		isShort: v.optional(v.boolean()),
 
+		// Raised by every write that changes title, description or transcript; publishPost only
+		// accepts a post generated from the version it expects.
+		sourceVersion: v.optional(v.number()),
+
 		// Transcript
 		transcript: v.optional(
 			v.array(

@@ -274,6 +274,36 @@ describe("completeText transport", () => {
 		});
 	});
 
+	it("announces every physical request before it is sent, retries included", async () => {
+		const overloaded = () =>
+			jsonResponse({ type: "error", error: { type: "overloaded_error" } }, 529);
+		const { fetchImpl } = fakeFetch([overloaded(), jsonResponse(claudeBody("Svar"))]);
+		const beforeRequest = vi.fn();
+		await completeText(claude, prompt, { fetchImpl, sleep: noSleep, beforeRequest });
+		const announced = {
+			provider: "claude",
+			model: "claude-x",
+			promptChars: prompt.system.length + prompt.user.length,
+			maxOutputTokens: 16_000,
+		};
+		expect(beforeRequest.mock.calls).toEqual([[announced], [announced]]);
+	});
+
+	it("stops without sending or retrying when the request announcement throws", async () => {
+		const { fetchImpl } = fakeFetch([jsonResponse(claudeBody("Svar"))]);
+		const stop = new Error("cap");
+		await expect(
+			completeText(claude, prompt, {
+				fetchImpl,
+				sleep: noSleep,
+				beforeRequest: () => {
+					throw stop;
+				},
+			}),
+		).rejects.toBe(stop);
+		expect(fetchImpl).not.toHaveBeenCalled();
+	});
+
 	it("calls only the OpenRouter endpoint for openrouter", async () => {
 		const { fetchImpl, calls } = fakeFetch([
 			jsonResponse({ choices: [{ message: { content: "x" } }] }),

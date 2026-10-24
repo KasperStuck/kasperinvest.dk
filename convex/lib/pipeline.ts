@@ -1,14 +1,20 @@
 /** Pure pipeline rules: AI eligibility, job budget, failure gate, sweep selection and CLI helpers. */
 import { SHORTS_THRESHOLD, type TranscriptSegment } from "../helpers";
 import {
+	type PostSource,
 	type ValidationIssue,
 	type VideoAnalysis,
 	validateAnalysis,
 	validateArticle,
 } from "./contentRules";
 
-/** One deadline per job, below the 10-minute Node action limit. */
-export const JOB_DEADLINE_MS = 8 * 60_000;
+/**
+ * One deadline per job, computed when the aiPosts action starts; below the 30-minute limit of
+ * Convex-runtime actions (https://docs.convex.dev/production/state/limits).
+ */
+export const JOB_DEADLINE_MS = 25 * 60_000;
+/** A transcript fetch runs in a Node action, which has a 10-minute limit. */
+export const TRANSCRIPT_FETCH_MAX_MS = 8 * 60_000;
 export const MIN_TRANSCRIPT_WORDS = 300;
 
 export function transcriptWordCount(transcript: TranscriptSegment[] | undefined): number {
@@ -146,17 +152,29 @@ function errorCodes(issues: ValidationIssue[]): string[] {
 	return [...new Set(issues.filter((i) => i.severity === "error").map((i) => i.code))];
 }
 
-/** Re-validates a stored post with the current rules. Error codes only, no content. */
+/**
+ * Re-validates a stored post with the current rules, against its own source (title,
+ * description, transcript) like the publish mutation does. Error codes only, no content.
+ */
 export function auditStoredPost(
-	video: Partial<VideoAnalysis> & { title: string; processedAt?: number; article?: string },
+	video: Partial<VideoAnalysis> &
+		PostSource & {
+			processedAt?: number;
+			article?: string;
+		},
 ): { missing: true } | { missing: false; findings: AuditFinding[] } {
 	const analysis = storedAnalysisOf(video);
 	if (!analysis || !video.article) return { missing: true };
 	const findings: AuditFinding[] = [];
-	const analysisIssues = errorCodes(validateAnalysis(analysis));
+	const analysisIssues = errorCodes(validateAnalysis(analysis, video));
 	if (analysisIssues.length) findings.push({ part: "analysis", issues: analysisIssues });
 	const articleIssues = errorCodes(
-		validateArticle(video.article, { title: video.title, seoTitle: analysis.seoTitle }),
+		validateArticle(video.article, {
+			title: video.title,
+			seoTitle: analysis.seoTitle,
+			analysis,
+			source: video,
+		}),
 	);
 	if (articleIssues.length) findings.push({ part: "article", issues: articleIssues });
 	return { missing: false, findings };

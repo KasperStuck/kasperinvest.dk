@@ -53,7 +53,17 @@ export type LlmCallOptions = {
 	/** Absolute epoch ms; no request starts with less than MIN_REMAINING_MS left. */
 	deadlineAt?: number;
 	onUsage?: (usage: LlmUsage & { provider: LlmProvider; model: string }) => void;
+	/** Called before every physical request, retries included; a throw stops the call unsent. */
+	beforeRequest?: (request: LlmRequestInfo) => void;
 	log?: (line: string) => void;
+};
+
+/** What a request may cost: prompt size and the max_tokens it is sent with. */
+export type LlmRequestInfo = {
+	provider: LlmProvider;
+	model: string;
+	promptChars: number;
+	maxOutputTokens: number;
 };
 
 // --- Errors ---
@@ -353,6 +363,12 @@ async function complete(
 			? buildClaudeRequest(config, prompt, json)
 			: buildOpenRouterRequest(config, prompt, json);
 	const where = `provider=${config.provider} model=${config.model}`;
+	const requestInfo: LlmRequestInfo = {
+		provider: config.provider,
+		model: config.model,
+		promptChars: prompt.system.length + prompt.user.length,
+		maxOutputTokens: config.provider === "claude" ? CLAUDE_MAX_TOKENS : OPENROUTER_MAX_TOKENS,
+	};
 
 	let lastFailure = "";
 	for (let attempt = 0; attempt <= TRANSIENT_RETRY_DELAYS_MS.length; attempt++) {
@@ -367,6 +383,8 @@ async function complete(
 			break;
 		}
 
+		// Outside the try: a refusal here (e.g. a spend cap) must not be retried.
+		options.beforeRequest?.(requestInfo);
 		try {
 			const { data, requestId } = await sendOnce(
 				config,

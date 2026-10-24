@@ -10,14 +10,18 @@
 
 import type * as affiliatePrograms from "../affiliatePrograms.js";
 import type * as affiliateSync from "../affiliateSync.js";
+import type * as aiPosts from "../aiPosts.js";
 import type * as channels from "../channels.js";
 import type * as crons from "../crons.js";
 import type * as helpers from "../helpers.js";
 import type * as lib_contentRules from "../lib/contentRules.js";
+import type * as lib_factCheck from "../lib/factCheck.js";
 import type * as lib_generation from "../lib/generation.js";
 import type * as lib_llm from "../lib/llm.js";
 import type * as lib_pipeline from "../lib/pipeline.js";
+import type * as lib_pricing from "../lib/pricing.js";
 import type * as lib_prompts from "../lib/prompts.js";
+import type * as lib_style from "../lib/style.js";
 import type * as lib_videoPost from "../lib/videoPost.js";
 import type * as videos from "../videos.js";
 import type * as youtube from "../youtube.js";
@@ -31,14 +35,18 @@ import type {
 declare const fullApi: ApiFromModules<{
   affiliatePrograms: typeof affiliatePrograms;
   affiliateSync: typeof affiliateSync;
+  aiPosts: typeof aiPosts;
   channels: typeof channels;
   crons: typeof crons;
   helpers: typeof helpers;
   "lib/contentRules": typeof lib_contentRules;
+  "lib/factCheck": typeof lib_factCheck;
   "lib/generation": typeof lib_generation;
   "lib/llm": typeof lib_llm;
   "lib/pipeline": typeof lib_pipeline;
+  "lib/pricing": typeof lib_pricing;
   "lib/prompts": typeof lib_prompts;
+  "lib/style": typeof lib_style;
   "lib/videoPost": typeof lib_videoPost;
   videos: typeof videos;
   youtube: typeof youtube;

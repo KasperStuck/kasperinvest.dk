@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { JudgeVerdict, ValidationIssue } from "./contentRules";
-import { generateValidated } from "./generation";
+import { generateValidated, judgeIssues } from "./generation";
 import {
 	LlmConfigError,
 	LlmContentError,
@@ -35,7 +35,9 @@ function setup(options: {
 		return next;
 	});
 	const validate = vi.fn((value: string) => options.issues?.[value] ?? []);
-	const judge = vi.fn(async (_value: string) => verdicts.shift() ?? pass);
+	const judge = vi.fn(
+		async (_value: string, _warnings: ValidationIssue[]) => verdicts.shift() ?? pass,
+	);
 	const now = () => (clock.length > 1 ? (clock.shift() as number) : (clock[0] ?? 0));
 	return { generate, validate, judge, now, deadlineAt: 8 * 60_000, log: vi.fn() };
 }
@@ -55,7 +57,7 @@ describe("generateValidated", () => {
 		const result = await generateValidated(deps);
 		expect(result).toMatchObject({ ok: true, value: "ok", attempts: 2 });
 		expect(deps.judge).toHaveBeenCalledTimes(1);
-		expect(deps.judge).toHaveBeenCalledWith("ok");
+		expect(deps.judge).toHaveBeenCalledWith("ok", []);
 		expect(deps.generate.mock.calls[1][0]).toEqual([bad]);
 	});
 
@@ -96,7 +98,7 @@ describe("generateValidated", () => {
 		await expect(generateValidated(config)).rejects.toBeInstanceOf(LlmConfigError);
 	});
 
-	it("lets content errors and exhausted transient errors consume an attempt", async () => {
+	it("retries content errors but preserves exhausted provider availability", async () => {
 		const deps = setup({
 			outputs: [
 				new LlmContentError("invalid_json"),
@@ -104,14 +106,12 @@ describe("generateValidated", () => {
 				"ok",
 			],
 		});
-		const result = await generateValidated(deps);
-		expect(result).toMatchObject({ ok: true, attempts: 3 });
+		await expect(generateValidated(deps)).rejects.toBeInstanceOf(LlmUnavailableError);
+		expect(deps.generate).toHaveBeenCalledTimes(2);
 		expect(deps.generate.mock.calls[1][0].map((i: ValidationIssue) => i.code)).toEqual([
 			"invalid_json",
 		]);
-		expect(deps.generate.mock.calls[2][0].map((i: ValidationIssue) => i.code)).toEqual([
-			"provider_unavailable",
-		]);
+		expect(deps.judge).not.toHaveBeenCalled();
 	});
 
 	it("treats a malformed judge answer as a consumed attempt", async () => {
@@ -162,6 +162,12 @@ describe("generateValidated", () => {
 		expect(result).toMatchObject({ ok: true, warnings: [warn] });
 	});
 
+	it("passes the attempt's warnings to the judge", async () => {
+		const deps = setup({ outputs: ["ok"], issues: { ok: [warn] } });
+		await generateValidated(deps);
+		expect(deps.judge).toHaveBeenCalledWith("ok", [warn]);
+	});
+
 	it("applies normalize before validation and judge", async () => {
 		const deps = setup({ outputs: ["  ok  "] });
 		const result = await generateValidated({ ...deps, normalize: (v: string) => v.trim() });
@@ -177,5 +183,137 @@ describe("generateValidated", () => {
 		expect(logged).toContain("article v1");
 		expect(logged).not.toContain("SECRET-OUTPUT");
 		expect(logged).not.toContain("Brug ikke H1.");
+	});
+});
+
+describe("judgeIssues", () => {
+	it("removes en and em dashes from the judge reason before it is fed back", () => {
+		const [low] = judgeIssues({
+			...pass,
+			score: 5,
+			reason: "Fin tekst \u2013 men 2020\u20132024 er uklart\u2014ret det.",
+		});
+		expect(low.code).toBe("judge_low_score");
+		expect(low.message).not.toMatch(/[\u2013\u2014]/);
+		expect(low.message).toContain("2020-2024");
+	});
+});
+
+describe("generateValidated with a fact-check step", () => {
+	const fact: ValidationIssue = {
+		code: "fact_unsupported",
+		message: "Disse påstande kunne ikke findes i kilden.",
+		severity: "error",
+	};
+
+	function withFactCheck(
+		options: Parameters<typeof setup>[0] & { facts?: Array<ValidationIssue[] | Error> },
+	) {
+		const deps = setup(options);
+		const order: string[] = [];
+		const facts = [...(options.facts ?? [])];
+		const generate = vi.fn(async (feedback: ValidationIssue[]) => {
+			order.push("generate");
+			return deps.generate(feedback);
+		});
+		const validate = vi.fn((value: string) => {
+			order.push("validate");
+			return deps.validate(value);
+		});
+		const factCheck = vi.fn(async (_value: string) => {
+			order.push("factCheck");
+			const next = facts.shift() ?? [];
+			if (next instanceof Error) throw next;
+			return next;
+		});
+		const judge = vi.fn(async (value: string, warnings: ValidationIssue[]) => {
+			order.push("judge");
+			return deps.judge(value, warnings);
+		});
+		return { ...deps, generate, validate, factCheck, judge, order };
+	}
+
+	it("runs after the deterministic rules and before the judge", async () => {
+		const deps = withFactCheck({ outputs: ["ok"] });
+		const result = await generateValidated(deps);
+		expect(result).toMatchObject({ ok: true, attempts: 1 });
+		expect(deps.order).toEqual(["generate", "validate", "factCheck", "judge"]);
+	});
+
+	it("is skipped when the deterministic rules fail", async () => {
+		const deps = withFactCheck({ outputs: ["bad", "ok"], issues: { bad: [bad] } });
+		await generateValidated(deps);
+		expect(deps.order).toEqual([
+			"generate",
+			"validate",
+			"generate",
+			"validate",
+			"factCheck",
+			"judge",
+		]);
+	});
+
+	it("feeds fact errors back and skips the judge for that attempt", async () => {
+		const deps = withFactCheck({ outputs: ["a", "b"], facts: [[fact], []] });
+		const result = await generateValidated(deps);
+		expect(result).toMatchObject({ ok: true, value: "b", attempts: 2 });
+		expect(deps.order).toEqual([
+			"generate",
+			"validate",
+			"factCheck",
+			"generate",
+			"validate",
+			"factCheck",
+			"judge",
+		]);
+		expect(deps.generate.mock.calls[1][0]).toEqual([fact]);
+		expect(JSON.stringify(deps.log.mock.calls)).toContain("fact-check issues=fact_unsupported");
+	});
+
+	it("returns the fact errors after three failed attempts", async () => {
+		const deps = withFactCheck({ outputs: ["a", "b", "c"], facts: [[fact], [fact], [fact]] });
+		expect(await generateValidated(deps)).toEqual({ ok: false, attempts: 3, lastIssues: [fact] });
+		expect(deps.judge).not.toHaveBeenCalled();
+	});
+
+	it("retries fact-check content errors but preserves exhausted provider availability", async () => {
+		const deps = withFactCheck({
+			outputs: ["a", "b", "c"],
+			facts: [
+				new LlmContentError("fact_check_coverage"),
+				new LlmUnavailableError("claude", "HTTP 529"),
+				[],
+			],
+		});
+		await expect(generateValidated(deps)).rejects.toBeInstanceOf(LlmUnavailableError);
+		expect(deps.generate).toHaveBeenCalledTimes(2);
+		expect(deps.generate.mock.calls[1][0].map((i: ValidationIssue) => i.code)).toEqual([
+			"fact_check_coverage",
+		]);
+		expect(deps.judge).not.toHaveBeenCalled();
+	});
+
+	it("rethrows a permanent provider error from the fact-check", async () => {
+		const deps = withFactCheck({ outputs: ["a"], facts: [new LlmHttpError("claude", 401)] });
+		await expect(generateValidated(deps)).rejects.toBeInstanceOf(LlmHttpError);
+		expect(deps.judge).not.toHaveBeenCalled();
+	});
+
+	it("starts no fact-check when the deadline is reached after validation", async () => {
+		const deps = withFactCheck({ outputs: ["ok"], clock: [0, 8 * 60_000 - 19_000] });
+		const result = await generateValidated(deps);
+		expect(result).toMatchObject({ ok: false, attempts: 1 });
+		expect(deps.factCheck).not.toHaveBeenCalled();
+	});
+
+	it("stops with deadline when a fact-check call hits the deadline", async () => {
+		const deps = withFactCheck({ outputs: ["ok"], facts: [new LlmDeadlineError()] });
+		const result = await generateValidated(deps);
+		expect(result).toEqual({
+			ok: false,
+			attempts: 1,
+			lastIssues: [expect.objectContaining({ code: "deadline" })],
+		});
+		expect(deps.judge).not.toHaveBeenCalled();
 	});
 });

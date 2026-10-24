@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { transcriptOfWords, VIDEO_TITLE, validAnalysis, validArticle } from "./fixtures.testing";
 import {
 	auditStoredPost,
 	clampPageSize,
@@ -161,44 +162,54 @@ describe("CLI helpers", () => {
 });
 
 describe("auditStoredPost", () => {
-	const analysis = {
-		summary:
-			"Videoen gennemgår, hvordan danske begyndere kan komme i gang med indeksfonde, og hvorfor lave omkostninger betyder meget.",
-		seoTitle: "Indeksfonde for begyndere: kom godt i gang",
-		seoDescription:
-			"Lær hvordan du vælger en billig indeksfond, hvad aktiesparekontoen betyder for skatten, og hvorfor tid er din vigtigste allierede.",
-		themes: ["indeksfonde"],
-		categories: ["ETF" as const],
-		keyTakeaways: ["a", "b", "c"],
-		faq: [
-			{ question: "Et?", answer: "Ja." },
-			{ question: "To?", answer: "Ja." },
-			{ question: "Tre?", answer: "Ja." },
-		],
-		relevanceScore: 50,
+	const analysis = validAnalysis();
+	const video = {
+		title: VIDEO_TITLE,
+		description: "Om indeksfonde.",
+		transcript: transcriptOfWords(400),
+		...analysis,
+		processedAt: 1,
+		article: validArticle(),
 	};
 
 	it("reports missing content", () => {
-		expect(auditStoredPost({ title: "T" })).toEqual({ missing: true });
-		expect(auditStoredPost({ title: "T", ...analysis, processedAt: 1 })).toEqual({
-			missing: true,
-		});
+		expect(auditStoredPost({ title: "T", description: "" })).toEqual({ missing: true });
+		expect(auditStoredPost({ ...video, article: undefined })).toEqual({ missing: true });
 	});
 
 	it("reports failing parts with error codes only", () => {
 		const result = auditStoredPost({
-			title: "T",
-			...analysis,
+			...video,
 			seoTitle: "kort",
-			processedAt: 1,
 			article: "## Overskrift\n\nKort tekst.",
 		});
 		expect(result).toEqual({
 			missing: false,
 			findings: [
 				{ part: "analysis", issues: ["seo_title_length"] },
-				{ part: "article", issues: ["intro_missing", "too_few_sections", "word_count"] },
+				{ part: "article", issues: ["too_few_sections", "word_count"] },
 			],
+		});
+	});
+
+	it("checks years against the transcript and repetition against the stored analysis", () => {
+		const year = "Indeksfonde i 2019: kom godt i gang";
+		expect(auditStoredPost({ ...video, seoTitle: year })).toEqual({
+			missing: false,
+			findings: [{ part: "analysis", issues: ["unsupported_year"] }],
+		});
+		const transcript = [...video.transcript, { text: "i 2019 faldt alt", offset: 0, duration: 1 }];
+		expect(auditStoredPost({ ...video, seoTitle: year, transcript })).toEqual({
+			missing: false,
+			findings: [],
+		});
+		const article = video.article.replace(
+			"Et eksempel gør det tydeligt.",
+			`${analysis.keyTakeaways[1]} Et eksempel gør det tydeligt.`,
+		);
+		const repeated = auditStoredPost({ ...video, article });
+		expect(repeated).toMatchObject({
+			findings: [{ part: "article", issues: expect.arrayContaining(["duplicate_text"]) }],
 		});
 	});
 });

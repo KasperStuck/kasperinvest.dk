@@ -3,7 +3,7 @@
 import type { PaginationResult } from "convex/server";
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import {
 	transcriptOfWords,
 	VIDEO_TITLE,
@@ -12,6 +12,7 @@ import {
 } from "./lib/fixtures.testing";
 import type { SweepRow } from "./lib/pipeline";
 import schema from "./schema";
+import { needsTranscript, saveTranscript } from "./videos";
 
 const modules = import.meta.glob("./**/*.*s");
 const newTest = () => convexTest(schema, modules);
@@ -28,7 +29,7 @@ const baseVideo = {
 	durationSeconds: 600,
 };
 
-// Fake timers keep scheduled actions (e.g. processNewVideo after insert) from running.
+// Fake timers keep scheduled actions (e.g. aiPosts.generateVideoPost after insert) from running.
 beforeEach(() => {
 	vi.useFakeTimers();
 });
@@ -114,6 +115,130 @@ describe("publishPost", () => {
 		expect(video?.processedAt).not.toBe(5);
 	});
 
+	it("re-validates the stored analysis on an article-only publish", async () => {
+		const t = newTest();
+		const stale = { ...validAnalysis(), summary: "Videoen handler om fonde." };
+		await seed(t, { ...stale, article: "gammel", processedAt: 5 });
+		const result = await t.mutation(internal.videos.publishPost, {
+			deadlineAt: openDeadline(),
+			videoId: "vid1",
+			expectedProcessedAt: 5,
+			article: validArticle(),
+		});
+		expect(result).toEqual({
+			status: "invalid",
+			issues: ["summary_length", "video_reference"],
+		});
+		const video = await load(t);
+		expect(video?.article).toBe("gammel");
+		expect(video?.processedAt).toBe(5);
+	});
+
+	it("rejects a thought dash in the article atomically and keeps the stored post", async () => {
+		const t = newTest();
+		await seed(t, { ...validAnalysis(), article: "gammel", processedAt: 5 });
+		const result = await t.mutation(internal.videos.publishPost, {
+			deadlineAt: openDeadline(),
+			videoId: "vid1",
+			expectedProcessedAt: 5,
+			analysis: { ...validAnalysis(), seoTitle: "En helt ny titel om indeksfonde" },
+			article: validArticle().replace("Det holder de", "Det holder – de"),
+		});
+		expect(result).toEqual({ status: "invalid", issues: ["thought_dash"] });
+		const video = await load(t);
+		expect(video?.article).toBe("gammel");
+		expect(video?.seoTitle).toBe(validAnalysis().seoTitle);
+		expect(video?.processedAt).toBe(5);
+	});
+
+	it("never publishes an en dash in any field, literal or entity-encoded", async () => {
+		const dashes = ["\u2013", "&ndash;", "&#8211;", "&#x2013;"];
+		const analysis = validAnalysis();
+		const fieldCases = (dash: string): Array<{ analysis?: object; article?: string }> => [
+			{
+				analysis: { ...analysis, summary: analysis.summary.replace(" og den", ` ${dash} og den`) },
+			},
+			{ analysis: { ...analysis, seoTitle: `Indeksfonde 2020${dash}2024: kom i gang` } },
+			{
+				analysis: {
+					...analysis,
+					seoDescription: analysis.seoDescription.replace(", hvad", ` ${dash} hvad`),
+				},
+			},
+			{ analysis: { ...analysis, themes: ["indeksfonde", `Q1${dash}Q3`] } },
+			{
+				analysis: {
+					...analysis,
+					keyTakeaways: [
+						`${analysis.keyTakeaways[0].slice(0, -1)} i 5${dash}6 år.`,
+						...analysis.keyTakeaways.slice(1),
+					],
+				},
+			},
+			{
+				analysis: {
+					...analysis,
+					faq: analysis.faq.map((f, i) =>
+						i === 0 ? { ...f, question: `Hvad er en fond${dash}kort?` } : f,
+					),
+				},
+			},
+			{
+				analysis: {
+					...analysis,
+					faq: analysis.faq.map((f, i) =>
+						i === 1 ? { ...f, answer: `${f.answer.slice(0, -1)} i 5${dash}6 år.` } : f,
+					),
+				},
+			},
+			{ article: validArticle().replace("Det holder de", `Det holder 5${dash}6 de`) },
+			{ article: validArticle().replace("## Hvad koster", `## 2020${dash}2024: hvad koster`) },
+		];
+		for (const dash of dashes) {
+			for (const fields of fieldCases(dash)) {
+				const t = newTest();
+				await seed(t, { transcript: transcriptOfWords(400) });
+				const result = await t.mutation(internal.videos.publishPost, {
+					deadlineAt: openDeadline(),
+					videoId: "vid1",
+					analysis: validAnalysis(),
+					article: validArticle(),
+					...fields,
+				} as never);
+				expect(result, `${dash} ${JSON.stringify(fields).slice(0, 80)}`).toMatchObject({
+					status: "invalid",
+					issues: expect.arrayContaining(["thought_dash"]),
+				});
+				const video = await load(t);
+				expect(JSON.stringify(video)).not.toMatch(/\u2013|&ndash;|&#8211;|&#x2013;/i);
+			}
+		}
+	});
+
+	it("checks years against the stored transcript", async () => {
+		const t = newTest();
+		await seed(t, {
+			transcript: [{ text: "siden 2019 er renten steget", offset: 0, duration: 1 }],
+		});
+		const analysis = { ...validAnalysis(), seoTitle: "Indeksfonde i 2019: kom godt i gang" };
+		expect(
+			await t.mutation(internal.videos.publishPost, {
+				deadlineAt: openDeadline(),
+				videoId: "vid1",
+				analysis: { ...analysis, seoTitle: "Indeksfonde i 2018: kom godt i gang" },
+				article: validArticle(),
+			}),
+		).toEqual({ status: "invalid", issues: ["unsupported_year"] });
+		expect(
+			await t.mutation(internal.videos.publishPost, {
+				deadlineAt: openDeadline(),
+				videoId: "vid1",
+				analysis,
+				article: validArticle(),
+			}),
+		).toEqual({ status: "published" });
+	});
+
 	it("refuses an article-only publish without a stored analysis", async () => {
 		const t = newTest();
 		await seed(t);
@@ -194,7 +319,7 @@ describe("insert", () => {
 		const count = await t.run(async (ctx) => (await ctx.db.query("videos").collect()).length);
 		expect(count).toBe(1);
 		const scheduled = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").collect());
-		expect(scheduled.map((job) => job.name)).toEqual(["youtube:processNewVideo"]);
+		expect(scheduled.map((job) => job.name)).toEqual(["aiPosts:generateVideoPost"]);
 	});
 
 	it("schedules the job after the given delay and does not store the delay", async () => {
@@ -355,7 +480,7 @@ describe("auditPage", () => {
 				id: "v2",
 				slug: "slug-2",
 				part: "article",
-				issues: ["intro_missing", "too_few_sections", "word_count"],
+				issues: ["too_few_sections", "word_count"],
 			},
 		]);
 		expect(JSON.stringify(failing)).not.toContain("investering");
@@ -363,20 +488,97 @@ describe("auditPage", () => {
 });
 
 describe("saveTranscript", () => {
+	it("registers transcript maintenance as internal, not public", () => {
+		for (const operation of [needsTranscript, saveTranscript]) {
+			expect(operation).toHaveProperty("isInternal", true);
+			expect(operation).not.toHaveProperty("isPublic");
+		}
+	});
+
+	it("lists only missing transcript IDs without returning stored content", async () => {
+		const t = newTest();
+		await seed(t, { article: "Private generated text" });
+		await seed(t, { videoId: "vid2", transcript: transcriptOfWords(20) });
+		expect(await t.query(internal.videos.needsTranscript, {})).toEqual([{ videoId: "vid1" }]);
+	});
+
 	it("writes only when the video has no transcript", async () => {
 		const t = newTest();
 		await seed(t);
 		await seed(t, { videoId: "vid2", transcript: transcriptOfWords(20) });
-		await t.mutation(api.videos.saveTranscript, {
+		await t.mutation(internal.videos.saveTranscript, {
 			videoId: "vid1",
 			transcript: transcriptOfWords(30),
 		});
-		await t.mutation(api.videos.saveTranscript, {
+		await t.mutation(internal.videos.saveTranscript, {
 			videoId: "vid2",
 			transcript: transcriptOfWords(500),
 		});
 		expect((await load(t, "vid1"))?.transcript).toHaveLength(3);
 		expect((await load(t, "vid2"))?.transcript).toHaveLength(2);
+		expect((await load(t, "vid1"))?.sourceVersion).toBe(1);
+		expect((await load(t, "vid2"))?.sourceVersion).toBeUndefined();
+	});
+
+	it("fills an empty transcript once, increments its source version and ignores a missing ID", async () => {
+		const t = newTest();
+		await seed(t, { transcript: [], sourceVersion: 4 });
+		await t.mutation(internal.videos.saveTranscript, {
+			videoId: "vid1",
+			transcript: transcriptOfWords(30),
+		});
+		await t.mutation(internal.videos.saveTranscript, {
+			videoId: "vid1",
+			transcript: transcriptOfWords(50),
+		});
+		await t.mutation(internal.videos.saveTranscript, { videoId: "absent", transcript: [] });
+		expect((await load(t))?.sourceVersion).toBe(5);
+		expect((await load(t))?.transcript).toHaveLength(3);
+		expect(await load(t, "absent")).toBeNull();
+	});
+});
+
+describe("sourceVersion", () => {
+	it("is raised by every transcript write", async () => {
+		const t = newTest();
+		await seed(t);
+		expect(
+			await t.mutation(internal.videos.updateTranscript, {
+				videoId: "vid1",
+				transcript: transcriptOfWords(30),
+			}),
+		).toEqual({ sourceVersion: 1 });
+		expect(
+			await t.mutation(internal.videos.updateTranscript, {
+				videoId: "vid1",
+				transcript: transcriptOfWords(40),
+			}),
+		).toEqual({ sourceVersion: 2 });
+		expect((await load(t))?.sourceVersion).toBe(2);
+		expect(
+			await t.mutation(internal.videos.updateTranscript, { videoId: "nope", transcript: [] }),
+		).toBeNull();
+	});
+
+	it("makes publishPost stale when the source changed after the job read it", async () => {
+		const t = newTest();
+		await seed(t, { transcript: transcriptOfWords(400), sourceVersion: 1 });
+		await t.mutation(internal.videos.updateTranscript, {
+			videoId: "vid1",
+			transcript: transcriptOfWords(400),
+		});
+		const publish = (expectedSourceVersion?: number) =>
+			t.mutation(internal.videos.publishPost, {
+				deadlineAt: openDeadline(),
+				videoId: "vid1",
+				expectedSourceVersion,
+				analysis: validAnalysis(),
+				article: validArticle(),
+			});
+		expect(await publish(1)).toEqual({ status: "stale" });
+		expect(await publish(undefined)).toEqual({ status: "stale" });
+		expect((await load(t))?.article).toBeUndefined();
+		expect(await publish(2)).toEqual({ status: "published" });
 	});
 });
 

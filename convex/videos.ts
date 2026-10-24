@@ -2,7 +2,7 @@ import { paginationOptsValidator } from "convex/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, query } from "./_generated/server";
 import { SHORTS_THRESHOLD } from "./helpers";
 import {
 	hasErrors,
@@ -60,7 +60,7 @@ export const insert = internalMutation({
 		const existing = await findVideo(ctx, fields.videoId);
 		if (existing) return existing._id;
 		const id = await ctx.db.insert("videos", fields);
-		await ctx.scheduler.runAfter(delayMs ?? 0, internal.youtube.processNewVideo, {
+		await ctx.scheduler.runAfter(delayMs ?? 0, internal.aiPosts.generateVideoPost, {
 			videoId: fields.videoId,
 		});
 		return id;
@@ -69,30 +69,41 @@ export const insert = internalMutation({
 
 /**
  * The only write path for AI content. Writes analysis (optional: article-only reruns keep the
- * stored analysis) and article together, after re-validation, the job deadline and an optimistic
- * guard on processedAt. Clears the failure state.
+ * stored analysis) and article together, after re-validation, the job deadline and optimistic
+ * guards on processedAt and sourceVersion (the post must come from the source it is stored
+ * next to). The effective analysis (new or stored) and the article are both re-validated
+ * against the stored source, so an article never goes live next to an analysis that fails the
+ * current rules. Clears the failure state.
  */
 export const publishPost = internalMutation({
 	args: {
 		videoId: v.string(),
 		expectedProcessedAt: v.optional(v.number()),
+		expectedSourceVersion: v.optional(v.number()),
 		analysis: v.optional(analysisFields),
 		article: v.string(),
 		deadlineAt: v.number(),
 	},
-	handler: async (ctx, { videoId, expectedProcessedAt, analysis, article, deadlineAt }) => {
+	handler: async (ctx, args) => {
+		const { videoId, expectedProcessedAt, expectedSourceVersion, analysis, article } = args;
 		const video = await findVideo(ctx, videoId);
 		if (!video) return { status: "not_found" as const };
-		if (Date.now() > deadlineAt) return { status: "deadline" as const };
+		if (Date.now() > args.deadlineAt) return { status: "deadline" as const };
 		if (video.processedAt !== expectedProcessedAt) return { status: "stale" as const };
+		if (video.sourceVersion !== expectedSourceVersion) return { status: "stale" as const };
 
 		// Categories are checked against the enum by validateAnalysis before the cast is relied on.
 		const newAnalysis = analysis as VideoAnalysis | undefined;
 		const effective = newAnalysis ?? storedAnalysisOf(video);
 		if (!effective) return { status: "invalid" as const, issues: ["analysis_missing"] };
 		const issues = [
-			...(newAnalysis ? validateAnalysis(newAnalysis) : []),
-			...validateArticle(article, { title: video.title, seoTitle: effective.seoTitle }),
+			...validateAnalysis(effective, video),
+			...validateArticle(article, {
+				title: video.title,
+				seoTitle: effective.seoTitle,
+				analysis: effective,
+				source: video,
+			}),
 		];
 		if (hasErrors(issues)) {
 			const codes = issues.filter((i) => i.severity === "error").map((i) => i.code);
@@ -136,13 +147,13 @@ export const updateTranscript = internalMutation({
 			}),
 		),
 	},
+	/** Returns the new source version, or null when the video does not exist. */
 	handler: async (ctx, { videoId, transcript }) => {
-		const video = await ctx.db
-			.query("videos")
-			.withIndex("by_videoId", (q) => q.eq("videoId", videoId))
-			.first();
-
-		if (video) await ctx.db.patch(video._id, { transcript });
+		const video = await findVideo(ctx, videoId);
+		if (!video) return null;
+		const sourceVersion = (video.sourceVersion ?? 0) + 1;
+		await ctx.db.patch(video._id, { transcript, sourceVersion });
+		return { sourceVersion };
 	},
 });
 
@@ -366,18 +377,20 @@ export const getNextByChannel = query({
 			.first(),
 });
 
-// --- Public query and mutation for scripts/sync-transcripts.ts ---
+// --- Admin CLI maintenance for scripts/sync-transcripts.ts ---
 
-export const needsTranscript = query({
+export const needsTranscript = internalQuery({
 	args: {},
-	handler: async (ctx) =>
-		ctx.db
+	handler: async (ctx) => {
+		const videos = await ctx.db
 			.query("videos")
 			.filter((q) => q.eq(q.field("transcript"), undefined))
-			.take(50),
+			.take(50);
+		return videos.map(({ videoId }) => ({ videoId }));
+	},
 });
 
-export const saveTranscript = mutation({
+export const saveTranscript = internalMutation({
 	args: {
 		videoId: v.string(),
 		transcript: v.array(
@@ -394,8 +407,10 @@ export const saveTranscript = mutation({
 			.withIndex("by_videoId", (q) => q.eq("videoId", videoId))
 			.first();
 
-		// Unauthenticated: only fill a missing transcript, never replace one.
-		if (video && !video.transcript?.length) await ctx.db.patch(video._id, { transcript });
+		// Admin-only: fill a missing transcript, never replace an existing source.
+		if (video && !video.transcript?.length) {
+			await ctx.db.patch(video._id, { transcript, sourceVersion: (video.sourceVersion ?? 0) + 1 });
+		}
 	},
 });
 

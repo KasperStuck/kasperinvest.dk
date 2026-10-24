@@ -1,8 +1,9 @@
 /**
  * The production generation path: analysis loop, then article loop, and the channel description
- * loop. No Convex calls, so the Convex jobs and scripts/compare-models.ts share it unchanged.
+ * loop. Both video post parts are fact-checked against the full transcript; the channel
+ * description is not. No Convex calls, so the Convex jobs and scripts/compare-models.ts share it
+ * unchanged.
  */
-import type { TranscriptSegment } from "../helpers";
 import {
 	analysisSchema,
 	type JudgeVerdict,
@@ -10,19 +11,28 @@ import {
 	normalizeAnalysis,
 	normalizeArticle,
 	normalizeChannelDescription,
+	type PostSource,
 	type ValidationIssue,
 	type VideoAnalysis,
 	validateAnalysis,
 	validateArticle,
 	validateChannelDescription,
 } from "./contentRules";
-import { type GenerationResult, generateValidated } from "./generation";
+import {
+	analysisSegments,
+	articleSegments,
+	type CandidateSegment,
+	factCheck,
+	transcriptChunks,
+} from "./factCheck";
+import { type GenerationResult, generateValidated, MAX_ATTEMPTS } from "./generation";
 import {
 	completeJson,
 	completeText,
 	type LlmCallOptions,
 	type LlmConfig,
 	type LlmPrompt,
+	TRANSIENT_RETRY_DELAYS_MS,
 } from "./llm";
 import {
 	appendFeedback,
@@ -32,11 +42,12 @@ import {
 	buildJudgePrompt,
 	buildSourceContext,
 	renderAnalysisForJudge,
+	transcriptText,
 } from "./prompts";
 
 export type GenerationContext = {
 	config: LlmConfig;
-	/** Judge model; production leaves it unset so the generator judges itself. */
+	/** Judge and fact-check model; production leaves it unset so the generator checks itself. */
 	judgeConfig?: LlmConfig;
 	deadlineAt: number;
 	now: () => number;
@@ -46,7 +57,7 @@ export type GenerationContext = {
 	label: string;
 };
 
-export type PostSource = { title: string; description: string; transcript?: TranscriptSegment[] };
+export type { PostSource };
 
 function callOptions(ctx: GenerationContext): LlmCallOptions {
 	return { log: ctx.log, ...ctx.llm, deadlineAt: ctx.deadlineAt, now: ctx.now };
@@ -61,12 +72,69 @@ async function judge(ctx: GenerationContext, prompt: LlmPrompt): Promise<JudgeVe
 	return value;
 }
 
+/** Fact-check chunks for this transcript: one call per chunk per checked attempt. */
+export function factCheckChunkCount(video: Pick<PostSource, "transcript">): number {
+	return transcriptChunks(transcriptText(video)).length;
+}
+
+/**
+ * Most logical provider calls one post can make: 2 parts × MAX_ATTEMPTS × (generation + judge +
+ * one fact-check call per chunk), i.e. 6C + 12.
+ */
+export function maxLogicalCallsPerPost(chunks: number): number {
+	return 2 * MAX_ATTEMPTS * (2 + chunks);
+}
+
+/** Every logical call may be sent up to 1 + TRANSIENT_RETRY_DELAYS_MS.length times. */
+export function maxPhysicalCallsPerPost(chunks: number): number {
+	return maxLogicalCallsPerPost(chunks) * (1 + TRANSIENT_RETRY_DELAYS_MS.length);
+}
+
+/**
+ * The fact-check step of one part, with the judge's model. Remembers the claims it verified so
+ * the judge of the same attempt can see them.
+ */
+function factChecker<T>(
+	ctx: GenerationContext,
+	video: PostSource,
+	channelName: string,
+	part: "analysis" | "article",
+	segmentsOf: (value: T) => CandidateSegment[],
+) {
+	const checker = { verifiedClaims: [] as string[] };
+	const check = async (value: T) => {
+		checker.verifiedClaims = [];
+		const result = await factCheck({
+			config: ctx.judgeConfig ?? ctx.config,
+			part,
+			segments: segmentsOf(value),
+			source: {
+				title: video.title,
+				description: video.description,
+				channelName,
+				transcriptText: transcriptText(video),
+			},
+			call: callOptions(ctx),
+		});
+		checker.verifiedClaims = result.verifiedClaims;
+		return result.issues;
+	};
+	return { check, checker };
+}
+
 export function generateAnalysis(
 	video: PostSource,
+	channelName: string,
 	ctx: GenerationContext,
 ): Promise<GenerationResult<VideoAnalysis>> {
-	const sourceContext = buildSourceContext(video);
-	const prompt = buildAnalysisPrompt({ ...video, sourceContext });
+	const source = {
+		title: video.title,
+		description: video.description,
+		channelName,
+		sourceContext: buildSourceContext(video),
+	};
+	const prompt = buildAnalysisPrompt(source);
+	const facts = factChecker(ctx, video, channelName, "analysis", analysisSegments);
 	return generateValidated({
 		generate: async (feedback) => {
 			const { value } = await completeJson(
@@ -77,16 +145,17 @@ export function generateAnalysis(
 			);
 			return value;
 		},
-		validate: validateAnalysis,
-		judge: (analysis) =>
+		validate: (analysis) => validateAnalysis(analysis, video),
+		factCheck: facts.check,
+		judge: (analysis, warnings) =>
 			judge(
 				ctx,
 				buildJudgePrompt({
+					...source,
 					part: "analysis",
 					candidate: renderAnalysisForJudge(analysis),
-					title: video.title,
-					description: video.description,
-					sourceContext,
+					warnings,
+					verifiedClaims: facts.checker.verifiedClaims,
 				}),
 			),
 		deadlineAt: ctx.deadlineAt,
@@ -102,23 +171,36 @@ export function generateArticle(
 	channelName: string,
 	ctx: GenerationContext,
 ): Promise<GenerationResult<string>> {
-	const sourceContext = buildSourceContext(video);
-	const prompt = buildArticlePrompt({ ...video, channelName, analysis, sourceContext });
+	const source = {
+		title: video.title,
+		description: video.description,
+		channelName,
+		sourceContext: buildSourceContext(video),
+	};
+	const prompt = buildArticlePrompt({ ...source, analysis });
+	const facts = factChecker(ctx, video, channelName, "article", articleSegments);
 	return generateValidated({
 		generate: async (feedback) =>
 			(await completeText(ctx.config, appendFeedback(prompt, feedback), callOptions(ctx))).text,
 		normalize: normalizeArticle,
 		validate: (article) =>
-			validateArticle(article, { title: video.title, seoTitle: analysis.seoTitle }),
-		judge: (article) =>
+			validateArticle(article, {
+				title: video.title,
+				seoTitle: analysis.seoTitle,
+				analysis,
+				source: video,
+			}),
+		factCheck: facts.check,
+		judge: (article, warnings) =>
 			judge(
 				ctx,
 				buildJudgePrompt({
+					...source,
 					part: "article",
 					candidate: article,
-					title: video.title,
-					description: video.description,
-					sourceContext,
+					pageContext: analysis,
+					warnings,
+					verifiedClaims: facts.checker.verifiedClaims,
 				}),
 			),
 		deadlineAt: ctx.deadlineAt,
@@ -159,7 +241,7 @@ export async function generateVideoPost(
 	let analysisVerdict: JudgeVerdict | undefined;
 	const warnings: ValidationIssue[] = [];
 	if (!analysis) {
-		const result = await generateAnalysis(video, ctx);
+		const result = await generateAnalysis(video, channelName, ctx);
 		attempts.analysis = result.attempts;
 		if (!result.ok) return { ok: false, part: "analysis", lastIssues: result.lastIssues, attempts };
 		analysis = result.value;
@@ -196,7 +278,8 @@ export function generateChannelDescription(
 			(await completeText(ctx.config, appendFeedback(prompt, feedback), callOptions(ctx))).text,
 		normalize: normalizeChannelDescription,
 		validate: validateChannelDescription,
-		judge: (candidate) => judge(ctx, buildJudgePrompt({ part: "channel", candidate, ...input })),
+		judge: (candidate, warnings) =>
+			judge(ctx, buildJudgePrompt({ part: "channel", candidate, ...input, warnings })),
 		deadlineAt: ctx.deadlineAt,
 		now: ctx.now,
 		label: `${ctx.label} description`,

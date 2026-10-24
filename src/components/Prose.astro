@@ -67,17 +67,7 @@ const proseClass = [
 </div>
 
 <script>
-	import { selectBanner } from "@/lib/banners";
-
-	interface Banner {
-		src: string;
-		width: number;
-		height: number;
-		alt: string;
-		href: string;
-		keywords: string[];
-		exclude: string[];
-	}
+	import { type Banner, placeBanners, selectBanner } from "@/lib/banners";
 
 	function isStringArray(value: unknown): value is string[] {
 		return Array.isArray(value) && value.every((item) => typeof item === "string");
@@ -104,26 +94,6 @@ const proseClass = [
 		);
 	}
 
-	function createBanner(b: Banner) {
-		const wrapper = document.createElement("aside");
-		wrapper.className = "not-prose my-10";
-		wrapper.setAttribute("aria-label", "Annonce");
-
-		const link = document.createElement("a");
-		link.href = b.href;
-		link.target = "_blank";
-		link.rel = "sponsored noopener noreferrer";
-		link.className = "block overflow-hidden rounded-lg";
-
-		const img = document.createElement("img");
-		Object.assign(img, { src: b.src, alt: b.alt, width: b.width, height: b.height, loading: "lazy" });
-		img.className = "w-full";
-
-		link.appendChild(img);
-		wrapper.append(link);
-		return wrapper;
-	}
-
 	// The banner data is only rendered on a populated #content.
 	const content = document.getElementById("content");
 	const payload = content?.dataset.banners;
@@ -135,19 +105,7 @@ const proseClass = [
 			contentText: content.textContent ?? "",
 			h1Text: document.querySelector("h1")?.textContent ?? "",
 		};
-		const headings = content.querySelectorAll(":scope > h2");
-		const contextualLinks = content.querySelector(":scope > [data-contextual-links]");
-		const contextualAnchor = headings[1] ?? headings[0];
-		if (contextualLinks && contextualAnchor) {
-			content.insertBefore(contextualLinks, contextualAnchor);
-		}
-
-		// Only render a contextual partner placement. Never fall back to an
-		// unrelated random ad, and never place advertising before the answer.
-		const banner = selectBanner(page, banners);
-		if (banner) {
-			const anchor = headings[2] ?? headings[1] ?? headings[0];
-			if (anchor) content.insertBefore(createBanner(banner), anchor);
-		}
+		// Repeat only the selected contextual partner banner.
+		placeBanners(content, selectBanner(page, banners));
 	}
 </script>

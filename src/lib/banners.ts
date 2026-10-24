@@ -3,6 +3,14 @@ export interface BannerRule {
 	exclude: readonly string[];
 }
 
+export interface Banner extends BannerRule {
+	src: string;
+	width: number;
+	height: number;
+	alt: string;
+	href: string;
+}
+
 export interface BannerPage {
 	/** `document.title`. */
 	title: string;
@@ -28,4 +36,49 @@ export function selectBanner<T extends BannerRule>(
 			b.keywords.some((kw) => pageText.includes(kw)) &&
 			!b.exclude.some((kw) => pageTitle.includes(kw)),
 	);
+}
+
+function createBanner(b: Banner, document: Document) {
+	const wrapper = document.createElement("aside");
+	wrapper.className = "not-prose my-10";
+	wrapper.setAttribute("aria-label", "Annonce");
+
+	const link = document.createElement("a");
+	link.href = b.href;
+	link.target = "_blank";
+	link.rel = "sponsored noopener noreferrer";
+	link.className = "block overflow-hidden rounded-lg";
+
+	const img = document.createElement("img");
+	Object.assign(img, {
+		src: b.src,
+		alt: b.alt,
+		width: b.width,
+		height: b.height,
+		loading: "lazy",
+	});
+	img.className = "w-full";
+
+	link.appendChild(img);
+	wrapper.append(link);
+	return wrapper;
+}
+
+export function placeBanners(content: HTMLElement, banner: Banner | undefined): void {
+	const headings = content.querySelectorAll(":scope > h2");
+	const contextualLinks = content.querySelector(":scope > [data-contextual-links]");
+	const contextualAnchor = headings[1] ?? headings[0];
+	if (contextualLinks && contextualAnchor) {
+		content.insertBefore(contextualLinks, contextualAnchor);
+	}
+
+	if (!banner) return;
+
+	// Repeat the same contextual banner before H2 #1 and every even-numbered H2.
+	headings.forEach((heading, index) => {
+		const headingNumber = index + 1;
+		if (headingNumber === 1 || headingNumber % 2 === 0) {
+			content.insertBefore(createBanner(banner, content.ownerDocument), heading);
+		}
+	});
 }

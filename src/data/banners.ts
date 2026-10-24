@@ -19,7 +19,7 @@ export const banners = [
 		image: norminvestPar,
 		alt: "Norm Invest - Den nemmeste måde at investere, gratis investeringsplan",
 		href: "https://at.norminvest.com/t/t?a=1873806258&as=2056026217&t=2&tk=1",
-		keywords: [],
+		keywords: ["norm invest", "norminvest"],
 		exclude: NORMINVEST_EXCLUDE,
 	},
 	{

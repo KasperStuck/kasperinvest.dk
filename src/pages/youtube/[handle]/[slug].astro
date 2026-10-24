@@ -176,7 +176,7 @@ function jsonLd(value: unknown): string {
 		<div class="space-y-16">
 			<div class="space-y-6">
 				<hgroup>
-					<a href={`/youtube/${handle}`} class="text-sm/7 font-semibold text-gray-600 hover:text-gray-700 dark:hover:text-gray-300">
+					<a href={`/youtube/${handle}`} class="text-sm/7 font-semibold text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
 						{channel?.name ?? "YouTube"}
 					</a>
 					<h1 class="text-3xl tracking-tight text-gray-950 dark:text-white">
@@ -197,7 +197,7 @@ function jsonLd(value: unknown): string {
 					</div>
 				)}
 
-				<div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm/7 text-gray-600">
+				<div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm/7 text-gray-600 dark:text-gray-400">
 					{video.durationSeconds && (
 						<div class="flex items-center gap-x-2 font-semibold text-gray-950 dark:text-white">
 							<ClockIcon class="text-gray-950/40 dark:text-white/40" />
@@ -265,7 +265,7 @@ function jsonLd(value: unknown): string {
 						href={videoUrl(nextVideo)}
 						class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 					>
-						<p class="flex items-center gap-3 text-sm/7 text-gray-600">
+						<p class="flex items-center gap-3 text-sm/7 text-gray-600 dark:text-gray-400">
 							Næste video
 							<ChevronRightIcon />
 						</p>
@@ -280,7 +280,7 @@ function jsonLd(value: unknown): string {
 						href="/youtube"
 						class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 					>
-						<p class="flex items-center gap-3 text-sm/7 text-gray-600">
+						<p class="flex items-center gap-3 text-sm/7 text-gray-600 dark:text-gray-400">
 							Tilbage
 							<ChevronRightIcon />
 						</p>

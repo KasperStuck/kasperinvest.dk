@@ -44,7 +44,7 @@ const proseClass = [
 		</div>
 	) : (
 		<div>
-			<div id="content" class={proseClass}>
+			<div id="content" class={proseClass} data-banners={JSON.stringify(banners)}>
 				<slot />
 				{relatedLinks.length > 0 && (
 					<aside data-contextual-links class="not-prose my-10 rounded-xl border border-gray-950/10 bg-gray-950/[0.025] p-5 dark:border-white/10 dark:bg-white/[0.025]" aria-label="Relaterede guides">
@@ -62,56 +62,96 @@ const proseClass = [
 					</aside>
 				)}
 			</div>
-
-			<script is:inline define:vars={{ banners }}>
-				const content = document.getElementById("content");
-				const pageText = (document.title + " " + content.textContent).toLowerCase();
-				// A passing mention of a competitor is fine; only a page about that platform (named in the title) excludes it.
-				const pageTitle = (document.title + " " + (document.querySelector("h1")?.textContent ?? "")).toLowerCase();
-				const headings = content.querySelectorAll(":scope > h2");
-				const contextualLinks = content.querySelector(":scope > [data-contextual-links]");
-				const contextualAnchor = headings[1] ?? headings[0];
-				if (contextualLinks && contextualAnchor) {
-					content.insertBefore(contextualLinks, contextualAnchor);
-				}
-
-				const matched = banners.filter(
-					(b) =>
-						b.keywords.length > 0 &&
-						b.keywords.some((kw) => pageText.includes(kw)) &&
-						!b.exclude.some((kw) => pageTitle.includes(kw)),
-				);
-				function createBanner(b) {
-					const wrapper = document.createElement("aside");
-					wrapper.className = "not-prose my-10";
-					wrapper.setAttribute("aria-label", "Annonce");
-
-					const label = document.createElement("p");
-					label.textContent = "Annonce · Partnerlink";
-					label.className = "mb-2 text-xs font-medium text-gray-500 dark:text-gray-400";
-
-					const link = document.createElement("a");
-					link.href = b.href;
-					link.target = "_blank";
-					link.rel = "sponsored noopener noreferrer";
-					link.className = "block overflow-hidden rounded-lg";
-
-					const img = document.createElement("img");
-					Object.assign(img, { src: b.src, alt: b.alt, width: b.width, height: b.height, loading: "lazy" });
-					img.className = "w-full";
-
-					link.appendChild(img);
-					wrapper.append(label, link);
-					return wrapper;
-				}
-
-				// Only render a contextual partner placement. Never fall back to an
-				// unrelated random ad, and never place advertising before the answer.
-				if (matched.length > 0) {
-					const anchor = headings[2] ?? headings[1] ?? headings[0];
-					if (anchor) content.insertBefore(createBanner(matched[0]), anchor);
-				}
-			</script>
 		</div>
 	)}
 </div>
+
+<script>
+	import { selectBanner } from "@/lib/banners";
+
+	interface Banner {
+		src: string;
+		width: number;
+		height: number;
+		alt: string;
+		href: string;
+		keywords: string[];
+		exclude: string[];
+	}
+
+	function isStringArray(value: unknown): value is string[] {
+		return Array.isArray(value) && value.every((item) => typeof item === "string");
+	}
+
+	function isBanner(value: unknown): value is Banner {
+		return (
+			typeof value === "object" &&
+			value !== null &&
+			"src" in value &&
+			typeof value.src === "string" &&
+			"width" in value &&
+			typeof value.width === "number" &&
+			"height" in value &&
+			typeof value.height === "number" &&
+			"alt" in value &&
+			typeof value.alt === "string" &&
+			"href" in value &&
+			typeof value.href === "string" &&
+			"keywords" in value &&
+			isStringArray(value.keywords) &&
+			"exclude" in value &&
+			isStringArray(value.exclude)
+		);
+	}
+
+	function createBanner(b: Banner) {
+		const wrapper = document.createElement("aside");
+		wrapper.className = "not-prose my-10";
+		wrapper.setAttribute("aria-label", "Annonce");
+
+		const label = document.createElement("p");
+		label.textContent = "Annonce · Partnerlink";
+		label.className = "mb-2 text-xs font-medium text-gray-500 dark:text-gray-400";
+
+		const link = document.createElement("a");
+		link.href = b.href;
+		link.target = "_blank";
+		link.rel = "sponsored noopener noreferrer";
+		link.className = "block overflow-hidden rounded-lg";
+
+		const img = document.createElement("img");
+		Object.assign(img, { src: b.src, alt: b.alt, width: b.width, height: b.height, loading: "lazy" });
+		img.className = "w-full";
+
+		link.appendChild(img);
+		wrapper.append(label, link);
+		return wrapper;
+	}
+
+	// The banner data is only rendered on a populated #content.
+	const content = document.getElementById("content");
+	const payload = content?.dataset.banners;
+	if (content && payload) {
+		const parsed: unknown = JSON.parse(payload);
+		const banners = Array.isArray(parsed) ? parsed.filter(isBanner) : [];
+		const page = {
+			title: document.title,
+			contentText: content.textContent ?? "",
+			h1Text: document.querySelector("h1")?.textContent ?? "",
+		};
+		const headings = content.querySelectorAll(":scope > h2");
+		const contextualLinks = content.querySelector(":scope > [data-contextual-links]");
+		const contextualAnchor = headings[1] ?? headings[0];
+		if (contextualLinks && contextualAnchor) {
+			content.insertBefore(contextualLinks, contextualAnchor);
+		}
+
+		// Only render a contextual partner placement. Never fall back to an
+		// unrelated random ad, and never place advertising before the answer.
+		const banner = selectBanner(page, banners);
+		if (banner) {
+			const anchor = headings[2] ?? headings[1] ?? headings[0];
+			if (anchor) content.insertBefore(createBanner(banner), anchor);
+		}
+	}
+</script>

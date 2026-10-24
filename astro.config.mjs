@@ -50,8 +50,11 @@ export default defineConfig({
 				"default-src 'self'",
 				"img-src 'self' https://i.ytimg.com https://img.youtube.com https://*.convex.cloud https://adtraction.com data:",
 				"frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com",
-				"connect-src 'self' https://glitchtip.eagleapp.dk https://*.convex.cloud",
+				"connect-src 'self' https://glitchtip.eagleapp.dk https://*.convex.cloud https://analytics.ahrefs.com",
 			],
+			scriptDirective: {
+				resources: ["'self'", "https://analytics.ahrefs.com"],
+			},
 		},
 	},
 });

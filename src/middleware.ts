@@ -1,10 +1,12 @@
 import "../sentry.server.config";
 import { defineMiddleware } from "astro:middleware";
+import { thumbnailFallback } from "@/lib/image-fallback";
 
 const STATIC_ASSET = /\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/;
 
 export const onRequest = defineMiddleware(async (_context, next) => {
-	const response = await next();
+	const upstream = await next();
+	const response = thumbnailFallback(_context.request, upstream) ?? upstream;
 	const url = new URL(_context.request.url);
 
 	// Static assets: 1 year cache (matches previous nginx config)

@@ -109,10 +109,6 @@ const proseClass = [
 		wrapper.className = "not-prose my-10";
 		wrapper.setAttribute("aria-label", "Annonce");
 
-		const label = document.createElement("p");
-		label.textContent = "Annonce · Partnerlink";
-		label.className = "mb-2 text-xs font-medium text-gray-500 dark:text-gray-400";
-
 		const link = document.createElement("a");
 		link.href = b.href;
 		link.target = "_blank";
@@ -124,7 +120,7 @@ const proseClass = [
 		img.className = "w-full";
 
 		link.appendChild(img);
-		wrapper.append(label, link);
+		wrapper.append(link);
 		return wrapper;
 	}
 

@@ -1,121 +1,50 @@
 "use node";
 
-import { ActionRetrier } from "@convex-dev/action-retrier";
+import type { PaginationResult } from "convex/server";
 import { v } from "convex/values";
 import slugify from "slugify";
-import { z } from "zod";
-import { components, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
-import { action, internalAction } from "./_generated/server";
+import { internalAction } from "./_generated/server";
 import {
 	bestThumbnail,
-	cleanDescription,
 	extractHashtags,
 	forEachSafe,
-	getTranscriptText,
 	parseDuration,
+	SHORTS_THRESHOLD,
 	type Thumbnails,
 } from "./helpers";
+import type { ValidationIssue, VideoAnalysis } from "./lib/contentRules";
+import { type FetchLike, LlmHttpError, resolveLlmConfig } from "./lib/llm";
+import {
+	type AuditPage,
+	type auditStoredPost,
+	clampPageSize,
+	isEligibleForAi,
+	JOB_DEADLINE_MS,
+	JOB_STAGGER_MS,
+	MAX_REPAIR_TARGETS,
+	pickVideoForSlug,
+	type SweepRow,
+	selectSweepCandidates,
+	storedAnalysisOf,
+} from "./lib/pipeline";
+import {
+	type GenerationContext,
+	generateChannelDescription as generateChannelDescriptionText,
+	generateVideoPost,
+	type PostAttempts,
+} from "./lib/videoPost";
 
 // --- Config ---
 
 const YOUTUBE_API = "https://www.googleapis.com/youtube/v3";
-const PRIMARY_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
-const FALLBACK_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
-const MODELS = [PRIMARY_MODEL, FALLBACK_MODEL] as const;
-const MAX_QUALITY_ATTEMPTS = 3;
-const MIN_QUALITY_SCORE = 5;
-// Reasoning-mode models burn tokens on internal "thinking"; give enough headroom for JSON output
-const MAX_TOKENS = 10000;
-
-const retrier = new ActionRetrier(components.actionRetrier, {
-	initialBackoffMs: 500,
-	base: 2,
-	maxFailures: 3,
-});
 
 function requireEnv(name: string): string {
 	const value = process.env[name];
 	if (!value) throw new Error(`Missing ${name} env var`);
 	return value;
-}
-
-// Direct /chat/completions fetch. ai-sdk v5 generateObject interacts badly with reasoning-mode
-// models on OpenRouter (truncated output, nonsense), so we bypass it.
-type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
-
-async function openRouterChat(
-	model: string,
-	messages: ChatMessage[],
-	responseFormat?: { name: string; schema: object },
-): Promise<string> {
-	const body: Record<string, unknown> = {
-		model,
-		messages,
-		max_tokens: MAX_TOKENS,
-		// Disable reasoning on OpenRouter: reasoning-mode models (nemotron) otherwise burn 800-1000
-		// tokens "thinking" before output, producing truncated/empty content and slow (30s+) calls.
-		// Disabled: 4s, clean output.
-		reasoning: { enabled: false },
-	};
-	if (responseFormat) {
-		body.response_format = {
-			type: "json_schema",
-			json_schema: { name: responseFormat.name, strict: false, schema: responseFormat.schema },
-		};
-	}
-	const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-		method: "POST",
-		headers: {
-			Authorization: `Bearer ${requireEnv("OPENROUTER_API_KEY")}`,
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify(body),
-	});
-	if (!res.ok) {
-		const text = await res.text();
-		throw new Error(`OpenRouter ${res.status}: ${text.slice(0, 300)}`);
-	}
-	const data = (await res.json()) as {
-		choices?: { message?: { content?: string } }[];
-		error?: { message?: string };
-	};
-	if (data.error) throw new Error(`OpenRouter error: ${data.error.message}`);
-	const content = data.choices?.[0]?.message?.content;
-	if (!content) throw new Error("OpenRouter returned empty content");
-	return content;
-}
-
-async function generateObjectDirect<T>(
-	model: string,
-	schema: z.ZodSchema<T>,
-	system: string,
-	user: string,
-	schemaName = "response",
-): Promise<T> {
-	const jsonSchema = z.toJSONSchema(schema);
-	const content = await openRouterChat(
-		model,
-		[
-			{ role: "system", content: system },
-			{ role: "user", content: user },
-		],
-		{ name: schemaName, schema: jsonSchema },
-	);
-	try {
-		return schema.parse(JSON.parse(content));
-	} catch (e) {
-		console.error(`generateObjectDirect parse failure. Raw content: ${content.slice(0, 600)}`);
-		throw e;
-	}
-}
-
-async function generateTextDirect(model: string, system: string, user: string): Promise<string> {
-	return openRouterChat(model, [
-		{ role: "system", content: system },
-		{ role: "user", content: user },
-	]);
 }
 
 // --- YouTube API types ---
@@ -159,162 +88,7 @@ async function ytFetch<T>(path: string): Promise<T> {
 	return res.json();
 }
 
-// --- AI schemas ---
-
-const qualitySchema = z.object({
-	score: z.number().min(1).max(10),
-	reason: z.string(),
-});
-
-const CATEGORIES = [
-	"privatøkonomi",
-	"aktier",
-	"ETF",
-	"obligationer",
-	"skat",
-	"pension",
-	"strategi",
-	"psykologi",
-	"analyse",
-	"krypto",
-	"bolig",
-	"FIRE",
-	"marked",
-	"andet",
-] as const;
-
-const videoAnalysisSchema = z.object({
-	summary: z.string(),
-	seoTitle: z.string(),
-	seoDescription: z.string(),
-	themes: z.array(z.string()),
-	categories: z.array(z.enum(CATEGORIES)),
-	keyTakeaways: z.array(z.string()),
-	faq: z.array(z.object({ question: z.string(), answer: z.string() })),
-	relevanceScore: z.number().min(0).max(100),
-});
-
-type VideoAnalysis = z.infer<typeof videoAnalysisSchema>;
-
-// --- AI system prompts ---
-
-const QUALITY_SYSTEM = `Du er en dansk tekstforfatter og korrekturlæser med speciale i økonomi og investering.
-
-Bedøm den givne tekst på en skala fra 1-10 ud fra disse kriterier:
-- Sprog: Er teksten skrevet på naturligt, flydende dansk? Ingen vrøvl, stavefejl, blandede sprog eller uforståelige sætninger.
-- Relevans: Handler teksten om det emne der er beskrevet i konteksten?
-- Kvalitet: Er teksten velskrevet, professionel og informativ?
-- Troværdighed: Lyder teksten som noget en dansk finansskribent ville skrive?
-
-VIGTIGT: Hvis teksten indeholder nonsens, blandede sprog, eller ikke er naturligt dansk, skal scoren ALTID være under 5.
-VIGTIGT: Alt output SKAL være på dansk. Inkludér ALDRIG links eller URL'er.
-
-En score på 9+ betyder at teksten er klar til publicering uden rettelser.
-En score under 9 betyder at teksten har problemer der kræver regenerering.`;
-
-const VIDEO_ANALYSIS_SYSTEM = `Du er en dansk tekstforfatter med ekspertise i privatøkonomi og investering.
-Skriv ALTID på naturligt, flydende dansk. Analysér YouTube-videoer og returnér udelukkende valid JSON.
-
-Gyldige kategorier: privatøkonomi, aktier, ETF, obligationer, skat, pension, strategi, psykologi, analyse, krypto, bolig, FIRE, marked, andet
-
-relevanceScore: 0 = irrelevant for dansk privatinvestor, 100 = meget relevant.
-
-VIGTIGT: Alt output SKAL være på dansk. Inkludér ALDRIG links eller URL'er i noget felt.`;
-
-const ARTICLE_SYSTEM = `Du er en erfaren dansk tekstforfatter med speciale i privatøkonomi og investering. Skriv en grundig, velformuleret artikel baseret på en YouTube-video.
-
-Regler:
-- Skriv på naturligt, flydende dansk i en professionel men tilgængelig tone
-- Skriv KUN ren Markdown — brug ALDRIG HTML-tags som <h2>, <h3>, <p>, <ul>, <b> osv.
-- Brug Markdown-formatering: overskrifter (##), afsnit, fed tekst (**tekst**), punktlister (-)
-- Strukturér artiklen med en indledning, flere sektioner med overskrifter, og en afrunding
-- Artiklen skal være 800-1500 ord
-- Forklar begreber kort når de introduceres
-- Inkludér konkrete pointer og eksempler fra videoen
-- Skriv IKKE "I denne video" eller lignende — skriv som en selvstændig artikel
-- Brug IKKE h1 (#) — start med h2 (##)
-- Inkludér ALDRIG links eller URL'er i artiklen
-- Alt output SKAL være på dansk`;
-
-const CHANNEL_DESCRIPTION_SYSTEM = `Du er en erfaren dansk tekstforfatter med speciale i privatøkonomi og investering. Skriv en unik kanalbeskrivelse til en YouTube-kanal.
-
-Regler:
-- Skriv på naturligt, flydende dansk i en professionel men tilgængelig tone — som en rigtig dansk journalist ville skrive
-- Beskrivelsen skal være ca. 70 ord fordelt på præcis 2 afsnit
-- Første afsnit: Hvad kanalen handler om, hvem den henvender sig til, og hvilke emner der dækkes
-- Andet afsnit: Hvad der gør kanalen unik eller aktuel, baseret på de seneste videoer
-- Brug kanalens originale beskrivelse som udgangspunkt, men omskriv den fuldstændigt
-- Skriv IKKE i første person — skriv som en neutral redaktionel beskrivelse
-- Nævn IKKE specifikke videoer ved navn
-- Adskil afsnit med en tom linje
-- Inkludér ALDRIG links eller URL'er
-- Alt output SKAL være på dansk`;
-
-// --- AI quality validation ---
-
-async function validateQuality(text: string, context: string) {
-	return generateObjectDirect(
-		PRIMARY_MODEL,
-		qualitySchema,
-		QUALITY_SYSTEM,
-		`Kontekst: ${context}\n\nTekst der skal bedømmes:\n${text}`,
-		"quality",
-	);
-}
-
-async function generateWithQuality<T>(opts: {
-	generate: (model: string) => Promise<T>;
-	extractText: (result: T) => string;
-	context: string;
-}): Promise<T | null> {
-	const { generate, extractText, context } = opts;
-
-	for (const model of MODELS) {
-		const label = model === PRIMARY_MODEL ? "primary" : "fallback";
-		if (label === "fallback") {
-			console.log(`Primary model failed quality threshold, trying fallback for: ${context}`);
-		}
-
-		for (let attempt = 1; attempt <= MAX_QUALITY_ATTEMPTS; attempt++) {
-			try {
-				const result = await generate(model);
-				const text = extractText(result);
-
-				if (!text || text.length < 10) {
-					console.warn(`Attempt ${attempt} (${label}): generated text too short, retrying`);
-					continue;
-				}
-
-				const { score, reason } = await validateQuality(text, context);
-				console.log(`Attempt ${attempt} (${label}): score ${score}/10 — ${reason}`);
-
-				if (score >= MIN_QUALITY_SCORE) return result;
-			} catch (e) {
-				console.warn(`Attempt ${attempt} (${label}) failed:`, e);
-			}
-		}
-	}
-
-	console.error(`Failed to reach quality threshold after all attempts for: ${context}`);
-	return null;
-}
-
-async function generateTextWithQuality(
-	system: string,
-	prompt: string,
-	context: string,
-): Promise<string | null> {
-	return generateWithQuality({
-		generate: async (model) => {
-			const text = await generateTextDirect(model, system, prompt);
-			return text.trim();
-		},
-		extractText: (t) => t,
-		context,
-	});
-}
-
-// --- Channel actions (public) ---
+// --- Channel actions (internal; run with `npx convex run`) ---
 
 async function fetchAndUpsertChannel(ctx: ActionCtx, channelId: string) {
 	const data = await ytFetch<YouTubeListResponse<YouTubeChannelItem>>(
@@ -354,7 +128,7 @@ async function fetchAndUpsertChannel(ctx: ActionCtx, channelId: string) {
 	return ch.snippet.title;
 }
 
-export const addChannel = action({
+export const addChannel = internalAction({
 	args: { channelId: v.string() },
 	handler: async (ctx, { channelId }) => {
 		const name = await fetchAndUpsertChannel(ctx, channelId);
@@ -362,7 +136,7 @@ export const addChannel = action({
 	},
 });
 
-export const addChannelByHandle = action({
+export const addChannelByHandle = internalAction({
 	args: { handle: v.string() },
 	handler: async (ctx, { handle }) => {
 		const lookup = await ytFetch<YouTubeListResponse<YouTubeChannelItem>>(
@@ -378,222 +152,545 @@ export const addChannelByHandle = action({
 
 // --- Video sync ---
 
+/**
+ * Inserts the channel's new videos; each insert schedules its own job. Pass one `stagger` to
+ * every channel of a run so their jobs start 30 s apart across all channels.
+ */
+export async function syncVideosForChannel(
+	ctx: Pick<ActionCtx, "runQuery" | "runMutation">,
+	channelId: string,
+	maxResults = 10,
+	stagger = { queued: 0 },
+) {
+	const channel = await ctx.runQuery(internal.channels.getByChannelId, { channelId });
+	if (!channel) throw new Error(`Channel ${channelId} not in database`);
+
+	const playlist = await ytFetch<YouTubeListResponse<YouTubePlaylistItem>>(
+		`playlistItems?part=snippet&playlistId=${channel.uploadsPlaylistId}&maxResults=${maxResults}`,
+	);
+	if (!playlist.items?.length) {
+		console.warn(`syncChannelVideos: No videos found for channel ${channelId}`);
+		return { synced: 0 };
+	}
+
+	const ids = playlist.items.map((i) => i.snippet.resourceId.videoId);
+	const details = await ytFetch<YouTubeListResponse<YouTubeVideoItem>>(
+		`videos?part=snippet,contentDetails,statistics&id=${ids.join(",")}`,
+	);
+
+	let synced = 0;
+	for (const vid of details.items ?? []) {
+		const exists = await ctx.runQuery(internal.videos.getByVideoId, { videoId: vid.id });
+		if (exists) continue;
+
+		const durationSeconds = parseDuration(vid.contentDetails?.duration ?? "");
+		const description = vid.snippet.description ?? "";
+
+		await ctx.runMutation(internal.videos.insert, {
+			videoId: vid.id,
+			slug: slugify(vid.snippet.title, { lower: true, strict: true }),
+			channelId,
+			title: vid.snippet.title,
+			description,
+			publishedAt: vid.snippet.publishedAt,
+			thumbnailUrl: bestThumbnail(vid.snippet.thumbnails),
+			duration: vid.contentDetails?.duration,
+			durationSeconds,
+			viewCount: Number(vid.statistics?.viewCount) || 0,
+			likeCount: Number(vid.statistics?.likeCount) || 0,
+			tags: vid.snippet.tags ?? [],
+			hashtags: extractHashtags(description),
+			delayMs: stagger.queued++ * JOB_STAGGER_MS,
+		});
+		synced++;
+	}
+
+	await ctx.runMutation(internal.channels.updateLastSynced, {
+		channelId,
+		lastSyncedAt: Date.now(),
+	});
+
+	console.log(
+		`syncChannelVideos: ${synced} new video(s) synced for channel ${channelId} (${details.items?.length ?? 0} checked)`,
+	);
+	return { synced };
+}
+
 export const syncChannelVideos = internalAction({
 	args: { channelId: v.string(), maxResults: v.optional(v.number()) },
-	handler: async (ctx, { channelId, maxResults }) => {
-		const channel = await ctx.runQuery(internal.channels.getByChannelId, { channelId });
-		if (!channel) throw new Error(`Channel ${channelId} not in database`);
-
-		const playlist = await ytFetch<YouTubeListResponse<YouTubePlaylistItem>>(
-			`playlistItems?part=snippet&playlistId=${channel.uploadsPlaylistId}&maxResults=${maxResults ?? 10}`,
-		);
-		if (!playlist.items?.length) {
-			console.warn(`syncChannelVideos: No videos found for channel ${channelId}`);
-			return { synced: 0 };
-		}
-
-		const ids = playlist.items.map((i) => i.snippet.resourceId.videoId);
-		const details = await ytFetch<YouTubeListResponse<YouTubeVideoItem>>(
-			`videos?part=snippet,contentDetails,statistics&id=${ids.join(",")}`,
-		);
-
-		let synced = 0;
-		for (const vid of details.items ?? []) {
-			const exists = await ctx.runQuery(internal.videos.getByVideoId, { videoId: vid.id });
-			if (exists) continue;
-
-			const durationSeconds = parseDuration(vid.contentDetails?.duration ?? "");
-			const description = vid.snippet.description ?? "";
-
-			await ctx.runMutation(internal.videos.insert, {
-				videoId: vid.id,
-				slug: slugify(vid.snippet.title, { lower: true, strict: true }),
-				channelId,
-				title: vid.snippet.title,
-				description,
-				publishedAt: vid.snippet.publishedAt,
-				thumbnailUrl: bestThumbnail(vid.snippet.thumbnails),
-				duration: vid.contentDetails?.duration,
-				durationSeconds,
-				viewCount: Number(vid.statistics?.viewCount) || 0,
-				likeCount: Number(vid.statistics?.likeCount) || 0,
-				tags: vid.snippet.tags ?? [],
-				hashtags: extractHashtags(description),
-			});
-			synced++;
-		}
-
-		await ctx.runMutation(internal.channels.updateLastSynced, {
-			channelId,
-			lastSyncedAt: Date.now(),
-		});
-
-		console.log(
-			`syncChannelVideos: ${synced} new video(s) synced for channel ${channelId} (${details.items?.length ?? 0} checked)`,
-		);
-		return { synced };
-	},
+	handler: (ctx, { channelId, maxResults }) => syncVideosForChannel(ctx, channelId, maxResults),
 });
 
 // --- Transcript ---
 
+type TranscriptEntry = { text: string; offset: number; duration: number };
+
+async function fetchTranscriptSegments(
+	videoId: string,
+	signal: AbortSignal,
+): Promise<TranscriptEntry[]> {
+	const { fetchTranscript } = await import("@egoist/youtube-transcript-plus");
+	// The library sends every request (watch page, player, captions) through this fetch.
+	const result = await fetchTranscript(videoId, {
+		fetch: (input, init) => fetch(input, { ...init, signal }),
+	});
+	return result.segments.map((entry) => ({
+		text: entry.text,
+		offset: Math.round(entry.offset),
+		duration: Math.round(entry.duration),
+	}));
+}
+
+/**
+ * Transcript only, no LLM call. The sweep no longer schedules it (processNewVideo fetches the
+ * transcript itself); it stays so already-scheduled runs remain valid. Failures are logged.
+ */
 export const fetchTranscript = internalAction({
 	args: { videoId: v.string() },
 	handler: async (ctx, { videoId }) => {
 		const video = await ctx.runQuery(internal.videos.getByVideoId, { videoId });
-		if (!video || video.transcript) return;
+		if (!video || video.transcript?.length) return;
 
 		try {
-			const { fetchTranscript } = await import("@egoist/youtube-transcript-plus");
-			const result = await fetchTranscript(videoId);
-
-			await ctx.runMutation(internal.videos.updateTranscript, {
+			const transcript = await fetchTranscriptSegments(
 				videoId,
-				transcript: result.segments.map((entry) => ({
-					text: entry.text,
-					offset: Math.round(entry.offset),
-					duration: Math.round(entry.duration),
-				})),
-			});
+				AbortSignal.timeout(JOB_DEADLINE_MS),
+			);
+			if (transcript.length === 0) return;
+			await ctx.runMutation(internal.videos.updateTranscript, { videoId, transcript });
 		} catch (e) {
 			console.error(`Transcript fetch failed for ${videoId}:`, e);
 		}
 	},
 });
 
-// --- AI processing ---
+// --- AI jobs ---
 
-export const processVideo = internalAction({
-	args: { videoId: v.string() },
-	handler: async (ctx, { videoId }) => {
-		const video = await ctx.runQuery(internal.videos.getByVideoId, { videoId });
-		if (!video || video.processedAt) return;
+/** Everything a job touches, injectable so the jobs run in tests without Convex or network. */
+export type JobDeps = Pick<ActionCtx, "runQuery" | "runMutation"> & {
+	env: Record<string, string | undefined>;
+	now: () => number;
+	fetchImpl?: FetchLike;
+	sleep?: (ms: number) => Promise<void>;
+	fetchTranscriptSegments: (videoId: string, signal: AbortSignal) => Promise<TranscriptEntry[]>;
+	log?: (line: string) => void;
+};
 
-		const transcriptText = getTranscriptText(video.transcript, 3000);
-		const transcriptSection = transcriptText ? `\nTransskription (uddrag):\n${transcriptText}` : "";
+function jobDeps(ctx: ActionCtx): JobDeps {
+	return {
+		runQuery: ctx.runQuery.bind(ctx),
+		runMutation: ctx.runMutation.bind(ctx),
+		env: process.env,
+		now: Date.now,
+		fetchTranscriptSegments,
+	};
+}
 
-		const result = await generateWithQuality<VideoAnalysis>({
-			generate: (model) =>
-				generateObjectDirect(
-					model,
-					videoAnalysisSchema,
-					VIDEO_ANALYSIS_SYSTEM,
-					`Analysér denne video:
+/** An exhausted generation run; the message carries the part and issue codes only. */
+export class AiGenerationError extends Error {
+	name = "AiGenerationError";
+}
 
-Titel: ${video.title}
-Beskrivelse: ${cleanDescription(video.description).slice(0, 1500)}
-${transcriptSection}
+function issueCodes(issues: ValidationIssue[]): string[] {
+	return [...new Set(issues.map((issue) => issue.code))];
+}
 
-Generér 3-5 FAQ-spørgsmål baseret på videoens indhold. Spørgsmålene skal være naturlige søgeforespørgsler en dansk investor ville stille.`,
-					"video_analysis",
-				),
-			extractText: (r) => [r.summary, r.seoTitle, r.seoDescription, ...r.keyTakeaways].join(" "),
-			context: `Video-analyse af "${video.title}"`,
-		});
+export type VideoJobOptions = {
+	/** Regenerate even when the post is complete (manual rerun). */
+	force?: boolean;
+	/** Generate and validate only; no Convex writes. Provider calls are still made and billed. */
+	dryRun?: boolean;
+	/** "article" keeps the stored analysis and regenerates only the article. */
+	parts?: "all" | "article";
+	deadlineAt?: number;
+};
 
-		if (result) {
-			await ctx.runMutation(internal.videos.updateProcessedData, {
-				videoId,
-				summary: result.summary,
-				seoTitle: result.seoTitle,
-				seoDescription: result.seoDescription,
-				themes: result.themes,
-				categories: result.categories,
-				keyTakeaways: result.keyTakeaways,
-				faq: result.faq,
-				relevanceScore: result.relevanceScore,
-			});
+export type VideoJobResult =
+	| { status: "not_found" | "skipped" }
+	| { status: "insufficient_source"; reason: string }
+	| {
+			status: "dry_run";
+			attempts: PostAttempts;
+			analysis?: VideoAnalysis;
+			article: string;
+	  }
+	| { status: "published" | "stale"; attempts: PostAttempts }
+	| { status: "invalid"; issues: string[] };
+
+/** The transcript fetch shares the job deadline: it is aborted when the deadline is reached. */
+async function fetchTranscriptBefore(
+	deps: JobDeps,
+	videoId: string,
+	deadlineAt: number,
+): Promise<TranscriptEntry[] | undefined> {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), Math.max(0, deadlineAt - deps.now()));
+	try {
+		return await deps.fetchTranscriptSegments(videoId, controller.signal);
+	} catch (e) {
+		console.error(`Transcript fetch failed for ${videoId}:`, e);
+		return undefined;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+// Only 413 (request too large) is specific to this video. 400 is also returned when an
+// organization or workspace spend limit is reached, so it may affect every video:
+// https://platform.claude.com/docs/en/api/errors
+const REQUEST_SPECIFIC_STATUSES = new Set([413]);
+
+/**
+ * One video post: transcript → analysis → article → one publish mutation. Nothing is written
+ * unless both parts pass; an exhausted run records the failure codes and throws.
+ */
+export async function runVideoPostJob(
+	deps: JobDeps,
+	videoId: string,
+	options: VideoJobOptions = {},
+): Promise<VideoJobResult> {
+	const log = deps.log ?? console.log;
+	const deadlineAt = options.deadlineAt ?? deps.now() + JOB_DEADLINE_MS;
+	const video = await deps.runQuery(internal.videos.getByVideoId, { videoId });
+	if (!video) return { status: "not_found" };
+	if (!options.force && video.processedAt !== undefined && video.article) {
+		return { status: "skipped" };
+	}
+
+	// Shorts never get a post, so their transcript is not fetched.
+	let transcript = video.transcript;
+	if ((video.durationSeconds ?? 0) > SHORTS_THRESHOLD && !transcript?.length) {
+		transcript = await fetchTranscriptBefore(deps, videoId, deadlineAt);
+		if (transcript?.length && !options.dryRun && deps.now() <= deadlineAt) {
+			await deps.runMutation(internal.videos.updateTranscript, { videoId, transcript });
 		}
-	},
+	}
+	const eligibility = isEligibleForAi({ durationSeconds: video.durationSeconds, transcript });
+	if (!eligibility.eligible) {
+		log(`video ${videoId}: insufficient_source reason=${eligibility.reason}`);
+		return { status: "insufficient_source", reason: eligibility.reason };
+	}
+
+	const config = resolveLlmConfig(deps.env);
+	const storedAnalysis = options.parts === "article" ? storedAnalysisOf(video) : undefined;
+	if (options.parts === "article" && !storedAnalysis) {
+		throw new Error(`Video ${videoId} has no stored analysis; rerun with parts "all"`);
+	}
+	const channel = await deps.runQuery(internal.channels.getByChannelId, {
+		channelId: video.channelId,
+	});
+	const ctx: GenerationContext = {
+		config,
+		deadlineAt,
+		now: deps.now,
+		llm: { fetchImpl: deps.fetchImpl, sleep: deps.sleep },
+		log,
+		label: `video ${videoId}`,
+	};
+
+	let result: Awaited<ReturnType<typeof generateVideoPost>>;
+	try {
+		result = await generateVideoPost(
+			{ title: video.title, description: video.description, transcript },
+			channel?.name ?? "YouTube",
+			ctx,
+			{ storedAnalysis },
+		);
+	} catch (error) {
+		// Only a request-specific rejection counts against this video. Auth, permission, model
+		// and other provider errors affect every video, so they must not gate this one.
+		if (error instanceof LlmHttpError && REQUEST_SPECIFIC_STATUSES.has(error.status)) {
+			if (!options.dryRun) {
+				await deps.runMutation(internal.videos.recordAiFailure, {
+					videoId,
+					issues: ["provider_rejected_request"],
+				});
+			}
+		} else if (error instanceof LlmHttpError) {
+			console.error(`video ${videoId}: provider error, fix the AI configuration: ${error.message}`);
+		}
+		throw error;
+	}
+
+	const fail = async (part: string, codes: string[]): Promise<never> => {
+		if (!options.dryRun) {
+			await deps.runMutation(internal.videos.recordAiFailure, { videoId, issues: codes });
+		}
+		throw new AiGenerationError(`AI post failed for ${videoId}: ${part} issues=${codes.join(",")}`);
+	};
+	if (!result.ok) return fail(result.part, issueCodes(result.lastIssues));
+
+	if (options.dryRun) {
+		return {
+			status: "dry_run",
+			attempts: result.attempts,
+			analysis: result.analysis,
+			article: result.article,
+		};
+	}
+
+	if (deps.now() > deadlineAt) return fail("publish", ["deadline"]);
+	const published = await deps.runMutation(internal.videos.publishPost, {
+		videoId,
+		expectedProcessedAt: video.processedAt,
+		...(result.analysis ? { analysis: result.analysis } : {}),
+		article: result.article,
+		deadlineAt,
+	});
+	log(`video ${videoId}: publish ${published.status}`);
+	if (published.status === "published" || published.status === "stale") {
+		return { status: published.status, attempts: result.attempts };
+	}
+	if (published.status === "deadline") return fail("publish", ["deadline"]);
+	if (published.status === "invalid") return published;
+	return { status: "not_found" };
+}
+
+export type ChannelJobResult =
+	| { status: "not_found" }
+	| { status: "dry_run"; attempts: number; aiDescription: string }
+	| { status: "published" | "stale"; attempts: number }
+	| { status: "invalid"; issues: string[] };
+
+/** One channel description: generate → validate → judge → guarded publish. Throws when exhausted. */
+export async function runChannelDescriptionJob(
+	deps: JobDeps,
+	channelId: string,
+	options: { dryRun?: boolean; deadlineAt?: number } = {},
+): Promise<ChannelJobResult> {
+	const log = deps.log ?? console.log;
+	const channel = await deps.runQuery(internal.channels.getByChannelId, { channelId });
+	if (!channel) return { status: "not_found" };
+	const config = resolveLlmConfig(deps.env);
+	const recentVideos = await deps.runQuery(internal.videos.listRecentByChannel, {
+		channelId,
+		limit: 10,
+	});
+
+	const deadlineAt = options.deadlineAt ?? deps.now() + JOB_DEADLINE_MS;
+	const result = await generateChannelDescriptionText(
+		{ name: channel.name, description: channel.description },
+		recentVideos,
+		{
+			config,
+			deadlineAt,
+			now: deps.now,
+			llm: { fetchImpl: deps.fetchImpl, sleep: deps.sleep },
+			log,
+			label: `channel ${channelId}`,
+		},
+	);
+	if (!result.ok) {
+		throw new AiGenerationError(
+			`AI channel description failed for ${channelId}: issues=${issueCodes(result.lastIssues).join(",")}`,
+		);
+	}
+	if (options.dryRun) {
+		return { status: "dry_run", attempts: result.attempts, aiDescription: result.value };
+	}
+
+	const deadlineError = new AiGenerationError(
+		`AI channel description not published for ${channelId}: issues=deadline`,
+	);
+	if (deps.now() > deadlineAt) throw deadlineError;
+	const published = await deps.runMutation(internal.channels.publishAiDescription, {
+		channelId,
+		aiDescription: result.value,
+		expectedAiDescription: channel.aiDescription,
+		deadlineAt,
+	});
+	log(`channel ${channelId}: publish ${published.status}`);
+	if (published.status === "published" || published.status === "stale") {
+		return { status: published.status, attempts: result.attempts };
+	}
+	if (published.status === "deadline") throw deadlineError;
+	return published;
+}
+
+const videoIdArgs = { videoId: v.string() };
+
+// processVideo and generateArticle keep their names so already-scheduled runs stay valid;
+// both run the full job, because analysis and article are published together.
+export const processVideo = internalAction({
+	args: videoIdArgs,
+	handler: (ctx, { videoId }) => runVideoPostJob(jobDeps(ctx), videoId),
 });
 
 export const generateArticle = internalAction({
-	args: { videoId: v.string() },
-	handler: async (ctx, { videoId }) => {
-		const video = await ctx.runQuery(internal.videos.getByVideoId, { videoId });
-		if (!video || video.article || !video.processedAt) return;
-
-		const channel = await ctx.runQuery(internal.channels.getByChannelId, {
-			channelId: video.channelId,
-		});
-
-		const transcriptText = getTranscriptText(video.transcript, 6000);
-		const transcriptSection = transcriptText ? `Transskription:\n${transcriptText}` : "";
-
-		const article = await generateTextWithQuality(
-			ARTICLE_SYSTEM,
-			`Skriv en artikel baseret på denne video:
-
-Titel: ${video.title}
-Kanal: ${channel?.name ?? "YouTube"}
-Opsummering: ${video.summary ?? ""}
-Hovedpointer: ${(video.keyTakeaways ?? []).join("\n- ")}
-Temaer: ${(video.themes ?? []).join(", ")}
-
-Beskrivelse:
-${cleanDescription(video.description).slice(0, 2000)}
-
-${transcriptSection}
-
-Skriv artiklen nu:`,
-			`Artikel baseret på video "${video.title}"`,
-		);
-
-		if (article) {
-			await ctx.runMutation(internal.videos.updateArticle, {
-				videoId,
-				article: article.replace(/<\/?[a-z][a-z0-9]*[^>]*>/gi, ""),
-			});
-		}
-	},
+	args: videoIdArgs,
+	handler: (ctx, { videoId }) => runVideoPostJob(jobDeps(ctx), videoId),
 });
 
 export const generateChannelDescription = internalAction({
 	args: { channelId: v.string() },
-	handler: async (ctx, { channelId }) => {
-		const channel = await ctx.runQuery(internal.channels.getByChannelId, { channelId });
-		if (!channel) return;
+	handler: (ctx, { channelId }) => runChannelDescriptionJob(jobDeps(ctx), channelId),
+});
 
-		const videos = await ctx.runQuery(internal.videos.listRecentByChannel, {
-			channelId,
-			limit: 10,
-		});
+// --- CLI commands (internal; run with `npx convex run youtube:<name> '<json>'`) ---
 
-		const recentVideos =
-			videos.map((v) => `- ${v.title}${v.summary ? ` (${v.summary})` : ""}`).join("\n") ||
-			"Ingen videoer endnu";
+type VideoTarget = { videoId: string } | { slug: string; channelId?: string };
 
-		const aiDescription = await generateTextWithQuality(
-			CHANNEL_DESCRIPTION_SYSTEM,
-			`Skriv en unik kanalbeskrivelse baseret på følgende:
+export async function resolveVideoTarget(
+	deps: Pick<ActionCtx, "runQuery">,
+	target: VideoTarget,
+): Promise<string> {
+	if ("videoId" in target) return target.videoId;
+	const matches = await deps.runQuery(internal.videos.findBySlug, {
+		slug: target.slug,
+		...(target.channelId ? { channelId: target.channelId } : {}),
+	});
+	return pickVideoForSlug(matches, target);
+}
 
-Kanalnavn: ${channel.name}
-Original beskrivelse: ${channel.description ?? "Ingen beskrivelse"}
-
-Seneste videoer:
-${recentVideos}
-
-Skriv kun selve beskrivelsen (ca. 70 ord, præcis 2 afsnit adskilt med tom linje), intet andet:`,
-			`Kanalbeskrivelse for "${channel.name}"`,
-		);
-
-		if (aiDescription) {
-			await ctx.runMutation(internal.channels.updateAiDescription, { channelId, aiDescription });
-		}
+/**
+ * Regenerates one video post now, ignoring the failure gate. With dryRun the result is returned
+ * and nothing is written, but the provider calls are still made and billed.
+ */
+export const rerunVideo = internalAction({
+	args: {
+		target: v.union(
+			v.object({ videoId: v.string() }),
+			v.object({ slug: v.string(), channelId: v.optional(v.string()) }),
+		),
+		parts: v.optional(v.union(v.literal("all"), v.literal("article"))),
+		dryRun: v.optional(v.boolean()),
 	},
+	handler: async (ctx, { target, parts, dryRun }): Promise<VideoJobResult> => {
+		const videoId = await resolveVideoTarget(ctx, target);
+		return runVideoPostJob(jobDeps(ctx), videoId, { force: true, parts, dryRun });
+	},
+});
+
+/** Regenerates one channel description now; dryRun returns it without writing (still billed). */
+export const rerunChannelDescription = internalAction({
+	args: { channelId: v.string(), dryRun: v.optional(v.boolean()) },
+	handler: (ctx, { channelId, dryRun }): Promise<ChannelJobResult> =>
+		runChannelDescriptionJob(jobDeps(ctx), channelId, { dryRun }),
+});
+
+type AuditArgs = { table: "videos" | "channels"; cursor?: string | null; pageSize?: number };
+
+export function runAudit(deps: Pick<ActionCtx, "runQuery">, args: AuditArgs): Promise<AuditPage> {
+	const paginationOpts = { numItems: clampPageSize(args.pageSize), cursor: args.cursor ?? null };
+	return args.table === "videos"
+		? deps.runQuery(internal.videos.auditPage, { paginationOpts })
+		: deps.runQuery(internal.channels.auditPage, { paginationOpts });
+}
+
+/**
+ * One page of the content audit: no provider calls, no env keys, no writes. Pass the returned
+ * continueCursor as cursor until isDone is true; audit each table separately.
+ */
+export const auditContent = internalAction({
+	args: {
+		table: v.union(v.literal("videos"), v.literal("channels")),
+		cursor: v.optional(v.union(v.string(), v.null())),
+		pageSize: v.optional(v.number()),
+	},
+	handler: (ctx, args): Promise<AuditPage> => runAudit(ctx, args),
+});
+
+export type RepairReceipt =
+	| { videoId: string; status: "scheduled"; delayMs: number; issues: string[] }
+	| { videoId: string; status: "valid" | "not_found" };
+
+/** Re-validates each target and schedules a forced rerun only for failing or missing posts. */
+export async function queueRepairs(deps: FanOutDeps, targets: string[]): Promise<RepairReceipt[]> {
+	if (targets.length > MAX_REPAIR_TARGETS) {
+		throw new Error(`regenerateInvalidPosts takes at most ${MAX_REPAIR_TARGETS} targets`);
+	}
+	const log = deps.log ?? console.log;
+	const receipts: RepairReceipt[] = [];
+	let scheduled = 0;
+	for (const videoId of targets) {
+		const audit: ReturnType<typeof auditStoredPost> | null = await deps.runQuery(
+			internal.videos.auditOne,
+			{ videoId },
+		);
+		if (!audit) {
+			receipts.push({ videoId, status: "not_found" });
+			continue;
+		}
+		const issues = audit.missing ? ["missing"] : audit.findings.flatMap((f) => f.issues);
+		if (issues.length === 0) {
+			receipts.push({ videoId, status: "valid" });
+			continue;
+		}
+		const delayMs = scheduled++ * JOB_STAGGER_MS;
+		await deps.scheduler.runAfter(delayMs, internal.youtube.rerunVideo, { target: { videoId } });
+		receipts.push({ videoId, status: "scheduled", delayMs, issues });
+	}
+	log(`regenerateInvalidPosts: scheduled ${scheduled} of ${targets.length}`);
+	return receipts;
+}
+
+export const regenerateInvalidPosts = internalAction({
+	args: { targets: v.array(v.string()) },
+	handler: (ctx, { targets }): Promise<RepairReceipt[]> => queueRepairs(ctx, targets),
 });
 
 // --- Pipeline ---
 
+type FanOutDeps = Pick<ActionCtx, "runQuery" | "scheduler"> & { log?: (line: string) => void };
+
+// Each page reads full video documents incl. transcripts; small pages stay far below the
+// per-function read limit.
+const SWEEP_PAGE_SIZE = 25;
+
+/**
+ * Pages through sweep projections, selects candidates and schedules them 30 s apart. Pass the
+ * sync's `stagger` so the sweep's jobs continue after the new-video jobs of the same run.
+ */
+export async function sweepVideos(
+	deps: FanOutDeps & { now: () => number; stagger?: { queued: number } },
+) {
+	const stagger = deps.stagger ?? { queued: 0 };
+	const log = deps.log ?? console.log;
+	const rows: SweepRow[] = [];
+	let cursor: string | null = null;
+	let isDone = false;
+	while (!isDone) {
+		const result: PaginationResult<SweepRow> = await deps.runQuery(internal.videos.listSweepPage, {
+			paginationOpts: { numItems: SWEEP_PAGE_SIZE, cursor },
+		});
+		rows.push(...result.page);
+		cursor = result.continueCursor;
+		isDone = result.isDone;
+	}
+
+	// One job type: processNewVideo fetches a missing transcript first and makes no LLM call
+	// when the source is insufficient.
+	const videoIds = selectSweepCandidates(rows, deps.now());
+	for (const videoId of videoIds) {
+		await deps.scheduler.runAfter(
+			stagger.queued++ * JOB_STAGGER_MS,
+			internal.youtube.processNewVideo,
+			{
+				videoId,
+			},
+		);
+	}
+	log(`sweep: checked ${rows.length} video(s), queued ${videoIds.length} job(s)`);
+	return { queued: videoIds.length };
+}
+
+/** Schedules one description job per channel, 30 s apart. */
+export async function queueChannelDescriptionJobs(deps: FanOutDeps) {
+	const log = deps.log ?? console.log;
+	const channels = await deps.runQuery(internal.channels.listAll);
+	for (const [i, channel] of channels.entries()) {
+		await deps.scheduler.runAfter(i * JOB_STAGGER_MS, internal.youtube.generateChannelDescription, {
+			channelId: channel.channelId,
+		});
+	}
+	log(`channel descriptions: queued ${channels.length} job(s)`);
+	return { queued: channels.length };
+}
+
+/** Full job for one video: transcript → analysis → article → publish, in order. */
 export const processNewVideo = internalAction({
-	args: { videoId: v.string() },
-	handler: async (ctx, { videoId }) => {
-		console.log(`processNewVideo: Starting pipeline for ${videoId}`);
-		await retrier.run(ctx, internal.youtube.fetchTranscript, { videoId });
-		await retrier.run(ctx, internal.youtube.processVideo, { videoId });
-		await retrier.run(ctx, internal.youtube.generateArticle, { videoId });
-		console.log(`processNewVideo: Pipeline complete for ${videoId}`);
-	},
+	args: videoIdArgs,
+	handler: (ctx, { videoId }) => runVideoPostJob(jobDeps(ctx), videoId),
 });
 
 export const refreshVideoStats = internalAction({
@@ -616,6 +713,8 @@ export const refreshVideoStats = internalAction({
 					viewCount: Number(vid.statistics?.viewCount) || 0,
 					likeCount: Number(vid.statistics?.likeCount) || 0,
 					thumbnailUrl: bestThumbnail(vid.snippet.thumbnails),
+					duration: vid.contentDetails?.duration,
+					durationSeconds: parseDuration(vid.contentDetails?.duration ?? ""),
 				});
 			}
 		}
@@ -626,7 +725,7 @@ export const syncAllChannels = internalAction({
 	args: {},
 	handler: async (ctx) => {
 		requireEnv("YOUTUBE_API_KEY");
-		requireEnv("OPENROUTER_API_KEY");
+		resolveLlmConfig(process.env);
 
 		const channels = await ctx.runQuery(internal.channels.listAll);
 		if (channels.length === 0) {
@@ -635,73 +734,53 @@ export const syncAllChannels = internalAction({
 		}
 
 		console.log(
-			`syncAllChannels: Starting pipeline for ${channels.length} channel(s): ${channels.map((c) => c.name).join(", ")}`,
+			`syncAllChannels: Syncing ${channels.length} channel(s): ${channels.map((c) => c.name).join(", ")}`,
 		);
 
-		// 1. Sync new videos from YouTube
-		for (const ch of channels) {
-			console.log(`[1/3] Syncing videos for "${ch.name}" (${ch.channelId})`);
-			await retrier.run(ctx, internal.youtube.syncChannelVideos, {
-				channelId: ch.channelId,
-				maxResults: 50,
-			});
-		}
-
-		// 2. Retry any videos that previously failed processing
-		const withoutTranscript = await ctx.runQuery(internal.videos.listWithoutTranscript);
-		const unprocessed = await ctx.runQuery(internal.videos.listUnprocessed);
-		const withoutArticle = await ctx.runQuery(internal.videos.listWithoutArticle);
-
-		const needsRetry = new Set(
-			[...withoutTranscript, ...unprocessed, ...withoutArticle].map((v) => v.videoId),
+		// 1. Sync new videos from YouTube; each insert schedules its own job, staggered across
+		// all channels.
+		const stagger = { queued: 0 };
+		await forEachSafe(
+			channels,
+			(ch) => `sync ${ch.name} (${ch.channelId})`,
+			(ch) => syncVideosForChannel(ctx, ch.channelId, 50, stagger),
 		);
 
-		if (needsRetry.size > 0) {
-			console.log(`[2/3] Retrying ${needsRetry.size} video(s) with missing content`);
-			for (const videoId of needsRetry) {
-				await retrier.run(ctx, internal.youtube.processNewVideo, { videoId });
-			}
-		} else {
-			console.log("[2/3] No videos need retry");
-		}
-
-		// 3. Refresh view/like counts
-		console.log("[3/3] Refreshing video stats");
-		await retrier.run(ctx, internal.youtube.refreshVideoStats, {});
-
-		console.log("syncAllChannels: Pipeline complete.");
+		// 2. Sweep: queue jobs for older videos with missing content, continuing the stagger.
+		await sweepVideos({
+			runQuery: ctx.runQuery.bind(ctx),
+			scheduler: ctx.scheduler,
+			now: Date.now,
+			stagger,
+		});
 	},
 });
 
+async function refreshChannels(ctx: ActionCtx) {
+	const channels = await ctx.runQuery(internal.channels.listAll);
+	if (channels.length === 0) return;
+
+	console.log(`refreshAllChannelInfo: Refreshing ${channels.length} channel(s)`);
+	await forEachSafe(
+		channels,
+		(ch) => `refresh ${ch.name}`,
+		(ch) => fetchAndUpsertChannel(ctx, ch.channelId),
+	);
+}
+
 export const refreshAllChannelInfo = internalAction({
 	args: {},
-	handler: async (ctx) => {
-		const channels = await ctx.runQuery(internal.channels.listAll);
-		if (channels.length === 0) return;
-
-		console.log(`refreshAllChannelInfo: Refreshing ${channels.length} channel(s)`);
-		await forEachSafe(
-			channels,
-			(ch) => `refresh ${ch.name}`,
-			(ch) => fetchAndUpsertChannel(ctx, ch.channelId),
-		);
-	},
+	handler: (ctx) => refreshChannels(ctx),
 });
 
 export const refreshAndGenerateAllChannelDescriptions = internalAction({
 	args: {},
 	handler: async (ctx) => {
-		requireEnv("OPENROUTER_API_KEY");
-		await ctx.runAction(internal.youtube.refreshAllChannelInfo);
-
-		const channels = await ctx.runQuery(internal.channels.listAll);
-		if (channels.length === 0) return;
-
-		console.log(`Generating AI descriptions for ${channels.length} channel(s)`);
-		for (const ch of channels) {
-			await retrier.run(ctx, internal.youtube.generateChannelDescription, {
-				channelId: ch.channelId,
-			});
-		}
+		resolveLlmConfig(process.env);
+		await refreshChannels(ctx);
+		await queueChannelDescriptionJobs({
+			runQuery: ctx.runQuery.bind(ctx),
+			scheduler: ctx.scheduler,
+		});
 	},
 });

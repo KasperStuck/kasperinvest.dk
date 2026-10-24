@@ -27,7 +27,6 @@
 		"deps:scan": "bun pm scan"
 	},
 	"dependencies": {
-		"@ai-sdk/openai": "^2.0.99",
 		"@ai-sdk/provider-utils": "^3.0.22",
 		"@astrojs/node": "^11.1.6",
 		"@convex-dev/action-retrier": "^0.3.0",
@@ -54,6 +53,7 @@
 		"@tailwindcss/typography": "^0.5.19",
 		"@tailwindcss/vite": "^4.3",
 		"@vitest/ui": "^4.1",
+		"convex-test": "0.0.54",
 		"eslint": "^10",
 		"happy-dom": "^20.8.3",
 		"tailwindcss": "^4.2.1",

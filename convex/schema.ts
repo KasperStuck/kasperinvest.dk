@@ -112,6 +112,10 @@ export default defineSchema({
 		keyTakeaways: v.optional(v.array(v.string())),
 		relevanceScore: v.optional(v.number()),
 		processedAt: v.optional(v.number()),
+		// AI failure state: set after an exhausted run, cleared on publish. Issue codes only.
+		aiFailureCount: v.optional(v.number()),
+		aiLastFailedAt: v.optional(v.number()),
+		aiLastIssues: v.optional(v.array(v.string())),
 	})
 		.index("by_videoId", ["videoId"])
 		.index("by_slug", ["slug"])

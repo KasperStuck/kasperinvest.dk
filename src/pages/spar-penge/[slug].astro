@@ -2,6 +2,7 @@
 import { captureException } from "@sentry/astro";
 
 import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import PageHeader from "@/components/PageHeader.astro";
 import ProviderCard from "@/components/ProviderCard.astro";
 import { getSavingsCategory } from "@/data/savings";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
@@ -28,6 +29,8 @@ if (!category) return new Response(null, { status: 404, statusText: "Not Found" 
 >
 	<Breadcrumbs
 		slot="breadcrumbs"
+		schema
+		hideRootOnMobile
 		items={[
 			{ label: "KasperInvest", href: "/" },
 			{ label: "Spar penge", href: "/spar-penge" },
@@ -35,12 +38,7 @@ if (!category) return new Response(null, { status: 404, statusText: "Not Found" 
 		]}
 	/>
 
-	<div class="mt-10 sm:mt-14">
-		<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">{category.title}</h1>
-		<p class="mt-6 max-w-2xl text-base/7 text-gray-700 dark:text-gray-400">
-			{category.intro ?? category.description}
-		</p>
-	</div>
+	<PageHeader title={category.title}>{category.intro ?? category.description}</PageHeader>
 
 	<div class="mt-10 space-y-4">
 		{category.providers.map((p) => (

@@ -38,7 +38,7 @@ const Content = mdxModule?.default;
 
 const breadcrumbItems = [
 	{ label: "KasperInvest", href: "/" },
-	{ label: lesson.module.title, href: `/#${lesson.module.id}`, class: "max-md:hidden" },
+	{ label: lesson.module.title, href: `/#${lesson.module.id}`, hideOnMobile: true },
 	{ label: lesson.title },
 ];
 const explicitRelatedLinks = getRelatedLinks(Astro.url.pathname);
@@ -87,10 +87,10 @@ const relatedLinks =
 				poster={lesson.video.thumbnail}
 			/>
 		</div>}
-		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 lg:max-w-5xl">
-			<div class="w-full flex-1">
-				<AuthorBox />
+		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 xl:max-w-5xl">
+			<div class="w-full min-w-0 flex-1">
 				<Prose empty={!Content} emptyMessage="Denne lektion er under udarbejdelse." relatedLinks={relatedLinks}>
+					<AuthorBox slot="byline" />
 					{Content && <Content />}
 				</Prose>
 				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
@@ -100,8 +100,8 @@ const relatedLinks =
 								href={`/${lesson.next.id}`}
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
-									Up next
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600 dark:text-gray-400">
+									Næste lektion
 									<ChevronRightIcon />
 								</p>
 								<p class="mt-3 text-base/7 font-medium text-gray-950 dark:text-white">
@@ -118,8 +118,8 @@ const relatedLinks =
 								href="/youtube"
 								class="-mx-3 -my-2 block rounded-xl px-3 py-2 hover:bg-gray-950/4 dark:hover:bg-white/5"
 							>
-								<p class="flex items-center gap-3 text-sm/7 text-gray-600">
-									Up next
+								<p class="flex items-center gap-3 text-sm/7 text-gray-600 dark:text-gray-400">
+									Næste
 									<ChevronRightIcon />
 								</p>
 								<p class="mt-3 text-base/7 font-medium text-gray-950 dark:text-white">
@@ -134,7 +134,7 @@ const relatedLinks =
 				</div>
 				<Disclaimer />
 			</div>
-			<div class="hidden w-66 lg:block">
+			<div class="hidden w-66 shrink-0 xl:block">
 				<TableOfContents contentId="content" />
 			</div>
 		</div>

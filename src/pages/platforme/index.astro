@@ -1,42 +1,37 @@
 ---
-import { getPlatforms } from "@/data/platforms";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import LinkCard from "@/components/LinkCard.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import { getPlatformsByKind } from "@/data/platforms";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import { sectionDescriptions } from "@/lib/navigation";
 
-const platforms = getPlatforms();
+const groups = [
+	{ id: "udbydere", title: "Udbydere", platforms: getPlatformsByKind("provider") },
+	{ id: "sammenligninger", title: "Sammenligninger", platforms: getPlatformsByKind("comparison") },
+];
 ---
 
 <CenteredLayout
 	title="Investeringsplatforme - KasperInvest"
-	description="Sammenlign de mest populære investeringsplatforme i Danmark — Saxo Bank, Nordnet, Norm Invest, eToro og flere. Find den rette platform til din investering."
+	description={sectionDescriptions.platforme}
 >
-	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
-		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
-		<span class="text-gray-950/25 dark:text-white/25">/</span>
-		<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">Platforme</span>
-	</nav>
+	<Breadcrumbs slot="breadcrumbs" items={[{ label: "KasperInvest", href: "/" }, { label: "Platforme" }]} />
 
-	<div class="mt-10 sm:mt-14">
-		<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
-			Investeringsplatforme
-		</h1>
-		<p class="mt-6 max-w-2xl text-base/7 text-gray-700 dark:text-gray-400">
-			Valget af investeringsplatform har betydning for dine omkostninger, dine muligheder og din daglige oplevelse som investor. Her finder du traditionelle banker, robo-advisors og internationale handelsplatforme. Begynd med <a href="/platforme/nordnet-vs-saxo-bank" class="underline">Nordnet vs. Saxo Bank</a>, eller sammenlign automatisk investering i <a href="/guides/bedste-maanedsopsparing" class="underline">Bedste månedsopsparing</a>.
-		</p>
-	</div>
+	<PageHeader title="Investeringsplatforme">
+		Valget af investeringsplatform har betydning for dine omkostninger, dine muligheder og din daglige oplevelse som investor. Her finder du traditionelle banker, robo-advisors og internationale handelsplatforme. Begynd med <a href="/platforme/nordnet-vs-saxo-bank" class="underline">Nordnet vs. Saxo Bank</a>, eller sammenlign automatisk investering i <a href="/guides/bedste-maanedsopsparing" class="underline">Bedste månedsopsparing</a>.
+	</PageHeader>
 
-	<div class="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-		{platforms.map((p) => (
-			<a
-				href={`/platforme/${p.id}`}
-				class="group rounded-xl border border-gray-950/10 p-6 transition hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"
-			>
-				<h2 class="text-base/7 font-semibold text-gray-950 group-hover:text-gray-700 dark:text-white dark:group-hover:text-gray-300">
-					{p.title}
-				</h2>
-				<p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">
-					{p.description}
-				</p>
-			</a>
-		))}
-	</div>
+	{groups.map((group) => (
+		<section aria-labelledby={group.id} class="mt-10">
+			<h2 id={group.id} class="text-xl/8 font-semibold tracking-tight text-gray-950 dark:text-white">
+				{group.title}
+			</h2>
+			<div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				{group.platforms.map((p) => (
+					<LinkCard href={`/platforme/${p.id}`} title={p.title} description={p.description} headingLevel={3} />
+				))}
+			</div>
+		</section>
+	))}
 </CenteredLayout>

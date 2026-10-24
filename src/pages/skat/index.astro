@@ -1,4 +1,7 @@
 ---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import LinkCard from "@/components/LinkCard.astro";
+import PageHeader from "@/components/PageHeader.astro";
 import { getArticles, sectionMeta } from "@/data/articles";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 
@@ -6,9 +9,7 @@ const section = sectionMeta.skat;
 const articles = getArticles("skat");
 ---
 <CenteredLayout title="Skat af investering - KasperInvest" description={section.description}>
-	<div class="py-10 sm:py-14">
-		<h1 class="text-3xl/10 font-semibold tracking-tight text-gray-950 dark:text-white">Skat af investering</h1>
-		<p class="mt-4 max-w-2xl text-base/7 text-gray-600 dark:text-gray-400">{section.description} Regler og beløbsgrænser ændrer sig; kontrollér derfor altid den konkrete situation hos Skattestyrelsen.</p>
-		<div class="mt-10 grid gap-4 sm:grid-cols-2">{articles.map((article) => <a href={`/skat/${article.id}`} class="rounded-xl border border-gray-950/10 p-5 hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"><h2 class="font-semibold text-gray-950 dark:text-white">{article.title}</h2><p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">{article.description}</p></a>)}</div>
-	</div>
+	<Breadcrumbs slot="breadcrumbs" items={[{ label: "KasperInvest", href: "/" }, { label: section.title }]} />
+	<PageHeader title="Skat af investering">{section.description} Regler og beløbsgrænser ændrer sig; kontrollér derfor altid den konkrete situation hos Skattestyrelsen.</PageHeader>
+	<div class="mt-10 grid gap-4 sm:grid-cols-2">{articles.map((article) => <LinkCard href={`/skat/${article.id}`} title={article.title} description={article.description} />)}</div>
 </CenteredLayout>

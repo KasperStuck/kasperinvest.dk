@@ -33,6 +33,13 @@ describe("getModules", () => {
 		expect(new Set(ids).size).toBe(ids.length);
 	});
 
+	it("has 8 modules with 47 unique lessons", () => {
+		const modules = getModules();
+		const ids = modules.flatMap((m) => m.lessons.map((l) => l.id));
+		expect(modules).toHaveLength(8);
+		expect(new Set(ids).size).toBe(47);
+	});
+
 	it("all module IDs are unique", () => {
 		const ids = getModules().map((m) => m.id);
 		expect(new Set(ids).size).toBe(ids.length);

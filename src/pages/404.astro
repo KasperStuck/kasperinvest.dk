@@ -1,10 +1,11 @@
 ---
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import { focusRing, primaryButton } from "@/lib/navigation";
 ---
 
 <CenteredLayout title="Side ikke fundet - KasperInvest">
 	<div class="flex flex-col items-center justify-center py-32 text-center">
-		<p class="text-sm font-semibold text-gray-600">404</p>
+		<p class="text-sm font-semibold text-gray-600 dark:text-gray-400">404</p>
 		<h1 class="mt-4 text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl dark:text-white">
 			Side ikke fundet
 		</h1>
@@ -14,7 +15,7 @@ import CenteredLayout from "@/layouts/CenteredLayout.astro";
 		<div class="mt-10">
 			<a
 				href="/"
-				class="rounded-md bg-gray-950 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 dark:bg-white dark:text-gray-950 dark:hover:bg-gray-200"
+				class:list={["rounded-md px-3.5 py-2.5 text-sm font-semibold shadow-sm", primaryButton, focusRing]}
 			>
 				Gå til forsiden
 			</a>

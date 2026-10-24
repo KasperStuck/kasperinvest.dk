@@ -41,6 +41,8 @@ const articleSchema = {
 	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
 	<Breadcrumbs
 		slot="breadcrumbs"
+		schema
+		hideRootOnMobile
 		items={[
 			{ label: "KasperInvest", href: "/" },
 			{ label: section.title, href: section.href },
@@ -50,8 +52,10 @@ const articleSchema = {
 	<div class="mx-auto max-w-5xl py-10 sm:py-14">
 		<div class="flex gap-x-10">
 			<article class="min-w-0 flex-1">
-				<AuthorBox updatedAt={article.updatedAt} />
-				<Prose relatedLinks={article.related}><Content /></Prose>
+				<Prose relatedLinks={article.related}>
+					<AuthorBox slot="byline" updatedAt={article.updatedAt} />
+					<Content />
+				</Prose>
 				<Disclaimer />
 			</article>
 			<div class="hidden w-66 lg:block"><TableOfContents contentId="content" /></div>

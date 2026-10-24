@@ -1,37 +1,73 @@
 ---
-interface Item {
-	label: string;
-	href?: string;
-}
+import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import {
+	type BreadcrumbItem,
+	breadcrumbSchema,
+	focusRing,
+	getBreadcrumbEntries,
+} from "@/lib/navigation";
 
 interface Props {
-	items: Item[];
+	items: BreadcrumbItem[];
+	/** Emit BreadcrumbList JSON-LD. Only the pages that emitted it before opt in. */
+	schema?: boolean;
+	/**
+	 * Hide the root crumb on mobile, where the header logo already links home. Used by
+	 * centered pages with three or more crumbs and by sidebar layouts, whose menu button shares the row.
+	 */
+	hideRootOnMobile?: boolean;
 }
 
-const { items } = Astro.props;
+const { items, schema = false, hideRootOnMobile = false } = Astro.props;
 const siteUrl = Astro.site?.origin ?? "https://kasperinvest.dk";
-const breadcrumbSchema = {
-	"@context": "https://schema.org",
-	"@type": "BreadcrumbList",
-	itemListElement: items.map((item, index) => ({
-		"@type": "ListItem",
-		position: index + 1,
-		name: item.label,
-		item: item.href ? new URL(item.href, siteUrl).href : new URL(Astro.url.pathname, siteUrl).href,
-	})),
-};
+const entries = getBreadcrumbEntries(items, { hideRootOnMobile });
 ---
 
-<script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
-<nav aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
-	{items.map((item, i) => (
-		<>
-			{i > 0 && <span class="text-gray-950/25 dark:text-white/25">/</span>}
-			{item.href ? (
-				<a href={item.href} class="min-w-0 shrink-0 text-gray-950 dark:text-white">{item.label}</a>
-			) : (
-				<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">{item.label}</span>
-			)}
-		</>
-	))}
+{schema && (
+	<script
+		is:inline
+		type="application/ld+json"
+		set:html={JSON.stringify(breadcrumbSchema(items, siteUrl, Astro.url.pathname))}
+	/>
+)}
+<nav aria-label="Brødkrummer" class="min-w-0">
+	<ol class="flex min-w-0 items-center gap-x-1.5 text-sm/6">
+		{entries.map((entry) => (
+			<li
+				class:list={[
+					"flex items-center gap-x-1.5",
+					entry.current ? "min-w-0" : "shrink-0",
+					entry.hideOnMobile && "max-md:hidden",
+				]}
+			>
+				{entry.separator !== "none" && (
+					<ChevronRightIcon
+						aria-hidden="true"
+						class:list={[
+							"text-gray-400 dark:text-gray-600",
+							entry.separator === "desktop" && "max-md:hidden",
+						]}
+					/>
+				)}
+				{entry.href && !entry.current ? (
+					<a
+						href={entry.href}
+						class:list={[
+							"max-w-[45vw] truncate rounded-sm text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white",
+							focusRing,
+						]}
+					>
+						{entry.label}
+					</a>
+				) : (
+					<span
+						aria-current={entry.current ? "page" : undefined}
+						class="truncate font-medium text-gray-950 dark:text-white"
+					>
+						{entry.label}
+					</span>
+				)}
+			</li>
+		))}
+	</ol>
 </nav>

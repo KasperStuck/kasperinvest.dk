@@ -1,6 +1,7 @@
 ---
 import type { Provider } from "@/data/savings";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
+import { focusRing, primaryButton } from "@/lib/navigation";
 
 interface Props {
 	provider: Provider;
@@ -35,7 +36,11 @@ const { provider } = Astro.props;
 		href={provider.url}
 		target="_blank"
 		rel="nofollow noopener sponsored"
-		class="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700"
+		class:list={[
+			"inline-flex shrink-0 items-center gap-1 rounded-full px-5 py-2.5 text-sm font-semibold shadow-sm transition",
+			primaryButton,
+			focusRing,
+		]}
 	>
 		Besøg udbyder
 		<ChevronRightIcon />

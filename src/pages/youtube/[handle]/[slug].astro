@@ -2,6 +2,7 @@
 import { captureException } from "@sentry/astro";
 
 import { marked } from "marked";
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import Prose from "@/components/Prose.astro";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import ClockIcon from "@/icons/ClockIcon.astro";
@@ -119,6 +120,11 @@ const breadcrumbSchema = {
 		{ "@type": "ListItem", position: 4, name: video.title, item: canonicalUrl },
 	],
 };
+
+// Escapes "<" so stored text (YouTube titles, AI fields) can never close the <script> element.
+function jsonLd(value: unknown): string {
+	return JSON.stringify(value).replace(/</g, "\\u003c");
+}
 ---
 
 <CenteredLayout
@@ -126,10 +132,10 @@ const breadcrumbSchema = {
 	description={video.seoDescription ?? video.summary ?? video.description.slice(0, 160)}
 	canonical={canonicalUrl}
 >
-	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(videoSchema)} />
-	<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
+	<script is:inline slot="head" type="application/ld+json" set:html={jsonLd(videoSchema)} />
+	<script is:inline slot="head" type="application/ld+json" set:html={jsonLd(breadcrumbSchema)} />
 	{video.faq && video.faq.length > 0 && (
-		<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
+		<script is:inline slot="head" type="application/ld+json" set:html={jsonLd({
 			"@context": "https://schema.org",
 			"@type": "FAQPage",
 			mainEntity: video.faq.map((item) => ({
@@ -142,17 +148,17 @@ const breadcrumbSchema = {
 			})),
 		})} />
 	)}
-	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
-		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
-		<span class="text-gray-950/25 dark:text-white/25">/</span>
-		<a href="/youtube" class="min-w-0 shrink-0 text-gray-950 dark:text-white">YouTube</a>
-		<span class="text-gray-950/25 dark:text-white/25">/</span>
-		<a href={`/youtube/${handle}`} class="min-w-0 shrink-0 text-gray-950 dark:text-white">{channel?.name ?? "YouTube"}</a>
-		<span class="text-gray-950/25 dark:text-white/25">/</span>
-		<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">
-			{video.title}
-		</span>
-	</nav>
+	{/* The BreadcrumbList JSON-LD above stays the source; the component emits none. */}
+	<Breadcrumbs
+		slot="breadcrumbs"
+		hideRootOnMobile
+		items={[
+			{ label: "KasperInvest", href: "/" },
+			{ label: "YouTube", href: "/youtube", hideOnMobile: true },
+			{ label: channel?.name ?? "YouTube", href: `/youtube/${handle}` },
+			{ label: video.title },
+		]}
+	/>
 
 	<div class="-mx-2 sm:-mx-4">
 		<div class="relative aspect-video w-full overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">

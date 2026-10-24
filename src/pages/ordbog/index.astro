@@ -1,48 +1,90 @@
 ---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import PageHeader from "@/components/PageHeader.astro";
+import TextInput from "@/components/TextInput.astro";
 import { getGlossaryTermsByLetter } from "@/data/glossary";
+import CloseIcon from "@/icons/CloseIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
+import { focusRing, sectionDescriptions } from "@/lib/navigation";
 
 const grouped = getGlossaryTermsByLetter();
 const letters = Object.keys(grouped).sort((a, b) => a.localeCompare(b, "da"));
+const termCount = letters.reduce((sum, letter) => sum + grouped[letter].length, 0);
 ---
 
-<CenteredLayout title="Investeringsordbog: 500+ finansielle begreber - KasperInvest" description="Slå mere end 500 finansielle begreber op i KasperInvests danske ordbog om investering, aktier, skat, pension og privatøkonomi.">
-	<div class="py-10 sm:py-14">
-		<h1 class="text-3xl/9 font-bold tracking-tight text-gray-950 dark:text-white sm:text-4xl/12">Ordbog</h1>
-		<p class="mt-3 max-w-2xl text-base/7 text-gray-600 dark:text-gray-400">
+<CenteredLayout title="Investeringsordbog: 500+ finansielle begreber - KasperInvest" description={sectionDescriptions.ordbog}>
+	<Breadcrumbs slot="breadcrumbs" items={[{ label: "KasperInvest", href: "/" }, { label: "Ordbog" }]} />
+	<div class="pb-10 sm:pb-14">
+		<PageHeader title="Ordbog">
 			Slå mere end 500 begreber op i vores finansielle ordbog, og bliv klogere på investering, aktier, skat, pension og privatøkonomi.
-		</p>
+		</PageHeader>
 
-		<!-- Letter navigation -->
-		<nav class="mt-8 flex flex-wrap gap-2">
-			{letters.map((letter) => (
-				<a
-					href={`#${letter}`}
-					class="inline-flex size-9 items-center justify-center rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5"
+		<!-- Hidden until the page script runs, so visitors without JavaScript get no dead control -->
+		<div hidden class="mt-8 max-w-md" data-glossary-search-form>
+			<label for="glossary-search" class="block text-sm/6 font-medium text-gray-950 dark:text-white">Søg i ordbogen</label>
+			<div class="relative mt-2">
+				<TextInput
+					type="search"
+					id="glossary-search"
+					autocomplete="off"
+					enterkeyhint="search"
+					class="pr-11 [&::-webkit-search-cancel-button]:appearance-none"
+					data-glossary-search
+				/>
+				<button
+					type="button"
+					hidden
+					aria-label="Ryd søgning"
+					class:list={["absolute inset-y-0 right-0 inline-flex w-11 cursor-pointer items-center justify-center rounded-lg text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white", focusRing]}
+					data-glossary-clear
 				>
-					{letter}
-				</a>
-			))}
+					<CloseIcon />
+				</button>
+			</div>
+			<p aria-live="polite" class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400" data-glossary-count>
+				{termCount} begreber
+			</p>
+		</div>
+
+		<!-- Letter navigation: one row below the header, scrolls sideways when it does not fit -->
+		<nav
+			aria-label="Bogstaver"
+			class="sticky top-16 z-10 -mx-4 mt-6 border-b border-gray-950/10 bg-white/90 px-4 pt-1 backdrop-blur-sm sm:-mx-6 sm:px-6 dark:border-white/10 dark:bg-gray-950/90"
+		>
+			<!-- p-1 keeps the offset focus outline inside the scroll container -->
+			<ul class="scrollbar-thin -mx-1 flex gap-1 overflow-x-auto p-1">
+				{letters.map((letter) => (
+					<li class="shrink-0">
+						<a
+							href={`#${letter}`}
+							class:list={["inline-flex size-9 items-center justify-center rounded-lg text-sm font-medium whitespace-nowrap text-gray-700 hover:bg-gray-950/5 hover:text-brand-700 data-disabled:pointer-events-none data-disabled:opacity-35 dark:text-gray-300 dark:hover:bg-white/5 dark:hover:text-brand-400", focusRing]}
+							data-letter-link={letter}
+						>
+							{letter}
+						</a>
+					</li>
+				))}
+			</ul>
 		</nav>
 
 		<!-- Terms grouped by letter -->
 		<div class="mt-10 space-y-10">
 			{letters.map((letter) => (
-				<section id={letter}>
+				<section id={letter} class="scroll-mt-16" data-letter-group={letter}>
 					<h2 class="text-lg font-semibold text-gray-950 dark:text-white border-b border-gray-950/10 pb-2 dark:border-white/10">
 						{letter}
 					</h2>
 					<ul class="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
 						{grouped[letter].map((term) => (
-							<li>
+							<li data-glossary-term>
 								<a
 									href={`/ordbog/${term.id}`}
-									class="group block"
+									class:list={["group block rounded-sm", focusRing]}
 								>
-									<span class="text-sm/6 font-medium text-gray-950 group-hover:text-blue-600 dark:text-white dark:group-hover:text-blue-400">
+									<span class="text-sm/6 font-medium text-gray-950 group-hover:text-brand-700 dark:text-white dark:group-hover:text-brand-400" data-term-title>
 										{term.title}
 									</span>
-									<p class="mt-0.5 text-sm/6 text-gray-600 dark:text-gray-400 line-clamp-1">
+									<p class="mt-0.5 text-sm/6 text-gray-600 dark:text-gray-400 line-clamp-1" data-term-description>
 										{term.description}
 									</p>
 								</a>
@@ -54,3 +96,70 @@ const letters = Object.keys(grouped).sort((a, b) => a.localeCompare(b, "da"));
 		</div>
 	</div>
 </CenteredLayout>
+
+<script>
+	import { matchesNeedle, searchHaystack, searchNeedle } from "@/lib/filter";
+
+	const searchForm = document.querySelector<HTMLElement>("[data-glossary-search-form]");
+	const input = document.querySelector<HTMLInputElement>("[data-glossary-search]");
+	const clearButton = document.querySelector<HTMLButtonElement>("[data-glossary-clear]");
+	const count = document.querySelector<HTMLElement>("[data-glossary-count]");
+
+	if (searchForm) searchForm.hidden = false;
+
+	const groups = [...document.querySelectorAll<HTMLElement>("[data-letter-group]")].map((group) => ({
+		group,
+		link: document.querySelector<HTMLAnchorElement>(`[data-letter-link="${group.dataset.letterGroup}"]`),
+		terms: [...group.querySelectorAll<HTMLElement>("[data-glossary-term]")].map((item) => ({
+			item,
+			haystack: searchHaystack({
+				title: item.querySelector("[data-term-title]")?.textContent?.trim() ?? "",
+				description: item.querySelector("[data-term-description]")?.textContent?.trim() ?? "",
+			}),
+		})),
+	}));
+
+	function applyQuery(query: string) {
+		const needle = searchNeedle(query);
+		let total = 0;
+		for (const { group, link, terms } of groups) {
+			let visible = 0;
+			for (const term of terms) {
+				const match = matchesNeedle(term.haystack, needle);
+				term.item.hidden = !match;
+				if (match) visible++;
+			}
+			total += visible;
+			group.hidden = visible === 0;
+			if (link) {
+				link.toggleAttribute("data-disabled", visible === 0);
+				if (visible === 0) link.removeAttribute("href");
+				else link.setAttribute("href", `#${group.id}`);
+			}
+		}
+		if (clearButton) clearButton.hidden = query === "";
+		if (count) {
+			count.textContent =
+				total === 0 ? "Ingen begreber fundet" : `${total} ${total === 1 ? "begreb" : "begreber"}`;
+		}
+	}
+
+	function clearQuery() {
+		if (!input) return;
+		input.value = "";
+		applyQuery("");
+		input.focus();
+	}
+
+	input?.addEventListener("input", () => applyQuery(input.value));
+	input?.addEventListener("keydown", (event) => {
+		if (event.key === "Escape" && input.value !== "") {
+			event.preventDefault();
+			clearQuery();
+		}
+	});
+	clearButton?.addEventListener("click", clearQuery);
+
+	// A value restored by the browser (back navigation) still filters the list.
+	if (input?.value) applyQuery(input.value);
+</script>

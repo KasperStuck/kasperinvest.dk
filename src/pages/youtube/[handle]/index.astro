@@ -1,6 +1,8 @@
 ---
 import { captureException } from "@sentry/astro";
 
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import PageHeader from "@/components/PageHeader.astro";
 import VideoCard from "@/components/VideoCard.astro";
 import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
@@ -65,27 +67,33 @@ const featuredVideo =
 const gridVideos = videos.filter((v) => v !== featuredVideo);
 
 const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))].sort();
+
+// Same classes the filter script applies, so the default "Videoer" filter paints active.
+const typeFilterClass = "cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition";
+const activeTypeFilterClass = "bg-gray-950 text-white dark:bg-white dark:text-gray-950";
+const inactiveTypeFilterClass =
+	"bg-gray-950/5 text-gray-700 hover:bg-gray-950/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20";
 ---
 
 <CenteredLayout
 	title={`${channel?.name ?? handle} - YouTube - KasperInvest`}
 	description={`Videoer fra ${channel?.name ?? handle} om investering og privatøkonomi.`}
 >
-	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
-		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
-		<span class="text-gray-950/25 dark:text-white/25">/</span>
-		<a href="/youtube" class="min-w-0 shrink-0 text-gray-950 dark:text-white">YouTube</a>
-		<span class="text-gray-950/25 dark:text-white/25">/</span>
-		<span class="min-w-0 truncate text-gray-600 dark:text-gray-400">{channel?.name ?? handle}</span>
-	</nav>
+	<Breadcrumbs
+		slot="breadcrumbs"
+		hideRootOnMobile
+		items={[
+			{ label: "KasperInvest", href: "/" },
+			{ label: "YouTube", href: "/youtube" },
+			{ label: channel?.name ?? handle ?? "" },
+		]}
+	/>
 
-	<div class="mt-10 flex flex-col gap-8 sm:mt-14 lg:flex-row lg:items-stretch lg:gap-12">
+	<div class="flex flex-col gap-8 lg:flex-row lg:gap-12">
 		<div class="min-w-0 flex-1">
-			<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
-				{channel?.name ?? handle}
-			</h1>
+			<PageHeader title={channel?.name ?? handle ?? ""} />
 			{channel?.aiDescription && (
-				<div class="mt-6 max-w-xl space-y-3 text-base/7 text-gray-700 dark:text-gray-400">
+				<div class="mt-4 max-w-xl space-y-3 text-base/7 text-gray-600 dark:text-gray-400">
 					{channel.aiDescription.split(/\n\n+/).map((paragraph) => (
 						<p>{paragraph.trim()}</p>
 					))}
@@ -93,7 +101,7 @@ const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))]
 			)}
 		</div>
 		{featuredVideo && (
-			<div class="flex w-full shrink-0 items-center lg:w-1/2">
+			<div class="w-full shrink-0 lg:w-1/2 lg:self-center">
 				<VideoCard
 					url={videoUrl(featuredVideo)}
 					thumbnailUrl={featuredVideo.thumbnailUrl}
@@ -110,9 +118,9 @@ const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))]
 
 	<div class="mt-10 space-y-3">
 		<div class="flex flex-wrap items-center gap-2" id="type-filters">
-			<button type="button" data-type="all" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Alle</button>
-			<button type="button" data-type="videos" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Videoer</button>
-			<button type="button" data-type="shorts" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Shorts</button>
+			<button type="button" data-type="all" aria-pressed="false" class:list={[typeFilterClass, inactiveTypeFilterClass]}>Alle</button>
+			<button type="button" data-type="videos" aria-pressed="true" class:list={[typeFilterClass, activeTypeFilterClass]}>Videoer</button>
+			<button type="button" data-type="shorts" aria-pressed="false" class:list={[typeFilterClass, inactiveTypeFilterClass]}>Shorts</button>
 
 			{allCategories.length > 0 && (
 				<>
@@ -155,7 +163,7 @@ const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))]
 		</div>
 	</div>
 
-	<p id="video-count" class="mt-4 text-sm/7 text-gray-600"></p>
+	<p id="video-count" class="mt-4 text-sm/7 text-gray-600 dark:text-gray-400"></p>
 
 	{gridVideos.length > 0 ? (
 		<div class="mt-4 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 xl:grid-cols-3" id="video-grid">
@@ -178,13 +186,13 @@ const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))]
 			))}
 		</div>
 	) : (
-		<p class="mt-8 text-sm/7 text-gray-600">
+		<p class="mt-8 text-sm/7 text-gray-600 dark:text-gray-400">
 			Ingen videoer endnu.
 		</p>
 	)}
 
 	{totalPages > 1 && (
-		<nav aria-label="Pagination" class="mt-12 flex items-center justify-center gap-2 pb-32">
+		<nav aria-label="Sidenavigation" class="mt-12 flex items-center justify-center gap-2 pb-32">
 			{safePage > 1 && (
 				<a
 					href={safePage === 2 ? basePath : `${basePath}?page=${safePage - 1}`}
@@ -255,6 +263,7 @@ const allCategories = [...new Set(allVideos.flatMap((v) => v.categories ?? []))]
 		for (const btn of typeButtons) {
 			const isActive = btn.dataset.type === currentType;
 			btn.className = `cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition ${isActive ? activeClass : inactiveClass}`;
+			btn.setAttribute("aria-pressed", String(isActive));
 		}
 
 		updateBadge("active-category", "active-category-label", currentCategory, currentCategory);

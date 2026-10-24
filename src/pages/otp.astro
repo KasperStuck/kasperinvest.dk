@@ -1,30 +1,31 @@
 ---
 import OTPInput from "@/components/OTPInput.astro";
 import AuthLayout from "@/layouts/AuthLayout.astro";
+import { focusRing, primaryButton } from "@/lib/navigation";
 ---
 
-<AuthLayout title="Enter one-time password - KasperInvest">
-	<h1 class="sr-only">Enter one-time password</h1>
+<AuthLayout title="Indtast engangskode - KasperInvest">
+	<h1 class="sr-only">Indtast engangskode</h1>
 	<p class="text-center text-sm/7 text-gray-950 dark:text-white">
-		A 6-digit verification code has been sent to{" "}
+		Vi har sendt en 6-cifret bekræftelseskode til{" "}
 		<span class="font-semibold">adam@example.com</span>.
 	</p>
 	<form action="/" class="mt-6">
 		<OTPInput maxLength={6} />
 		<p class="mt-6 text-center text-sm/7 text-gray-600 dark:text-gray-400">
-			Didn't receive a code?{" "}
+			Har du ikke modtaget en kode?{" "}
 			<button
 				type="button"
 				class="font-semibold text-gray-950 underline decoration-gray-950/25 underline-offset-2 hover:decoration-gray-950/50 dark:text-white dark:decoration-white/25 dark:hover:decoration-white/50"
 			>
-				Request new code
+				Send en ny kode
 			</button>
 		</p>
 		<button
 			type="submit"
-			class="mt-6 w-full rounded-full bg-gray-950 px-3.5 py-2 text-sm/6 font-semibold text-white hover:bg-gray-800 focus:outline-2 focus:outline-offset-2 focus:outline-blue-500 dark:bg-gray-700 dark:hover:bg-gray-600"
+			class:list={["mt-6 w-full rounded-full px-3.5 py-2 text-sm/6 font-semibold", primaryButton, focusRing]}
 		>
-			Verify
+			Bekræft
 		</button>
 	</form>
 	<p class="mt-6 text-center text-sm/7 dark:text-gray-400">
@@ -32,7 +33,7 @@ import AuthLayout from "@/layouts/AuthLayout.astro";
 			href="/login"
 			class="font-semibold text-gray-950 dark:text-white"
 		>
-			Use a different email
+			Brug en anden e-mail
 		</a>
 	</p>
 </AuthLayout>

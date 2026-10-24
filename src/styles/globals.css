@@ -11,6 +11,18 @@
 		monospace;
 }
 
+/*
+ * Restrained brand accent: CTAs, active nav, prose links, focus outlines and
+ * card hover only. Aliases emerald; use the utilities, the vars are not emitted.
+ * On dark backgrounds use brand-400 for text and indicators (700 fails contrast).
+ */
+@theme inline {
+	--color-brand-300: var(--color-emerald-300);
+	--color-brand-400: var(--color-emerald-400);
+	--color-brand-700: var(--color-emerald-700);
+	--color-brand-800: var(--color-emerald-800);
+}
+
 @layer base {
 	table {
 		display: block;

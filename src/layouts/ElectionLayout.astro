@@ -1,19 +1,13 @@
 ---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import Footer from "@/components/Footer.astro";
-import Logo from "@/components/Logo.astro";
 import Navbar from "@/components/Navbar.astro";
 import type { Election } from "@/data/elections";
-import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
-import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
+import ArticleIcon from "@/icons/ArticleIcon.astro";
 import CloseIcon from "@/icons/CloseIcon.astro";
 import SidebarIcon from "@/icons/SidebarIcon.astro";
+import { type BreadcrumbItem, focusRing, samePath } from "@/lib/navigation";
 import BaseLayout from "./BaseLayout.astro";
-
-interface BreadcrumbItem {
-	label: string;
-	href?: string;
-	class?: string;
-}
 
 interface Props {
 	title?: string;
@@ -24,168 +18,125 @@ interface Props {
 
 const { title, description, breadcrumbItems = [], election } = Astro.props;
 const pathname = Astro.url.pathname;
+const articles = election.articles.map((article) => {
+	const href = `/folketingsvalg/${election.year}/${article.id}`;
+	return { href, title: article.title, active: samePath(pathname, href) };
+});
+
+const itemClass = (active: boolean) =>
+	active
+		? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
+		: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5";
+const iconClass = (active: boolean) =>
+	active ? "text-gray-950 dark:text-white" : "text-gray-400 dark:text-gray-500";
 ---
 
 <BaseLayout title={title} description={description}>
-	<div class="flex min-h-screen">
+	<Navbar />
+	<div class="flex min-h-[calc(100dvh-4rem)]">
 		<!-- Desktop Sidebar -->
 		<aside class="hidden w-72 shrink-0 border-r border-gray-950/10 dark:border-white/10 lg:block">
-			<div class="sticky top-0 flex h-screen flex-col overflow-y-auto px-4 py-6">
-				<div class="mb-8 px-2">
-					<a href="/">
-						<Logo class="text-xl text-gray-950 dark:text-white" />
+			<nav aria-label={election.title} class="sticky top-16 h-[calc(100dvh-4rem)] space-y-6 overflow-y-auto px-4 py-6">
+				<div>
+					<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
+						{election.title}
+					</h3>
+					<ul class="mt-1 space-y-0.5">
+						{articles.map((article) => (
+							<li>
+								<a
+									href={article.href}
+									aria-current={article.active ? "page" : undefined}
+									class:list={["-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7", itemClass(article.active)]}
+								>
+									<ArticleIcon class={iconClass(article.active)} />
+									<span class="truncate">{article.title}</span>
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
+				<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
+					<a
+						href="/"
+						class="-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
+					>
+						&larr; Tilbage til kurset
 					</a>
 				</div>
-				<nav class="flex-1 space-y-6">
+			</nav>
+		</aside>
+
+		<!-- Mobile Sidebar Drawer -->
+		<dialog
+			id="mobile-sidebar"
+			aria-labelledby="mobile-sidebar-title"
+			class="h-dvh max-h-none w-full max-w-xs bg-white text-gray-950 ring ring-gray-950/10 backdrop:bg-gray-950/25 lg:hidden dark:bg-gray-950 dark:text-white dark:ring-white/10"
+			data-drawer
+		>
+			<div class="h-full overflow-y-auto overscroll-contain px-4 py-3">
+				<div class="flex h-10 items-center justify-between pl-2">
+					<h2 id="mobile-sidebar-title" class="text-base/7 font-semibold">Emneoversigt</h2>
+					<button
+						type="button"
+						class:list={["-mr-2.5 inline-flex size-11 cursor-pointer items-center justify-center rounded-md hover:bg-gray-950/5 dark:hover:bg-white/5", focusRing]}
+						data-close-dialog
+						aria-label="Luk emneoversigt"
+					>
+						<CloseIcon />
+					</button>
+				</div>
+				<nav aria-label={election.title} class="mt-4 space-y-6">
 					<div>
 						<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
 							{election.title}
 						</h3>
 						<ul class="mt-1 space-y-0.5">
-							{election.articles.map((article) => {
-								const href = `/folketingsvalg/${election.year}/${article.id}`;
-								const isActive = pathname === href || pathname === `${href}/`;
-								return (
-									<li>
-										<a
-											href={href}
-											class:list={[
-												"-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
-												isActive
-													? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
-													: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
-											]}
-										>
-											<CirclePlayIcon class:list={[
-												isActive
-													? "text-gray-950 dark:text-white"
-													: "text-gray-400 dark:text-gray-500",
-											]} />
-											<span class="truncate">{article.title}</span>
-										</a>
-									</li>
-								);
-							})}
+							{articles.map((article) => (
+								<li>
+									<a
+										href={article.href}
+										aria-current={article.active ? "page" : undefined}
+										class:list={["flex min-h-11 items-center gap-2 rounded-lg px-3 py-1 text-sm/7", itemClass(article.active)]}
+									>
+										<ArticleIcon class={iconClass(article.active)} />
+										<span class="truncate">{article.title}</span>
+									</a>
+								</li>
+							))}
 						</ul>
 					</div>
 					<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
 						<a
 							href="/"
-							class="-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
+							class="flex min-h-11 items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
 						>
 							&larr; Tilbage til kurset
 						</a>
 					</div>
 				</nav>
 			</div>
-		</aside>
-
-		<!-- Mobile Sidebar Overlay -->
-		<div id="mobile-sidebar" class="fixed inset-0 z-50 hidden lg:hidden">
-			<div class="fixed inset-0 bg-gray-950/25" data-close-sidebar></div>
-			<div class="fixed inset-0 flex justify-start pr-11">
-				<div class="w-full max-w-xs overflow-y-auto bg-white px-4 py-5 ring ring-gray-950/10 dark:bg-gray-950 dark:ring-white/10">
-					<div class="mb-6 flex items-center justify-between px-2">
-						<a href="/">
-							<Logo class="text-xl text-gray-950 dark:text-white" />
-						</a>
-						<button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden" data-close-sidebar>
-							<CloseIcon class="text-gray-950 dark:text-white" />
-						</button>
-					</div>
-					<nav class="space-y-6">
-						<div>
-							<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
-								{election.title}
-							</h3>
-							<ul class="mt-1 space-y-0.5">
-								{election.articles.map((article) => {
-									const href = `/folketingsvalg/${election.year}/${article.id}`;
-									const isActive = pathname === href || pathname === `${href}/`;
-									return (
-										<li>
-											<a
-												href={href}
-												class:list={[
-													"flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
-													isActive
-														? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
-														: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
-												]}
-											>
-												<CirclePlayIcon class:list={[
-													isActive
-														? "text-gray-950 dark:text-white"
-														: "text-gray-400 dark:text-gray-500",
-												]} />
-												<span class="truncate">{article.title}</span>
-											</a>
-										</li>
-									);
-								})}
-							</ul>
-						</div>
-						<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
-							<a
-								href="/"
-								class="flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
-							>
-								&larr; Tilbage til kurset
-							</a>
-						</div>
-					</nav>
-				</div>
-			</div>
-		</div>
+		</dialog>
 
 		<!-- Main Content -->
-		<div class="flex flex-1 flex-col">
-			<Navbar>
-				<div class="flex items-center gap-3">
-					<button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden lg:hidden" data-open-sidebar>
-						<SidebarIcon class="text-gray-950 dark:text-white" />
-					</button>
-
-					{breadcrumbItems.length > 0 && (
-						<nav class="flex items-center gap-1.5 text-sm/7">
-							{breadcrumbItems.map((item, i) => (
-								<>
-									{i > 0 && (
-										<ChevronRightIcon class="text-gray-400 dark:text-gray-600" />
-									)}
-									{item.href ? (
-										<a href={item.href} class:list={[item.class, "text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"]}>
-											{item.label}
-										</a>
-									) : (
-										<span class:list={[item.class, "font-medium text-gray-950 dark:text-white"]}>
-											{item.label}
-										</span>
-									)}
-								</>
-							))}
-						</nav>
-					)}
-				</div>
-			</Navbar>
-
+		<div class="flex min-w-0 flex-1 flex-col">
 			<main class="flex-1 px-4 pb-16 sm:px-6">
+				<div class="flex items-center gap-x-3 py-3">
+					<button
+						type="button"
+						class:list={["inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-x-2 rounded-md border border-gray-950/10 px-3 text-sm/6 font-medium text-gray-950 hover:bg-gray-950/5 lg:hidden dark:border-white/10 dark:text-white dark:hover:bg-white/5", focusRing]}
+						data-open-dialog="mobile-sidebar"
+						aria-haspopup="dialog"
+						aria-controls="mobile-sidebar"
+					>
+						<SidebarIcon />
+						Emneoversigt
+					</button>
+					{breadcrumbItems.length > 0 && <Breadcrumbs items={breadcrumbItems} hideRootOnMobile />}
+				</div>
 				<slot />
 			</main>
 			<Footer />
 		</div>
 	</div>
 </BaseLayout>
-
-<script>
-	document.querySelectorAll("[data-open-sidebar]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			document.getElementById("mobile-sidebar")?.classList.remove("hidden");
-		});
-	});
-	document.querySelectorAll("[data-close-sidebar]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			document.getElementById("mobile-sidebar")?.classList.add("hidden");
-		});
-	});
-</script>

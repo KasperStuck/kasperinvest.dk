@@ -1,107 +1,150 @@
 ---
+import Logo from "@/components/Logo.astro";
 import CloseIcon from "@/icons/CloseIcon.astro";
 import MenuIcon from "@/icons/MenuIcon.astro";
 import MoonIcon from "@/icons/MoonIcon.astro";
 import SunIcon from "@/icons/SunIcon.astro";
+import { focusRing, getActiveNavHref, getNavAriaCurrent, navLinks } from "@/lib/navigation";
 
-const links = [
-	{ href: "/", label: "Kursus" },
-	{ href: "/guides", label: "Guides" },
-	{ href: "/etf", label: "ETF" },
-	{ href: "/pension", label: "Pension" },
-	{ href: "/platforme", label: "Platforme" },
-	{ href: "/ordbog", label: "Ordbog" },
-	{ href: "/spar-penge", label: "Spar penge" },
-	{ href: "/youtube", label: "YouTube" },
-];
+interface Props {
+	/** Header link to mark active when the URL alone cannot tell (lesson pages). */
+	activeHref?: string;
+}
 
-const mobileLink =
-	"block rounded-md px-4 py-1.5 text-lg/7 font-medium tracking-tight text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5";
+const pathname = Astro.url.pathname;
+const activeHref = getActiveNavHref(pathname, Astro.props.activeHref);
+const iconButton = `inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-gray-950 hover:bg-gray-950/5 dark:text-white dark:hover:bg-white/5 ${focusRing}`;
 ---
 
-<div class="sticky top-0 z-40 flex items-center justify-between gap-x-8 bg-white/90 px-4 py-4 backdrop-blur-sm sm:px-6 dark:bg-gray-950/90">
-  <slot />
+<header
+	class="sticky top-0 z-40 h-16 border-b border-gray-950/10 bg-white/90 backdrop-blur-sm dark:border-white/10 dark:bg-gray-950/90"
+	data-site-header
+>
+	<div class="flex h-full items-center justify-between gap-x-6 px-4 sm:px-6">
+		<a href="/" class:list={["shrink-0 rounded-sm", focusRing]}>
+			<Logo class="text-xl text-gray-950 dark:text-white" />
+		</a>
 
-  <nav class="flex items-center">
-    <!-- Mobile: theme toggle + menu button -->
-    <div class="flex items-center gap-4 lg:hidden">
-      <button
-        type="button"
-        class="relative cursor-pointer *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 focus:outline-hidden dark:hover:before:bg-white/5"
-        data-toggle-theme
-        aria-label="Skift tema"
-      >
-        <SunIcon class="hidden text-gray-950 dark:block dark:text-white" />
-        <MoonIcon class="block text-gray-950 dark:hidden dark:text-white" />
-      </button>
-      <button
-        type="button"
-        class="flex cursor-pointer items-center gap-1.5 text-sm/6 font-medium text-gray-950 hover:text-gray-600 focus:outline-hidden dark:text-white dark:hover:text-gray-300"
-        data-open-site-nav
-      >
-        <span>Menu</span>
-        <MenuIcon />
-      </button>
-    </div>
+		<div class="flex items-center gap-x-4">
+			<nav aria-label="Hovedmenu" class="max-lg:hidden">
+				<ul class="flex items-center gap-x-1 text-sm/6">
+					{navLinks.map(({ href, label }) => (
+						<li>
+							<a
+								href={href}
+								aria-current={getNavAriaCurrent(pathname, href, activeHref)}
+								class:list={[
+									"relative block rounded-md px-2.5 py-1 whitespace-nowrap",
+									focusRing,
+									href === activeHref
+										? "bg-gray-950/5 font-medium text-gray-950 after:absolute after:inset-x-2.5 after:-bottom-px after:h-0.5 after:rounded-full after:bg-brand-700 dark:bg-white/10 dark:text-white dark:after:bg-brand-400"
+										: "text-gray-600 hover:text-gray-950 dark:text-gray-400 dark:hover:text-white",
+								]}
+							>
+								{label}
+							</a>
+						</li>
+					))}
+				</ul>
+			</nav>
 
-    <!-- Mobile nav dialog -->
-    <div class="fixed inset-0 z-50 hidden lg:hidden" id="site-mobile-nav">
-      <div class="fixed inset-0 bg-gray-950/25" data-close-site-nav></div>
-      <div class="fixed inset-0 flex justify-end pl-11">
-        <div class="min-h-screen w-full max-w-2xs overflow-y-auto bg-white px-4 py-5 shadow-lg ring ring-gray-950/10 sm:px-6 dark:bg-gray-950 dark:ring-white/10">
-          <div class="flex justify-end">
-            <button
-              type="button"
-              class="relative cursor-pointer *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md before:bg-white/75 before:backdrop-blur-sm hover:before:bg-gray-950/5 focus:outline-hidden dark:before:bg-gray-950/75 dark:hover:before:bg-white/5"
-              data-close-site-nav
-            >
-              <CloseIcon class="text-gray-950 dark:text-white" />
-            </button>
-          </div>
+			<div class="flex items-center">
+				<button type="button" class={iconButton} data-toggle-theme aria-label="Skift tema">
+					<SunIcon class="hidden dark:block" />
+					<MoonIcon class="block dark:hidden" />
+				</button>
+				<button
+					type="button"
+					class:list={[iconButton, "-mr-2.5 lg:hidden"]}
+					data-open-dialog="site-mobile-nav"
+					aria-haspopup="dialog"
+					aria-controls="site-mobile-nav"
+					aria-label="Åbn menu"
+				>
+					<MenuIcon />
+				</button>
+			</div>
+		</div>
+	</div>
+</header>
 
-          <div class="mt-4 flex flex-col gap-y-2">
-            {links.map(({ href, label }) => (
-              <a href={href} class={mobileLink}>{label}</a>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+<dialog
+	id="site-mobile-nav"
+	aria-label="Menu"
+	class="ml-auto h-dvh max-h-none w-full max-w-xs bg-white text-gray-950 shadow-lg ring ring-gray-950/10 backdrop:bg-gray-950/25 lg:hidden dark:bg-gray-950 dark:text-white dark:ring-white/10"
+	data-drawer
+>
+	<div class="h-full overflow-y-auto overscroll-contain px-4 py-3 sm:px-6">
+		<div class="flex h-10 items-center justify-between">
+			<a href="/" class:list={["rounded-sm", focusRing]}>
+				<Logo class="text-xl" />
+			</a>
+			<button type="button" class:list={[iconButton, "-mr-2.5"]} data-close-dialog aria-label="Luk menu">
+				<CloseIcon />
+			</button>
+		</div>
 
-    <!-- Desktop nav -->
-    <div class="flex items-center gap-x-6 text-sm/6 text-gray-950 max-lg:hidden dark:text-white">
-      {links.map(({ href, label }) => (
-        <a href={href}>{label}</a>
-      ))}
-      <button
-        type="button"
-        class="relative cursor-pointer *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 focus:outline-hidden dark:hover:before:bg-white/5"
-        data-toggle-theme
-        aria-label="Skift tema"
-      >
-        <SunIcon class="hidden text-gray-950 dark:block dark:text-white" />
-        <MoonIcon class="block text-gray-950 dark:hidden dark:text-white" />
-      </button>
-    </div>
-  </nav>
-</div>
+		<nav aria-label="Hovedmenu" class="mt-6">
+			<ul class="flex flex-col gap-y-1">
+				{navLinks.map(({ href, label }) => (
+					<li>
+						<a
+							href={href}
+							aria-current={getNavAriaCurrent(pathname, href, activeHref)}
+							class:list={[
+								"relative block rounded-md px-3 py-2 text-lg/7 font-medium tracking-tight",
+								focusRing,
+								href === activeHref
+									? "bg-gray-950/5 text-gray-950 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brand-700 dark:bg-white/10 dark:text-white dark:before:bg-brand-400"
+									: "text-gray-700 hover:bg-gray-950/5 dark:text-gray-300 dark:hover:bg-white/5",
+							]}
+						>
+							{label}
+						</a>
+					</li>
+				))}
+			</ul>
+		</nav>
+	</div>
+</dialog>
 
 <script>
-  const mobileNav = document.getElementById("site-mobile-nav");
+	import { setDrawerOpen } from "@/lib/navigation";
 
-  document.querySelectorAll("[data-open-site-nav]").forEach((btn) =>
-    btn.addEventListener("click", () => mobileNav?.classList.remove("hidden"))
-  );
+	const drawers = document.querySelectorAll<HTMLDialogElement>("dialog[data-drawer]");
 
-  document.querySelectorAll("[data-close-site-nav]").forEach((btn) =>
-    btn.addEventListener("click", () => mobileNav?.classList.add("hidden"))
-  );
+	document.querySelectorAll<HTMLElement>("[data-open-dialog]").forEach((btn) =>
+		btn.addEventListener("click", () => {
+			const dialog = document.getElementById(btn.dataset.openDialog ?? "");
+			if (dialog instanceof HTMLDialogElement) setDrawerOpen(dialog, true);
+		})
+	);
 
-  document.querySelectorAll("[data-toggle-theme]").forEach((btn) =>
-    btn.addEventListener("click", () => {
-      const dark = !document.documentElement.classList.contains("dark");
-      document.documentElement.classList.toggle("dark", dark);
-      document.cookie = `theme=${dark ? "dark" : "light"};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-    })
-  );
+	drawers.forEach((dialog) => {
+		dialog.querySelectorAll("[data-close-dialog]").forEach((btn) =>
+			btn.addEventListener("click", () => setDrawerOpen(dialog, false))
+		);
+		// A click on the dialog element itself is a click on its backdrop.
+		dialog.addEventListener("click", (event) => {
+			if (event.target === dialog) setDrawerOpen(dialog, false);
+		});
+	});
+
+	// A page restored from the back/forward cache keeps its open drawer; close it.
+	window.addEventListener("pageshow", (event) => {
+		if (event.persisted) drawers.forEach((dialog) => setDrawerOpen(dialog, false));
+	});
+
+	// The drawers are mobile-only; close them when the viewport grows to desktop.
+	window.matchMedia("(min-width: 64rem)").addEventListener("change", (event) => {
+		if (event.matches) drawers.forEach((dialog) => setDrawerOpen(dialog, false));
+	});
+
+	document.querySelectorAll("[data-toggle-theme]").forEach((btn) =>
+		btn.addEventListener("click", () => {
+			const dark = !document.documentElement.classList.contains("dark");
+			document.documentElement.classList.toggle("dark", dark);
+			document.cookie = `theme=${dark ? "dark" : "light"};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+		})
+	);
 </script>

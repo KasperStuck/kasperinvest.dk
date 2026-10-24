@@ -1,6 +1,7 @@
 ---
+import PageHeader from "@/components/PageHeader.astro";
 import { getElection, getElections } from "@/data/elections";
-import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
+import ArticleIcon from "@/icons/ArticleIcon.astro";
 import ElectionLayout from "@/layouts/ElectionLayout.astro";
 
 export function getStaticPaths() {
@@ -18,7 +19,7 @@ if (!election) {
 
 const breadcrumbItems = [
 	{ label: "KasperInvest", href: "/" },
-	{ label: "Folketingsvalg", href: "/folketingsvalg" },
+	{ label: "Folketingsvalg", href: "/folketingsvalg", hideOnMobile: true },
 	{ label: String(election.year) },
 ];
 ---
@@ -29,13 +30,8 @@ const breadcrumbItems = [
 	breadcrumbItems={breadcrumbItems}
 	election={election}
 >
-	<div class="mx-auto max-w-2xl py-10 sm:py-14 lg:max-w-5xl">
-		<h1 class="text-2xl/7 font-medium tracking-tight text-gray-950 dark:text-white">
-			{election.title}
-		</h1>
-		<p class="mt-4 text-base/7 text-gray-700 dark:text-gray-400">
-			{election.description}
-		</p>
+	<div class="mx-auto max-w-2xl pb-10 sm:pb-14 lg:max-w-5xl">
+		<PageHeader title={election.title}>{election.description}</PageHeader>
 
 		<ol class="mt-10 space-y-4">
 			{election.articles.map((article) => (
@@ -46,7 +42,7 @@ const breadcrumbItems = [
 							class="-mx-3 -my-2 flex items-start gap-3 rounded-xl px-3 py-2 text-sm/7 hover:bg-gray-950/4 dark:hover:bg-white/5"
 						>
 							<div class="flex h-lh shrink items-center">
-								<CirclePlayIcon class="text-gray-950 dark:text-white" />
+								<ArticleIcon class="text-gray-950 dark:text-white" />
 							</div>
 							<div>
 								<div>

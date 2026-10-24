@@ -21,84 +21,97 @@ const banners = await Promise.all(
 		return { src, width: attributes.width as number, height: attributes.height as number, ...rest };
 	}),
 );
+
+// The wrapper sets the reading width once so the byline and #content share both edges.
+// Long Danish compounds in headings wrap (hyphenated, as <html lang="da">) instead of
+// widening the page on small screens; table headers are left out of the hyphenation.
+const proseClass = [
+	"prose prose-base max-w-none dark:prose-invert",
+	"prose-headings:wrap-break-word prose-h1:text-3xl sm:prose-h1:text-4xl",
+	"prose-h1:hyphens-auto prose-h2:hyphens-auto prose-h3:hyphens-auto prose-h4:hyphens-auto",
+	"prose-a:text-brand-700 prose-a:hover:text-brand-800 dark:prose-a:text-brand-400 dark:prose-a:hover:text-brand-300",
+].join(" ");
 ---
 
-{empty ? (
-	<div id="content" class="prose prose-sm dark:prose-invert">
-		<div class="flex flex-col items-center justify-center py-20 text-center">
-			<p class="text-lg font-medium text-gray-950 dark:text-white">Kommer snart</p>
-			<p class="mt-2 text-sm text-gray-600">{emptyMessage}</p>
+<div class="max-w-prose text-base">
+	<slot name="byline" />
+	{empty ? (
+		<div id="content" class={proseClass}>
+			<div class="flex flex-col items-center justify-center py-20 text-center">
+				<p class="text-lg font-medium text-gray-950 dark:text-white">Kommer snart</p>
+				<p class="mt-2 text-sm text-gray-600 dark:text-gray-400">{emptyMessage}</p>
+			</div>
 		</div>
-	</div>
-) : (
-	<div>
-		<div id="content" class="prose prose-sm dark:prose-invert">
-			<slot />
-			{relatedLinks.length > 0 && (
-				<aside data-contextual-links class="not-prose my-10 rounded-xl border border-gray-950/10 bg-gray-950/[0.025] p-5 dark:border-white/10 dark:bg-white/[0.025]" aria-label="Relaterede guides">
-					<p class="text-sm font-semibold text-gray-950 dark:text-white">Læs også</p>
-					<ul class="mt-3 space-y-2">
-						{relatedLinks.slice(0, 3).map((link) => (
-							<li>
-								<a href={link.href} class="text-sm/6 font-medium text-gray-800 underline decoration-gray-950/20 underline-offset-2 hover:decoration-gray-950 dark:text-gray-200 dark:decoration-white/20 dark:hover:decoration-white">
-									{link.title}
-								</a>
-								<span class="text-sm/6 text-gray-600 dark:text-gray-400"> — {link.description}</span>
-							</li>
-						))}
-					</ul>
-				</aside>
-			)}
+	) : (
+		<div>
+			<div id="content" class={proseClass}>
+				<slot />
+				{relatedLinks.length > 0 && (
+					<aside data-contextual-links class="not-prose my-10 rounded-xl border border-gray-950/10 bg-gray-950/[0.025] p-5 dark:border-white/10 dark:bg-white/[0.025]" aria-label="Relaterede guides">
+						<p class="text-sm font-semibold text-gray-950 dark:text-white">Læs også</p>
+						<ul class="mt-3 space-y-2">
+							{relatedLinks.slice(0, 3).map((link) => (
+								<li>
+									<a href={link.href} class="text-sm/6 font-medium text-gray-800 underline decoration-gray-950/20 underline-offset-2 hover:decoration-gray-950 dark:text-gray-200 dark:decoration-white/20 dark:hover:decoration-white">
+										{link.title}
+									</a>
+									<span class="text-sm/6 text-gray-600 dark:text-gray-400"> — {link.description}</span>
+								</li>
+							))}
+						</ul>
+					</aside>
+				)}
+			</div>
+
+			<script is:inline define:vars={{ banners }}>
+				const content = document.getElementById("content");
+				const pageText = (document.title + " " + content.textContent).toLowerCase();
+				// A passing mention of a competitor is fine; only a page about that platform (named in the title) excludes it.
+				const pageTitle = (document.title + " " + (document.querySelector("h1")?.textContent ?? "")).toLowerCase();
+				const headings = content.querySelectorAll(":scope > h2");
+				const contextualLinks = content.querySelector(":scope > [data-contextual-links]");
+				const contextualAnchor = headings[1] ?? headings[0];
+				if (contextualLinks && contextualAnchor) {
+					content.insertBefore(contextualLinks, contextualAnchor);
+				}
+
+				const matched = banners.filter(
+					(b) =>
+						b.keywords.length > 0 &&
+						b.keywords.some((kw) => pageText.includes(kw)) &&
+						!b.exclude.some((kw) => pageTitle.includes(kw)),
+				);
+				function createBanner(b) {
+					const wrapper = document.createElement("aside");
+					wrapper.className = "not-prose my-10";
+					wrapper.setAttribute("aria-label", "Annonce");
+
+					const label = document.createElement("p");
+					label.textContent = "Annonce · Partnerlink";
+					label.className = "mb-2 text-xs font-medium text-gray-500 dark:text-gray-400";
+
+					const link = document.createElement("a");
+					link.href = b.href;
+					link.target = "_blank";
+					link.rel = "sponsored noopener noreferrer";
+					link.className = "block overflow-hidden rounded-lg";
+
+					const img = document.createElement("img");
+					Object.assign(img, { src: b.src, alt: b.alt, width: b.width, height: b.height, loading: "lazy" });
+					img.className = "w-full";
+
+					link.appendChild(img);
+					wrapper.append(label, link);
+					return wrapper;
+				}
+
+				// Only render a contextual partner placement. Never fall back to an
+				// unrelated random ad, and never place advertising before the answer.
+				if (matched.length > 0) {
+					const anchor = headings[2] ?? headings[1] ?? headings[0];
+					if (anchor) content.insertBefore(createBanner(matched[0]), anchor);
+				}
+			</script>
 		</div>
-
-		<script is:inline define:vars={{ banners }}>
-			const content = document.getElementById("content");
-			const pageText = (document.title + " " + content.textContent).toLowerCase();
-			// A passing mention of a competitor is fine; only a page about that platform (named in the title) excludes it.
-			const pageTitle = (document.title + " " + (document.querySelector("h1")?.textContent ?? "")).toLowerCase();
-			const headings = content.querySelectorAll(":scope > h2");
-			const contextualLinks = content.querySelector(":scope > [data-contextual-links]");
-			const contextualAnchor = headings[1] ?? headings[0];
-			if (contextualLinks && contextualAnchor) {
-				content.insertBefore(contextualLinks, contextualAnchor);
-			}
-
-			const matched = banners.filter(
-				(b) =>
-					b.keywords.length > 0 &&
-					b.keywords.some((kw) => pageText.includes(kw)) &&
-					!b.exclude.some((kw) => pageTitle.includes(kw)),
-			);
-			function createBanner(b) {
-				const wrapper = document.createElement("aside");
-				wrapper.className = "not-prose my-10";
-				wrapper.setAttribute("aria-label", "Annonce");
-
-				const label = document.createElement("p");
-				label.textContent = "Annonce · Partnerlink";
-				label.className = "mb-2 text-xs font-medium text-gray-500 dark:text-gray-400";
-
-				const link = document.createElement("a");
-				link.href = b.href;
-				link.target = "_blank";
-				link.rel = "sponsored noopener noreferrer";
-				link.className = "block overflow-hidden rounded-lg";
-
-				const img = document.createElement("img");
-				Object.assign(img, { src: b.src, alt: b.alt, width: b.width, height: b.height, loading: "lazy" });
-				img.className = "w-full";
-
-				link.appendChild(img);
-				wrapper.append(label, link);
-				return wrapper;
-			}
-
-			// Only render a contextual partner placement. Never fall back to an
-			// unrelated random ad, and never place advertising before the answer.
-			if (matched.length > 0) {
-				const anchor = headings[2] ?? headings[1] ?? headings[0];
-				if (anchor) content.insertBefore(createBanner(matched[0]), anchor);
-			}
-		</script>
-	</div>
-)}
+	)}
+</div>

@@ -1,19 +1,13 @@
 ---
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
 import Footer from "@/components/Footer.astro";
-import Logo from "@/components/Logo.astro";
 import Navbar from "@/components/Navbar.astro";
 import { getGlossaryTermsByLetter } from "@/data/glossary";
-import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
-import CirclePlayIcon from "@/icons/CirclePlayIcon.astro";
+import ArticleIcon from "@/icons/ArticleIcon.astro";
 import CloseIcon from "@/icons/CloseIcon.astro";
 import SidebarIcon from "@/icons/SidebarIcon.astro";
+import { type BreadcrumbItem, focusRing, samePath } from "@/lib/navigation";
 import BaseLayout from "./BaseLayout.astro";
-
-interface BreadcrumbItem {
-	label: string;
-	href?: string;
-	class?: string;
-}
 
 interface SidebarItem {
 	id: string;
@@ -49,6 +43,7 @@ const {
 	isGlossaryCompact = false,
 } = Astro.props;
 const pathname = Astro.url.pathname;
+const isActive = (href: string) => samePath(pathname, href);
 
 const letters = isGlossaryCompact
 	? Object.keys(getGlossaryTermsByLetter()).sort((a, b) => a.localeCompare(b, "da"))
@@ -67,18 +62,21 @@ const groupedItems: GroupedItems | null = groupByLetter
 			}, {}),
 		).map(([letter, items]) => ({ letter, items }))
 	: null;
+
+const itemClass = (active: boolean) =>
+	active
+		? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
+		: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5";
+const iconClass = (active: boolean) =>
+	active ? "text-gray-950 dark:text-white" : "text-gray-400 dark:text-gray-500";
 ---
 
 <BaseLayout title={title} description={description} canonical={canonical} noindex={noindex} ogType={ogType} image={image}>
-	<div class="flex min-h-screen">
+	<Navbar />
+	<div class="flex min-h-[calc(100dvh-4rem)]">
 		<!-- Desktop Sidebar -->
 		<aside class="hidden w-72 shrink-0 border-r border-gray-950/10 dark:border-white/10 lg:block">
-			<div class="sticky top-0 flex h-screen flex-col overflow-y-auto px-4 py-6">
-				<div class="mb-8 px-2">
-					<a href="/">
-						<Logo class="text-xl text-gray-950 dark:text-white" />
-					</a>
-				</div>
+			<div class="sticky top-16 flex h-[calc(100dvh-4rem)] flex-col overflow-y-auto px-4 py-6">
 				<!-- Search / Alphabet Navigation -->
 				{isGlossaryCompact ? (
 					<div class="mb-6 px-1">
@@ -111,8 +109,9 @@ const groupedItems: GroupedItems | null = groupByLetter
 							<input
 								type="text"
 								placeholder="Filtrer..."
+								aria-label={`Filtrer ${sectionTitle.toLowerCase()}`}
 								data-sidebar-search="desktop"
-								class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-9 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
+								class:list={["w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-9 text-sm/6 text-gray-950 placeholder:text-gray-400 dark:border-white/10 dark:text-white dark:placeholder:text-gray-500", focusRing]}
 							/>
 							<kbd class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-gray-950/10 px-1.5 text-[10px] font-medium text-gray-400 dark:border-white/10 dark:text-gray-500" data-search-kbd>
 								<span data-search-kbd-prefix></span>K
@@ -120,7 +119,7 @@ const groupedItems: GroupedItems | null = groupByLetter
 						</div>
 					</div>
 				)}
-				<nav class="flex-1 space-y-6">
+				<nav aria-label={sectionTitle} class="flex-1 space-y-6">
 					<div>
 						<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
 							{sectionTitle}
@@ -129,53 +128,31 @@ const groupedItems: GroupedItems | null = groupByLetter
 							{groupedItems ? groupedItems.map((group) => (
 								<>
 									<li data-sidebar-letter class="mt-4 first:mt-0 px-2 text-xs/6 font-bold text-gray-950 dark:text-white">{group.letter}</li>
-									{group.items.map((item) => {
-										const isActive = pathname === item.href || pathname === `${item.href}/`;
-										return (
-											<li data-sidebar-item data-title={item.title.toLowerCase()} data-letter={group.letter}>
-												<a
-													href={item.href}
-													class:list={[
-														"-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
-														isActive
-															? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
-															: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
-													]}
-												>
-													<CirclePlayIcon class:list={[
-														isActive
-															? "text-gray-950 dark:text-white"
-															: "text-gray-400 dark:text-gray-500",
-													]} />
-													<span class="truncate">{item.title}</span>
-												</a>
-											</li>
-										);
-									})}
+									{group.items.map((item) => (
+										<li data-sidebar-item data-title={item.title.toLowerCase()} data-letter={group.letter}>
+											<a
+												href={item.href}
+												aria-current={isActive(item.href) ? "page" : undefined}
+												class:list={["-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7", itemClass(isActive(item.href))]}
+											>
+												<ArticleIcon class={iconClass(isActive(item.href))} />
+												<span class="truncate">{item.title}</span>
+											</a>
+										</li>
+									))}
 								</>
-							)) : sidebarItems.map((item) => {
-								const isActive = pathname === item.href || pathname === `${item.href}/`;
-								return (
-									<li data-sidebar-item data-title={item.title.toLowerCase()}>
-										<a
-											href={item.href}
-											class:list={[
-												"-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
-												isActive
-													? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
-													: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
-											]}
-										>
-											<CirclePlayIcon class:list={[
-												isActive
-													? "text-gray-950 dark:text-white"
-													: "text-gray-400 dark:text-gray-500",
-											]} />
-											<span class="truncate">{item.title}</span>
-										</a>
-									</li>
-								);
-							})}
+							)) : sidebarItems.map((item) => (
+								<li data-sidebar-item data-title={item.title.toLowerCase()}>
+									<a
+										href={item.href}
+										aria-current={isActive(item.href) ? "page" : undefined}
+										class:list={["-mx-1 flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7", itemClass(isActive(item.href))]}
+									>
+										<ArticleIcon class={iconClass(isActive(item.href))} />
+										<span class="truncate">{item.title}</span>
+									</a>
+								</li>
+							))}
 						</ul>
 						<p class="mt-3 hidden px-2 text-sm/6 text-gray-400 dark:text-gray-500" data-sidebar-empty="desktop">
 							Ingen resultater
@@ -193,163 +170,133 @@ const groupedItems: GroupedItems | null = groupByLetter
 			</div>
 		</aside>
 
-		<!-- Mobile Sidebar Overlay -->
-		<div id="mobile-sidebar" class="fixed inset-0 z-50 hidden lg:hidden">
-			<div class="fixed inset-0 bg-gray-950/25" data-close-sidebar></div>
-			<div class="fixed inset-0 flex justify-start pr-11">
-				<div class="w-full max-w-xs overflow-y-auto bg-white px-4 py-5 ring ring-gray-950/10 dark:bg-gray-950 dark:ring-white/10">
-					<div class="mb-6 flex items-center justify-between px-2">
-						<a href="/">
-							<Logo class="text-xl text-gray-950 dark:text-white" />
-						</a>
-						<button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden" data-close-sidebar>
-							<CloseIcon class="text-gray-950 dark:text-white" />
-						</button>
-					</div>
-					<!-- Mobile Search / Alphabet Navigation -->
-					{isGlossaryCompact ? (
-						<div class="mb-6 px-1">
-							<h4 class="text-xs/6 font-semibold text-gray-600 dark:text-gray-400 mb-2">Søg på bogstav</h4>
-							<div class="grid grid-cols-7 gap-1 text-center">
-								{letters.map((letter) => (
-									<a
-										href={`/ordbog#${letter}`}
-										class="inline-flex size-7 items-center justify-center rounded-md text-[11px] font-semibold text-gray-700 bg-gray-950/4 hover:bg-gray-950/8 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
-									>
-										{letter}
-									</a>
-								))}
-							</div>
-							<div class="mt-3">
+		<!-- Mobile Sidebar Drawer -->
+		<dialog
+			id="mobile-sidebar"
+			aria-labelledby="mobile-sidebar-title"
+			class="h-dvh max-h-none w-full max-w-xs bg-white text-gray-950 ring ring-gray-950/10 backdrop:bg-gray-950/25 lg:hidden dark:bg-gray-950 dark:text-white dark:ring-white/10"
+			data-drawer
+		>
+			<div class="h-full overflow-y-auto overscroll-contain px-4 py-3">
+				<div class="mb-4 flex h-10 items-center justify-between pl-2">
+					<h2 id="mobile-sidebar-title" class="text-base/7 font-semibold">Emneoversigt</h2>
+					<button
+						type="button"
+						class:list={["-mr-2.5 inline-flex size-11 cursor-pointer items-center justify-center rounded-md hover:bg-gray-950/5 dark:hover:bg-white/5", focusRing]}
+						data-close-dialog
+						aria-label="Luk emneoversigt"
+					>
+						<CloseIcon />
+					</button>
+				</div>
+				<!-- Mobile Search / Alphabet Navigation -->
+				{isGlossaryCompact ? (
+					<div class="mb-6 px-1">
+						<h4 class="text-xs/6 font-semibold text-gray-600 dark:text-gray-400 mb-2">Søg på bogstav</h4>
+						<div class="grid grid-cols-7 gap-1 text-center">
+							{letters.map((letter) => (
 								<a
-									href="/ordbog"
-									class="flex items-center justify-center gap-1.5 rounded-lg border border-gray-950/10 dark:border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-950 hover:bg-gray-950/4 dark:text-white dark:hover:bg-white/5 w-full text-center transition-all"
+									href={`/ordbog#${letter}`}
+									class="inline-flex size-7 items-center justify-center rounded-md text-[11px] font-semibold text-gray-700 bg-gray-950/4 hover:bg-gray-950/8 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 transition-colors"
 								>
-									Se alle ord (A-Å) &rarr;
+									{letter}
 								</a>
-							</div>
+							))}
 						</div>
-					) : (
-						<div class="mb-4 px-1">
-							<div class="relative">
-								<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-								</svg>
-								<input
-									type="text"
-									placeholder="Filtrer..."
-									data-sidebar-search="mobile"
-									class="w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-3 text-sm/6 text-gray-950 placeholder:text-gray-400 focus:border-gray-950/20 focus:outline-none dark:border-white/10 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white/20"
-								/>
-							</div>
+						<div class="mt-3">
+							<a
+								href="/ordbog"
+								class="flex items-center justify-center gap-1.5 rounded-lg border border-gray-950/10 dark:border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-950 hover:bg-gray-950/4 dark:text-white dark:hover:bg-white/5 w-full text-center transition-all"
+							>
+								Se alle ord (A-Å) &rarr;
+							</a>
 						</div>
-					)}
-					<nav class="space-y-6">
-						<div>
-							<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
-								{sectionTitle}
-							</h3>
-							<ul class="mt-1 space-y-0.5" data-sidebar-list="mobile">
-								{groupedItems ? groupedItems.map((group) => (
-									<>
-										<li data-sidebar-letter class="mt-4 first:mt-0 px-2 text-xs/6 font-bold text-gray-950 dark:text-white">{group.letter}</li>
-										{group.items.map((item) => {
-											const isActive = pathname === item.href || pathname === `${item.href}/`;
-											return (
-												<li data-sidebar-item data-title={item.title.toLowerCase()} data-letter={group.letter}>
-													<a
-														href={item.href}
-														class:list={[
-															"flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
-															isActive
-																? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
-																: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
-														]}
-													>
-														<CirclePlayIcon class:list={[
-															isActive
-																? "text-gray-950 dark:text-white"
-																: "text-gray-400 dark:text-gray-500",
-														]} />
-														<span class="truncate">{item.title}</span>
-													</a>
-												</li>
-											);
-										})}
-									</>
-								)) : sidebarItems.map((item) => {
-									const isActive = pathname === item.href || pathname === `${item.href}/`;
-									return (
-										<li data-sidebar-item data-title={item.title.toLowerCase()}>
+					</div>
+				) : (
+					<div class="mb-4 px-1">
+						<div class="relative">
+							<svg class="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+							</svg>
+							{/* autofocus: the drawer focuses the filter when it opens */}
+							<input
+								type="text"
+								placeholder="Filtrer..."
+								aria-label={`Filtrer ${sectionTitle.toLowerCase()}`}
+								autofocus
+								data-sidebar-search="mobile"
+								class:list={["w-full rounded-lg border border-gray-950/10 bg-transparent py-1.5 pl-9 pr-3 text-sm/6 text-gray-950 placeholder:text-gray-400 dark:border-white/10 dark:text-white dark:placeholder:text-gray-500", focusRing]}
+							/>
+						</div>
+					</div>
+				)}
+				<nav aria-label={sectionTitle} class="space-y-6">
+					<div>
+						<h3 class="px-2 text-xs/6 font-semibold text-gray-600 dark:text-gray-400">
+							{sectionTitle}
+						</h3>
+						<ul class="mt-1 space-y-0.5" data-sidebar-list="mobile">
+							{groupedItems ? groupedItems.map((group) => (
+								<>
+									<li data-sidebar-letter class="mt-4 first:mt-0 px-2 text-xs/6 font-bold text-gray-950 dark:text-white">{group.letter}</li>
+									{group.items.map((item) => (
+										<li data-sidebar-item data-title={item.title.toLowerCase()} data-letter={group.letter}>
 											<a
 												href={item.href}
-												class:list={[
-													"flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7",
-													isActive
-														? "bg-gray-950/5 font-semibold text-gray-950 dark:bg-white/5 dark:text-white"
-														: "text-gray-700 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5",
-												]}
+												aria-current={isActive(item.href) ? "page" : undefined}
+												class:list={["flex min-h-11 items-center gap-2 rounded-lg px-3 py-1 text-sm/7", itemClass(isActive(item.href))]}
 											>
-												<CirclePlayIcon class:list={[
-													isActive
-														? "text-gray-950 dark:text-white"
-														: "text-gray-400 dark:text-gray-500",
-												]} />
+												<ArticleIcon class={iconClass(isActive(item.href))} />
 												<span class="truncate">{item.title}</span>
 											</a>
 										</li>
-									);
-								})}
-							</ul>
-							<p class="mt-3 hidden px-2 text-sm/6 text-gray-400 dark:text-gray-500" data-sidebar-empty="mobile">
-								Ingen resultater
-							</p>
-						</div>
-						<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
-							<a
-								href="/"
-								class="flex items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
-							>
-								&larr; Tilbage til kurset
-							</a>
-						</div>
-					</nav>
-				</div>
+									))}
+								</>
+							)) : sidebarItems.map((item) => (
+								<li data-sidebar-item data-title={item.title.toLowerCase()}>
+									<a
+										href={item.href}
+										aria-current={isActive(item.href) ? "page" : undefined}
+										class:list={["flex min-h-11 items-center gap-2 rounded-lg px-3 py-1 text-sm/7", itemClass(isActive(item.href))]}
+									>
+										<ArticleIcon class={iconClass(isActive(item.href))} />
+										<span class="truncate">{item.title}</span>
+									</a>
+								</li>
+							))}
+						</ul>
+						<p class="mt-3 hidden px-2 text-sm/6 text-gray-400 dark:text-gray-500" data-sidebar-empty="mobile">
+							Ingen resultater
+						</p>
+					</div>
+					<div class="border-t border-gray-950/10 pt-4 dark:border-white/10">
+						<a
+							href="/"
+							class="flex min-h-11 items-center gap-2 rounded-lg px-3 py-1 text-sm/7 text-gray-600 hover:bg-gray-950/4 dark:text-gray-400 dark:hover:bg-white/5"
+						>
+							&larr; Tilbage til kurset
+						</a>
+					</div>
+				</nav>
 			</div>
-		</div>
+		</dialog>
 
 		<!-- Main Content -->
-		<div class="flex flex-1 flex-col">
-			<Navbar>
-				<div class="flex items-center gap-3">
-					<button type="button" class="relative *:relative before:absolute before:top-1/2 before:left-1/2 before:size-8 before:-translate-1/2 before:rounded-md hover:before:bg-gray-950/5 dark:hover:before:bg-white/5 focus:outline-hidden lg:hidden" data-open-sidebar>
-						<SidebarIcon class="text-gray-950 dark:text-white" />
-					</button>
-
-					{breadcrumbItems.length > 0 && (
-						<nav class="flex items-center gap-1.5 text-sm/7">
-							{breadcrumbItems.map((item, i) => (
-								<>
-									{i > 0 && (
-										<ChevronRightIcon class="text-gray-400 dark:text-gray-600" />
-									)}
-									{item.href ? (
-										<a href={item.href} class:list={[item.class, "text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"]}>
-											{item.label}
-										</a>
-									) : (
-										<span class:list={[item.class, "font-medium text-gray-950 dark:text-white"]}>
-											{item.label}
-										</span>
-									)}
-								</>
-							))}
-						</nav>
-					)}
-				</div>
-			</Navbar>
-
+		<div class="flex min-w-0 flex-1 flex-col">
 			<main class="flex-1 px-4 pb-16 sm:px-6">
+				<div class="flex items-center gap-x-3 py-3">
+					<button
+						type="button"
+						class:list={["inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-x-2 rounded-md border border-gray-950/10 px-3 text-sm/6 font-medium text-gray-950 hover:bg-gray-950/5 lg:hidden dark:border-white/10 dark:text-white dark:hover:bg-white/5", focusRing]}
+						data-open-dialog="mobile-sidebar"
+						aria-haspopup="dialog"
+						aria-controls="mobile-sidebar"
+					>
+						<SidebarIcon />
+						Emneoversigt
+					</button>
+					{breadcrumbItems.length > 0 && <Breadcrumbs items={breadcrumbItems} hideRootOnMobile />}
+				</div>
 				<slot />
 			</main>
 			<Footer />
@@ -358,19 +305,7 @@ const groupedItems: GroupedItems | null = groupByLetter
 </BaseLayout>
 
 <script>
-	// Mobile sidebar open/close
-	document.querySelectorAll("[data-open-sidebar]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			document.getElementById("mobile-sidebar")?.classList.remove("hidden");
-			const mobileSearch = document.querySelector<HTMLInputElement>('[data-sidebar-search="mobile"]');
-			mobileSearch?.focus();
-		});
-	});
-	document.querySelectorAll("[data-close-sidebar]").forEach((btn) => {
-		btn.addEventListener("click", () => {
-			document.getElementById("mobile-sidebar")?.classList.add("hidden");
-		});
-	});
+	import { setDrawerOpen } from "@/lib/navigation";
 
 	// Sidebar search filter
 	document.querySelectorAll<HTMLInputElement>("[data-sidebar-search]").forEach((input) => {
@@ -418,22 +353,25 @@ const groupedItems: GroupedItems | null = groupByLetter
 	// Cmd/Ctrl+K to focus desktop search
 	const kbdPrefix = document.querySelector("[data-search-kbd-prefix]");
 	if (kbdPrefix) {
-		kbdPrefix.textContent = navigator.userAgent.includes("Mac") ? "\u2318" : "Ctrl+";
+		kbdPrefix.textContent = navigator.userAgent.includes("Mac") ? "⌘" : "Ctrl+";
 	}
 
 	document.addEventListener("keydown", (e) => {
 		if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-			e.preventDefault();
 			const desktopSearch = document.querySelector<HTMLInputElement>('[data-sidebar-search="desktop"]');
 			const mobileSearch = document.querySelector<HTMLInputElement>('[data-sidebar-search="mobile"]');
 			const target = window.innerWidth >= 1024 ? desktopSearch : mobileSearch;
+			// Compact glossary pages have no filter; leave the shortcut to the browser there.
+			if (!target) return;
+			e.preventDefault();
 
-			if (target && window.innerWidth < 1024) {
-				document.getElementById("mobile-sidebar")?.classList.remove("hidden");
+			const drawer = document.getElementById("mobile-sidebar");
+			if (window.innerWidth < 1024 && drawer instanceof HTMLDialogElement) {
+				setDrawerOpen(drawer, true);
 			}
 
-			target?.focus();
-			target?.select();
+			target.focus();
+			target.select();
 		}
 	});
 </script>

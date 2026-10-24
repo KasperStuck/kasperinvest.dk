@@ -1,9 +1,12 @@
 ---
 
+import Breadcrumbs from "@/components/Breadcrumbs.astro";
+import PageHeader from "@/components/PageHeader.astro";
 import VideoCard from "@/components/VideoCard.astro";
 import ChevronDownIcon from "@/icons/ChevronDownIcon.astro";
 import CenteredLayout from "@/layouts/CenteredLayout.astro";
 import { api, convex } from "@/lib/convex";
+import { sectionDescriptions } from "@/lib/navigation";
 
 const VIDEOS_PER_PAGE = 36;
 
@@ -74,32 +77,32 @@ function formatCount(n: number): string {
 function capitalize(s: string): string {
 	return s.charAt(0).toUpperCase() + s.slice(1);
 }
+
+// Same classes the filter script applies, so the default "Videoer" filter paints active.
+const typeFilterClass = "cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition";
+const activeTypeFilterClass = "bg-gray-950 text-white dark:bg-white dark:text-gray-950";
+const inactiveTypeFilterClass =
+	"bg-gray-950/5 text-gray-700 hover:bg-gray-950/10 dark:bg-white/10 dark:text-gray-300 dark:hover:bg-white/20";
 ---
 
 <CenteredLayout
 	title="YouTube - KasperInvest"
-	description="Udvalgte videoer fra danske finans-youtubere om investering og privatøkonomi."
+	description={sectionDescriptions.youtube}
 >
-	<nav slot="breadcrumbs" aria-label="Breadcrumb" class="flex items-center gap-x-2 text-sm/6">
-		<a href="/" class="min-w-0 shrink-0 text-gray-950 dark:text-white">KasperInvest</a>
-		<span class="text-gray-950/25 dark:text-white/25">/</span>
-		<span class="min-w-0 truncate text-gray-950 last:text-gray-600 dark:last:text-gray-400">YouTube</span>
-	</nav>
+	<Breadcrumbs slot="breadcrumbs" items={[{ label: "KasperInvest", href: "/" }, { label: "YouTube" }]} />
 
-	<div class="mt-10 flex flex-col gap-8 sm:mt-14 lg:flex-row lg:items-stretch lg:gap-12">
+	<div class="flex flex-col gap-8 lg:flex-row lg:gap-12">
 		<div class="min-w-0 flex-1">
-			<h1 class="text-3xl/10 font-normal tracking-tight text-gray-950 dark:text-white">
-				YouTube
-			</h1>
-			<p class="mt-6 max-w-xl text-base/7 text-gray-700 dark:text-gray-400">
+			<PageHeader title="YouTube" />
+			<p class="mt-4 max-w-xl text-base/7 text-gray-600 dark:text-gray-400">
 				Her samler vi de bedste videoer fra danske finans-youtubere om investering og privatøkonomi. Du finder indhold fra kanaler der dækker alt fra aktieanalyse, ETF'er og dividendeaktier til budgetlægning, opsparing og skat. Uanset om du er nybegynder eller erfaren investor, kan du lære nyt fra nogle af Danmarks mest populære finanskanaler på YouTube.
 			</p>
-			<p class="mt-4 max-w-xl text-base/7 text-gray-700 dark:text-gray-400">
+			<p class="mt-4 max-w-xl text-base/7 text-gray-600 dark:text-gray-400">
 				Brug filtrene herunder til at finde videoer efter type, kategori eller kanal. Udforsk emner som langsigtet investering, økonomisk frihed, porteføljeopbygning og pensionsplanlægning. Hver video er suppleret med en dansk opsummering, nøglepointer og en dybdegående artikel, så du hurtigt kan vurdere om indholdet er relevant for dig og din økonomi.
 			</p>
 		</div>
 		{featuredVideo && (
-			<div class="flex w-full shrink-0 items-center lg:w-1/2">
+			<div class="w-full shrink-0 lg:w-1/2 lg:self-center">
 				<VideoCard
 					url={videoUrl(featuredVideo)}
 					thumbnailUrl={featuredVideo.thumbnailUrl}
@@ -162,9 +165,9 @@ function capitalize(s: string): string {
 
 	<div class="mt-10 space-y-3">
 		<div class="flex flex-wrap items-center gap-2" id="type-filters">
-			<button type="button" data-type="all" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Alle</button>
-			<button type="button" data-type="videos" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Videoer</button>
-			<button type="button" data-type="shorts" class="cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition">Shorts</button>
+			<button type="button" data-type="all" aria-pressed="false" class:list={[typeFilterClass, inactiveTypeFilterClass]}>Alle</button>
+			<button type="button" data-type="videos" aria-pressed="true" class:list={[typeFilterClass, activeTypeFilterClass]}>Videoer</button>
+			<button type="button" data-type="shorts" aria-pressed="false" class:list={[typeFilterClass, inactiveTypeFilterClass]}>Shorts</button>
 
 			<span class="mx-1 h-4 w-px bg-gray-950/10 dark:bg-white/10"></span>
 
@@ -271,7 +274,7 @@ function capitalize(s: string): string {
 	)}
 
 	{totalPages > 1 && (
-		<nav aria-label="Pagination" class="mt-12 flex items-center justify-center gap-2 pb-32">
+		<nav aria-label="Sidenavigation" class="mt-12 flex items-center justify-center gap-2 pb-32">
 			{safePage > 1 && (
 				<a
 					href={safePage === 2 ? "/youtube" : `/youtube?page=${safePage - 1}`}
@@ -364,6 +367,7 @@ function capitalize(s: string): string {
 		for (const btn of typeButtons) {
 			const isActive = btn.dataset.type === currentType;
 			btn.className = `cursor-pointer rounded-full px-3 py-1 text-sm/6 font-medium transition ${isActive ? activeClass : inactiveClass}`;
+			btn.setAttribute("aria-pressed", String(isActive));
 		}
 
 		updateBadge("active-category", "active-category-label", currentCategory, currentCategory);

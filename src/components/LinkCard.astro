@@ -1,23 +1,31 @@
 ---
+import { focusRing } from "@/lib/navigation";
+
 interface Props {
 	href: string;
 	title: string;
 	description?: string;
 	external?: boolean;
+	/** Heading level of the card title; 3 when the cards sit under a section H2. */
+	headingLevel?: 2 | 3;
 }
 
-const { href, title, description, external } = Astro.props;
+const { href, title, description, external, headingLevel = 2 } = Astro.props;
 const externalAttrs = external ? { target: "_blank", rel: "nofollow noopener sponsored" } : {};
+const Heading = headingLevel === 3 ? "h3" : "h2";
 ---
 
 <a
 	href={href}
 	{...externalAttrs}
-	class="group rounded-xl border border-gray-950/10 p-6 transition hover:bg-gray-950/[0.025] dark:border-white/10 dark:hover:bg-white/[0.025]"
+	class:list={[
+		"group block rounded-xl border border-gray-950/10 p-5 transition hover:border-brand-700/40 hover:bg-gray-950/[0.025] sm:p-6 dark:border-white/10 dark:hover:border-brand-400/40 dark:hover:bg-white/[0.025]",
+		focusRing,
+	]}
 >
-	<h2 class="text-base/7 font-semibold text-gray-950 group-hover:text-gray-700 dark:text-white dark:group-hover:text-gray-300">
+	<Heading class="text-base/7 font-semibold text-gray-950 group-hover:text-brand-700 group-focus-visible:text-brand-700 dark:text-white dark:group-hover:text-brand-400 dark:group-focus-visible:text-brand-400">
 		{title}
-	</h2>
+	</Heading>
 	{description && (
 		<p class="mt-2 text-sm/6 text-gray-600 dark:text-gray-400">{description}</p>
 	)}

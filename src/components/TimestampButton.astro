@@ -1,4 +1,6 @@
 ---
+import { focusRing } from "@/lib/navigation";
+
 interface Props {
 	start: number;
 	videoId: string;
@@ -14,7 +16,11 @@ const formatted = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
 <button
 	type="button"
-	class:list={[className, "text-sm/7 font-medium tabular-nums text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"]}
+	class:list={[
+		className,
+		"rounded-sm text-sm/7 font-medium tabular-nums text-brand-700 hover:text-brand-800 dark:text-brand-400 dark:hover:text-brand-300",
+		focusRing,
+	]}
 	data-timestamp-button
 	data-start={start}
 	data-video-id={videoId}

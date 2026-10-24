@@ -1,22 +1,14 @@
 ---
-interface Props {
-	type?: astroHTML.JSX.HTMLInputTypeAttribute;
-	id?: string;
-	required?: boolean;
-	class?: string;
-	placeholder?: string;
-	name?: string;
-}
+import type { HTMLAttributes } from "astro/types";
+import { focusRing } from "@/lib/navigation";
 
-const { type = "text", id, required, class: className, placeholder, name, ...props } = Astro.props;
+type Props = HTMLAttributes<"input">;
+
+const { type = "text", class: className, ...props } = Astro.props;
 ---
 
 <input
 	type={type}
-	id={id}
-	name={name}
-	required={required}
-	placeholder={placeholder}
-	class:list={[className, "block w-full rounded-lg border border-gray-950/10 bg-transparent px-3 py-1.5 text-sm/7 text-gray-950 outline-none placeholder:text-gray-500 focus:border-gray-950/20 focus:ring-0 dark:border-white/10 dark:text-white dark:focus:border-white/20"]}
+	class:list={[className, "block w-full rounded-lg border border-gray-950/10 bg-transparent px-3 py-1.5 text-sm/7 text-gray-950 placeholder:text-gray-500 focus:border-gray-950/20 dark:border-white/10 dark:text-white dark:placeholder:text-gray-400 dark:focus:border-white/20", focusRing]}
 	{...props}
 />

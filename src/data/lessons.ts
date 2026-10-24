@@ -10,12 +10,17 @@ export type Lesson = {
 	title: string;
 	seoTitle?: string;
 	description: string;
+	updatedAt?: string;
 	video: {
 		thumbnail: string;
 		duration: number;
 		url: string;
 	} | null;
-	faq: { question: string; answer: string }[];
+	faq: {
+		question: string;
+		answer: string;
+		sources?: { label: string; url: string }[];
+	}[];
 };
 
 export function getModules(): Module[] {
@@ -50,7 +55,7 @@ export async function getLessonContent(slug: string) {
 	return (await import(`@/data/lessons/${module.id}/${slug}.mdx`)).default;
 }
 
-const lessons = [
+const lessons: Module[] = [
 	{
 		id: "velkommen-og-fundament",
 		title: "Velkommen og fundament",
@@ -60,33 +65,58 @@ const lessons = [
 			{
 				id: "velkommen-til-kurset",
 				title: "Velkommen til kurset",
-				description: "Sæt rammer, forventninger og risikodisclaimer.",
+				seoTitle: "Gratis investeringskursus for begyndere – velkommen",
+				description:
+					"Start med budget og mål. Se kursets otte dele om risiko, aktier, fonde, depot, skat og nedsparing, og lav din første øvelse.",
+				updatedAt: "2026-10-24",
 				video: null,
 				faq: [
 					{
 						question: "Kan man starte med at investere med kun 500 kr.?",
 						answer:
-							"Ja, absolut. Mange danske platforme tilbyder løsninger som Månedsopsparing. Her kan du automatisk købe for mindre beløb hver måned uden at betale høje gebyrer hver gang.",
+							"Ja, 500 kr. kan være nok, men det afhænger af produkt og omkostninger. Saxos månedsopsparing for personer bosat og fuldt skattepligtige i Danmark har intet fast minimumsbeløb og ingen købskurtage. Du skal dog have råd til mindst én hel enhed af det valgte værdipapir og eventuel valutaveksling. Fonde og ETF'er har også produktomkostninger, og salg koster kurtage. Kontrollér de aktuelle vilkår, før du køber.",
+						sources: [
+							{
+								label: "Saxo: Månedsopsparing",
+								url: "https://www.home.saxo/da-dk/products/autoinvest",
+							},
+						],
 					},
 					{
 						question: "Hvad er en aktiesparekonto?",
 						answer:
-							"En aktiesparekonto (ASK) er en særlig konto med en lav skattesats på kun 17%. I 2026 er indskudsloftet 174.200 kr. Kontoen er lagerbeskattet. Det betyder, at skatten afregnes årligt af din værditilvækst.",
+							"En aktiesparekonto (ASK) er en særlig investeringskonto, som personer, der er fuldt skattepligtige til Danmark, kan oprette. Du må kun have én. Afkastet beskattes med 17 % efter lagerprincippet, også af gevinster, du ikke har solgt. Banken beregner og indbetaler skatten. I 2026 er indskudsloftet 174.200 kr. Muligheden for yderligere indskud afhænger af kontoens samlede værdi den 31. december 2025 og årets nettoindskud; loftet er ikke et nyt indskud hvert år. Indskud til betaling af ASK-skat kan ske ud over loftet i det kalenderår, hvor skatten forfalder til betaling. Kontoen kan kun rumme værdipapirer, der opfylder ASK-reglerne.",
+						sources: [
+							{
+								label: "Skattestyrelsen: Aktiesparekonto",
+								url: "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/aktiesparekonto",
+							},
+						],
 					},
 					{
 						question: "Er dette kursus gratis?",
 						answer:
-							"Indholdet her er stillet til rådighed som en del af Kasper Invests mission om at demokratisere viden. Målet er at give dig et fundament uden skjulte dagsordener.",
+							"Ja. Lektionerne er gratis at læse. KasperInvest kan modtage betaling gennem annoncer og partnerlinks. Læs mere i affiliatepolitikken. Dine egne investeringer kan have omkostninger.",
 					},
 					{
 						question: "Hvilken platform anbefaler kurset?",
 						answer:
-							"Jeg peger ikke på en vinder. Jeg bruger ofte Nordnet og Saxo Bank som eksempler. De er de mest populære for private investorer i Danmark.",
+							"Valget afhænger af dine behov. Nordnet og Saxo Bank indgår som eksempler i kurset. Sammenlign kontotyper, relevante værdipapirer, samlede omkostninger og skatteindberetning, før du vælger platform.",
 					},
 					{
 						question: "Behøver jeg en revisor til min aktieskat?",
 						answer:
-							"For de fleste er svaret nej. Danske platforme indberetter automatisk dine handler til Skattestyrelsen. Du skal dog altid selv tjekke din årsopgørelse en ekstra gang.",
+							"Ved aktier optaget til handel i et dansk depot kan Skattestyrelsen i de fleste tilfælde beregne gevinst og tab, når alle nødvendige oplysninger er modtaget. Mangler der oplysninger til beregningen for dit danske depot, skal du supplere dem i Værdipapirsystemet. Du har selv pligt til at sikre, at årsopgørelsen er korrekt. Har du aktier i et udenlandsk depot, skal du selv beregne og oplyse gevinst og tab på årsopgørelsen samt oplyse udbytte. På en dansk aktiesparekonto beregner og indbetaler banken ASK-skatten særskilt. Søg konkret hjælp, hvis du er i tvivl om din situation.",
+						sources: [
+							{
+								label: "Skattestyrelsen: Skat af aktier",
+								url: "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/skat-af-aktier",
+							},
+							{
+								label: "Skattestyrelsen: Aktiesparekonto",
+								url: "https://skat.dk/borger/aktier-og-andre-vaerdipapirer/aktiesparekonto",
+							},
+						],
 					},
 				],
 			},

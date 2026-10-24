@@ -70,7 +70,7 @@ export const GET: APIRoute = async () => {
 	// Lessons
 	for (const mod of getModules()) {
 		for (const lesson of mod.lessons) {
-			add(`${SITE_URL}/${lesson.id}`);
+			add(`${SITE_URL}/${lesson.id}`, lesson.updatedAt);
 		}
 	}
 

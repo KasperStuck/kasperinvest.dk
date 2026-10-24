@@ -205,12 +205,12 @@ const articles: Article[] = [
 	{
 		id: "bedste-etf-til-aktiesparekonto",
 		section: "etf",
-		title: "Bedste ETF til aktiesparekonto — brug de rigtige kriterier",
-		seoTitle: "Bedste ETF til aktiesparekonto: guide og kriterier",
+		title: "ETF til aktiesparekonto: sådan vælger du",
+		seoTitle: "ETF til aktiesparekonto: regler, valg og omkostninger",
 		description:
-			"Vælg ETF til aktiesparekonto ud fra spredning, omkostninger, valuta, likviditet og hvilke værdipapirer kontoen må indeholde.",
+			"Sådan vælger du ETF til aktiesparekonto: kontrollér ISIN og positivliste, vurder indeks og overlap, og sammenlign omkostninger med et regneeksempel.",
 		publishedAt: "2026-07-16",
-		updatedAt: "2026-07-16",
+		updatedAt: "2026-10-24",
 		related: [
 			{
 				title: "Global ETF",
@@ -341,11 +341,11 @@ const articles: Article[] = [
 		id: "aktieindkomst-og-progressionsgraense",
 		section: "skat",
 		title: "Aktieindkomst og progressionsgrænsen",
-		seoTitle: "Aktieindkomst og progressionsgrænse forklaret",
+		seoTitle: "Aktieindkomst 2026: satser og progressionsgrænse",
 		description:
-			"Forstå hvad der tæller som aktieindkomst, hvordan progressionsgrænsen bruges, og hvorfor årets officielle satser altid skal kontrolleres.",
+			"I 2026 er skatten 27 % op til 79.400 kr. og 42 % derover. Se regneeksempel, ægtefælleregler, udbytteskat og tabsmodregning.",
 		publishedAt: "2026-07-16",
-		updatedAt: "2026-07-16",
+		updatedAt: "2026-10-24",
 		related: [
 			{
 				title: "Skat af aktier",

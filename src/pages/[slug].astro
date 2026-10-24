@@ -11,6 +11,8 @@ import { getRelatedLinks } from "@/data/related";
 import ChevronRightIcon from "@/icons/ChevronRightIcon.astro";
 import SidebarLayout from "@/layouts/SidebarLayout.astro";
 
+type Props = Record<string, never>;
+
 export function getStaticPaths() {
 	const modules = getModules();
 	const paths = modules.flatMap((module) =>
@@ -64,8 +66,8 @@ const relatedLinks =
 	breadcrumbItems={breadcrumbItems}
 	ogType="article"
 >
-	<ArticleSchema slot="head" headline={lesson.title} description={lesson.description} />
-	{lesson.faq && lesson.faq.length > 0 && (
+	<ArticleSchema slot="head" headline={lesson.title} description={lesson.description} dateModified={lesson.updatedAt} />
+	{Content && lesson.faq.length > 0 && (
 		<script is:inline slot="head" type="application/ld+json" set:html={JSON.stringify({
 			"@context": "https://schema.org",
 			"@type": "FAQPage",
@@ -77,7 +79,7 @@ const relatedLinks =
 					text: item.answer,
 				},
 			})),
-		})} />
+		}).replaceAll("<", "\\u003c")} />
 	)}
 	<div class="mx-auto max-w-7xl">
 		{lesson.video && <div class="-mx-2 sm:-mx-4">
@@ -90,8 +92,29 @@ const relatedLinks =
 		<div class="mx-auto flex max-w-2xl gap-x-10 py-10 sm:py-14 xl:max-w-5xl">
 			<div class="w-full min-w-0 flex-1">
 				<Prose empty={!Content} emptyMessage="Denne lektion er under udarbejdelse." relatedLinks={relatedLinks}>
-					<AuthorBox slot="byline" />
+					<AuthorBox slot="byline" updatedAt={lesson.updatedAt} />
 					{Content && <Content />}
+					{lesson.faq.length > 0 && (
+						<section aria-labelledby="lesson-faq-heading" class="mt-12">
+							<h2 id="lesson-faq-heading">Spørgsmål og svar</h2>
+							{lesson.faq.map((item, index) => (
+								<div>
+									<h3 id={`lesson-faq-${index + 1}`}>{item.question}</h3>
+									<p>{item.answer}</p>
+									{item.sources && item.sources.length > 0 && (
+										<>
+											<p class="text-sm/6">Kilder:</p>
+											<ul class="text-sm/6">
+												{item.sources.map((source) => (
+													<li><a href={source.url}>{source.label}</a></li>
+												))}
+											</ul>
+										</>
+									)}
+								</div>
+							))}
+						</section>
+					)}
 				</Prose>
 				<div class="mt-16 border-t border-gray-200 pt-8 dark:border-white/10">
 					{lesson.next ? (

@@ -17,13 +17,13 @@ const link =
 ---
 
 <p class="not-prose mb-8 text-sm/6 text-gray-600 dark:text-gray-400">
-	Skrevet og redigeret af <a href="/om" class={link}>Kasper Stuck</a>
+	Redaktionelt ansvar: <a href="/om" class={link}>Kasper Stuck</a>
 	<span aria-hidden="true" class="mx-1 text-gray-950/25 dark:text-white/25">&middot;</span><span class="sr-only">. </span>
 	Følger KasperInvests <a href="/redaktionel-metode" class={link}>redaktionelle metode</a>
 	{formatted && updatedAt && (
 		<>
 			<span aria-hidden="true" class="mx-1 text-gray-950/25 dark:text-white/25">&middot;</span><span class="sr-only">. </span>
-			Senest opdateret og kontrolleret <time datetime={updatedAt}>{formatted}</time>
+			Senest opdateret <time datetime={updatedAt}>{formatted}</time>
 		</>
 	)}
 </p>
